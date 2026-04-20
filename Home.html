@@ -147,6 +147,35 @@
     </div>
   </div>
 
+  <div class="border-t border-slate-100 pt-2">
+    <h5 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Investments</h5>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h6 class="font-bold text-slate-800 mb-6">Money invested vs revenue (per investment)</h6>
+        <div class="h-72">
+          <canvas id="invVsRevChart"></canvas>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h6 class="font-bold text-slate-800 mb-6">Ledger: monthly revenue vs expenditures</h6>
+        <div class="h-72">
+          <canvas id="invMonthlyChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2">
+        <div class="flex items-center justify-between mb-6 flex-wrap gap-2">
+          <h6 class="font-bold text-slate-800">Revenue by category (ledger, selected range)</h6>
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Matches date range above</span>
+        </div>
+        <div class="h-72 max-w-xl mx-auto">
+          <canvas id="invRevenueCatChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
     <div class="flex items-center justify-between mb-4">
       <h6 class="font-bold text-slate-800">Top Contributors (Selected Range)</h6>
@@ -263,5 +292,133 @@
         }
       });
     });
+
+    renderInvestmentCharts(data.investments);
+  }
+
+  function renderInvestmentCharts(inv) {
+    const safe = inv || {};
+    const ivr = safe.investedVsRevenue || [];
+    const monthly = safe.monthlyInvestmentTrend || {};
+    const rbc = safe.revenueByCategory || {};
+
+    ["invVsRevChart", "invMonthlyChart", "invRevenueCatChart"].forEach(function (id) {
+      if (charts[id]) {
+        charts[id].destroy();
+        charts[id] = null;
+      }
+    });
+
+    const doughnutColors = [
+      "#22c55e",
+      "#0ea5e9",
+      "#f59e0b",
+      "#a855f7",
+      "#ec4899",
+      "#14b8a6",
+      "#6366f1",
+      "#ef4444",
+    ];
+
+    const ctxInv = document.getElementById("invVsRevChart");
+    if (ctxInv) {
+      const labels1 = ivr.length ? ivr.map(function (x) {
+        return x.label;
+      }) : ["No data"];
+      charts.invVsRevChart = new Chart(ctxInv, {
+        type: "bar",
+        data: {
+          labels: labels1,
+          datasets: [
+            {
+              label: "Money invested",
+              data: ivr.length ? ivr.map(function (x) {
+                return x.invested;
+              }) : [0],
+              backgroundColor: "#6366f1",
+              borderRadius: 6,
+            },
+            {
+              label: "Revenue (sheet)",
+              data: ivr.length ? ivr.map(function (x) {
+                return x.revenue;
+              }) : [0],
+              backgroundColor: "#22c55e",
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: { maxRotation: 45, minRotation: 0 },
+            },
+            y: { beginAtZero: true },
+          },
+          plugins: { legend: { position: "bottom" } },
+        },
+      });
+    }
+
+    const ctxMo = document.getElementById("invMonthlyChart");
+    if (ctxMo) {
+      const mLabels = monthly.labels || [];
+      charts.invMonthlyChart = new Chart(ctxMo, {
+        type: "bar",
+        data: {
+          labels: mLabels,
+          datasets: [
+            {
+              label: "Revenue (ledger)",
+              data: monthly.revenue || [],
+              backgroundColor: "rgba(34, 197, 94, 0.85)",
+              borderRadius: 6,
+            },
+            {
+              label: "Expenditures (OpEx + CapEx + fees)",
+              data: monthly.expenditures || [],
+              backgroundColor: "rgba(239, 68, 68, 0.85)",
+              borderRadius: 6,
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true },
+          },
+          plugins: { legend: { position: "bottom" } },
+        },
+      });
+    }
+
+    const ctxCat = document.getElementById("invRevenueCatChart");
+    if (ctxCat) {
+      const catLabels = (rbc.labels && rbc.labels.length) ? rbc.labels : ["No revenue in range"];
+      const catVals = (rbc.values && rbc.values.length) ? rbc.values : [0];
+      const bg = catLabels.map(function (_, i) {
+        return doughnutColors[i % doughnutColors.length];
+      });
+      charts.invRevenueCatChart = new Chart(ctxCat, {
+        type: "doughnut",
+        data: {
+          labels: catLabels,
+          datasets: [
+            {
+              data: catVals,
+              backgroundColor: bg,
+              borderWidth: 0,
+            },
+          ],
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: "bottom" },
+          },
+        },
+      });
+    }
   }
 </script>

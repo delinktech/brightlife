@@ -283,6 +283,124 @@ function getHomeAnalyticsByRange_(rangeKey) {
       pending: pendingLoanCount,
       settled: settledLoanCount,
     },
+    investments: buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds),
+  };
+}
+
+/**
+ * Home dashboard: investment charts (optional sheets — missing tabs return empty series).
+ */
+function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
+  const investedVsRevenue = [];
+  try {
+    const sheet = getSpreadsheet_().getSheetByName(SHEETS.INVESTMENTS);
+    if (sheet) {
+      const values = sheet.getDataRange().getValues();
+      if (values.length > 1) {
+        const headers = values[0];
+        const col = getHeaderMap_(headers);
+        if (
+          col["Investment ID"] !== undefined &&
+          col["Money Invested"] !== undefined &&
+          col["Revenue"] !== undefined
+        ) {
+          for (let i = 1; i < values.length; i++) {
+            const row = values[i];
+            if (!row[col["Investment ID"]]) continue;
+            let name = String(row[col["Name"]] || "").trim();
+            if (!name) name = String(row[col["Investment ID"]]);
+            if (name.length > 28) {
+              name = name.substring(0, 26) + "\u2026";
+            }
+            investedVsRevenue.push({
+              label: name,
+              invested: Number(row[col["Money Invested"]]) || 0,
+              revenue: Number(row[col["Revenue"]]) || 0,
+            });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    // optional sheet
+  }
+
+  const monthlyRev = {};
+  const monthlyExp = {};
+  const revenueByCategoryMap = {};
+  try {
+    const ledgerSheet = getSpreadsheet_().getSheetByName(SHEETS.INVESTMENT_LEDGER);
+    if (ledgerSheet) {
+      const lv = ledgerSheet.getDataRange().getValues();
+      if (lv.length > 1) {
+        const lc = getHeaderMap_(lv[0]);
+        if (
+          lc["Date"] !== undefined &&
+          lc["Type"] !== undefined &&
+          lc["Category"] !== undefined &&
+          lc["Amount"] !== undefined &&
+          lc["Transaction Fee"] !== undefined
+        ) {
+          for (let j = 1; j < lv.length; j++) {
+            const row = lv[j];
+            const rawDate = row[lc["Date"]];
+            if (!(rawDate instanceof Date)) continue;
+            const kind = normalizeLedgerType_(row[lc["Type"]]);
+            const absAmt = Math.abs(Number(row[lc["Amount"]]) || 0);
+            const fee = Number(row[lc["Transaction Fee"]]) || 0;
+            const catLabel = ledgerCategoryLabel_(row[lc["Category"]]);
+            const monthKey =
+              rawDate.getFullYear() + "-" + String(rawDate.getMonth() + 1).padStart(2, "0");
+
+            if (kind === "revenue") {
+              monthlyRev[monthKey] = (monthlyRev[monthKey] || 0) + absAmt;
+              if (isWithinRange_(rawDate, rangeBounds.start, rangeBounds.end)) {
+                revenueByCategoryMap[catLabel] = (revenueByCategoryMap[catLabel] || 0) + absAmt;
+              }
+            } else if (kind === "expense") {
+              monthlyExp[monthKey] = (monthlyExp[monthKey] || 0) + absAmt + fee;
+            } else if (kind === "capital in") {
+              monthlyExp[monthKey] = (monthlyExp[monthKey] || 0) + absAmt + fee;
+            }
+          }
+        }
+      }
+    }
+  } catch (e2) {
+    // optional sheet
+  }
+
+  const trendMonths = effectiveRange === "this_month" ? 6 : 12;
+  const monthLabels = [];
+  const revenueSeries = [];
+  const expenditureSeries = [];
+  for (let m = trendMonths - 1; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const key = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    monthLabels.push(Utilities.formatDate(d, tz, "MMM yy"));
+    revenueSeries.push(monthlyRev[key] || 0);
+    expenditureSeries.push(monthlyExp[key] || 0);
+  }
+
+  const catKeys = Object.keys(revenueByCategoryMap).sort(function (a, b) {
+    return revenueByCategoryMap[b] - revenueByCategoryMap[a];
+  });
+  const revenueCategoryLabels = catKeys;
+  const revenueCategoryValues = catKeys.map(function (k) {
+    return revenueByCategoryMap[k];
+  });
+
+  return {
+    investedVsRevenue: investedVsRevenue,
+    monthlyInvestmentTrend: {
+      labels: monthLabels,
+      revenue: revenueSeries,
+      expenditures: expenditureSeries,
+    },
+    revenueByCategory: {
+      labels: revenueCategoryLabels,
+      values: revenueCategoryValues,
+    },
   };
 }
 
