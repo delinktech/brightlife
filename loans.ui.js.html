@@ -1,0 +1,81 @@
+<script>
+  let loanPage = 1;
+  let loanTotalPages = 1;
+
+  function getStatusStyle(status) {
+    const styles = {
+      Active: "bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold",
+      Approved: "bg-[#107c51] text-white px-3 py-1 rounded-full text-[10px] font-bold",
+      Pending: "bg-[#fee8ad] text-[#6d4d1d] px-3 py-1 rounded-full text-[10px] font-bold",
+      Settled: "bg-[#1357a6] text-white px-3 py-1 rounded-full text-[10px] font-bold",
+      Rejected: "bg-rose-100 text-rose-700 px-3 py-1 rounded-full text-[10px] font-bold",
+    };
+    return styles[status] || "bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px]";
+  }
+
+  function renderLoanTable(loans) {
+    const body = document.getElementById("loan-table-body");
+    body.innerHTML = (loans || [])
+      .map(function (loan) {
+        return (
+          '<tr class="hover:bg-slate-50 transition-all">' +
+          '<td class="px-4 py-4 text-xs font-mono text-slate-400">#' +
+          loan.id +
+          "</td>" +
+          '<td class="px-4 py-4 font-bold text-slate-800">' +
+          loan.borrower +
+          "</td>" +
+          '<td class="px-4 py-4 text-right text-slate-600">' +
+          formatMoney(loan.requested) +
+          "</td>" +
+          '<td class="px-4 py-4 text-right font-bold text-rose-600">' +
+          formatMoney(loan.balance) +
+          '</td><td class="px-4 py-4 text-center"><span class="' +
+          getStatusStyle(loan.status) +
+          '">' +
+          loan.status +
+          "</span></td></tr>"
+        );
+      })
+      .join("");
+  }
+
+  function loadLoans(page) {
+    loanPage = page || 1;
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) {
+          handleErr(res || { message: "Failed to load loans." });
+          return;
+        }
+
+        loanTotalPages = res.totalPages || 1;
+        renderLoanTable(res.loans);
+        document.getElementById("loan-page-num").innerText = res.currentPage;
+        document.getElementById("l-prev").disabled = res.currentPage <= 1;
+        document.getElementById("l-next").disabled = res.currentPage >= res.totalPages;
+      })
+      .withFailureHandler(handleErr)
+      .getLoansData(loanPage, 10);
+  }
+
+  function changeLoanPage(direction) {
+    if (loanPage + direction >= 1 && loanPage + direction <= loanTotalPages) {
+      loadLoans(loanPage + direction);
+    }
+  }
+
+  function openPayLoanModal() {
+    const select = document.getElementById("pl-member");
+    select.innerHTML = (currentMembers || [])
+      .map(function (member) {
+        return '<option value="' + member.name + '">' + member.name + "</option>";
+      })
+      .join("");
+    document.getElementById("payLoanModal").classList.remove("hidden");
+  }
+
+  function closePayLoanModal() {
+    document.getElementById("payLoanModal").classList.add("hidden");
+  }
+</script>

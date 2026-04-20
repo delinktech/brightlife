@@ -1,0 +1,108 @@
+<script>
+  let currentHomeRange = "year";
+
+  function formatMoney(value) {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+      maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
+  }
+
+  function handleErr(err) {
+    console.error(err);
+    alert("Operation failed. Please retry.");
+  }
+
+  function formatPercent(value) {
+    const number = Number(value) || 0;
+    const sign = number > 0 ? "+" : "";
+    return sign + number.toFixed(1) + "%";
+  }
+
+  function rangeLabel(rangeKey) {
+    if (rangeKey === "this_month") return "This Month";
+    if (rangeKey === "quarter") return "Quarter";
+    return "Year";
+  }
+
+  function updateRangeButtons(rangeKey) {
+    ["this-month", "quarter", "year"].forEach((token) => {
+      const button = document.getElementById("range-" + token);
+      if (!button) return;
+      button.className =
+        "home-range-btn px-3 py-2 text-xs font-semibold rounded-lg transition-colors " +
+        (rangeKey === token.replace("-", "_")
+          ? "bg-slate-900 text-white"
+          : "bg-slate-100 text-slate-600 hover:bg-slate-200");
+    });
+  }
+
+  function setHomeRange(rangeKey) {
+    currentHomeRange = rangeKey;
+    updateRangeButtons(rangeKey);
+    refreshDashboard();
+  }
+
+  function toggleLoading(show) {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.style.pointerEvents = show ? "none" : "auto";
+    sidebar.style.opacity = show ? "0.7" : "1";
+  }
+
+  function showPage(pageId) {
+    document.querySelectorAll(".page-wrapper").forEach((container) => {
+      container.classList.remove("active");
+    });
+
+    const target = document.getElementById(pageId + "-container");
+    if (target) target.classList.add("active");
+
+    document.querySelectorAll(".nav-link").forEach((link) => {
+      link.classList.remove("active");
+    });
+    const activeLink = document.querySelector('[data-page="' + pageId + '"]');
+    if (activeLink) activeLink.classList.add("active");
+
+    if (pageId === "home") refreshDashboard();
+    if (pageId === "members") loadMembers();
+    if (pageId === "contributions") {
+      if (typeof currentMembers === "undefined" || currentMembers.length === 0) {
+        loadMembers();
+      }
+      loadContributions();
+    }
+    if (pageId === "loans") loadLoans();
+  }
+
+  function refreshDashboard() {
+    toggleLoading(true);
+    google.script.run
+      .withSuccessHandler((data) => {
+        updateRangeButtons(data.range || currentHomeRange);
+        document.getElementById("home-savings").innerText = formatMoney(data.savings);
+        document.getElementById("home-loans").innerText = formatMoney(data.loans);
+        document.getElementById("home-yearly-contrib").innerText = formatMoney(data.yearlyContributions);
+        document.getElementById("home-membercount").innerText = (data.memberCount || 0).toLocaleString();
+        document.getElementById("home-cash").innerText = formatMoney(data.cash);
+        document.getElementById("home-monthly-contrib").innerText = formatMoney(data.currentMonthContributions);
+        document.getElementById("home-growth-mom").innerText = formatPercent(data.growth && data.growth.monthOverMonth);
+        document.getElementById("home-growth-yoy-month").innerText = formatPercent(data.growth && data.growth.yearOverYearMonth);
+        document.getElementById("home-repayment-rate").innerText = formatPercent(data.portfolio && data.portfolio.repaymentRate);
+        document.getElementById("home-par-rate").innerText = formatPercent(data.portfolio && data.portfolio.parRate);
+        document.getElementById("home-range-label").innerText = rangeLabel(data.range || currentHomeRange);
+        renderTopContributors(data.topContributors || []);
+        renderMainCharts(data);
+        toggleLoading(false);
+      })
+      .withFailureHandler((err) => {
+        toggleLoading(false);
+        handleErr(err);
+      })
+      .getHomeAnalytics(currentHomeRange);
+  }
+
+  window.onload = function () {
+    showPage("home");
+  };
+</script>

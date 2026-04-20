@@ -1,0 +1,125 @@
+<script>
+  let currentMembers = [];
+
+  function getStatusClasses(status) {
+    switch ((status || "").toLowerCase()) {
+      case "active":
+        return "bg-emerald-100 text-emerald-700";
+      case "suspended":
+      case "inactive":
+        return "bg-rose-100 text-rose-700";
+      default:
+        return "bg-slate-100 text-slate-600";
+    }
+  }
+
+  function loadMembers() {
+    const container = document.getElementById("member-table-body");
+    google.script.run
+      .withSuccessHandler((response) => {
+        if (!response || !response.success) {
+          container.innerHTML =
+            '<tr><td colspan="8" class="text-center py-6 text-rose-600">' +
+            ((response && response.error) || "Failed to load members.") +
+            "</td></tr>";
+          return;
+        }
+
+        currentMembers = response.members || [];
+        let html = "";
+        currentMembers.forEach((m) => {
+          html +=
+            '<tr class="hover:bg-slate-50/50 transition-colors">' +
+            '<td class="px-6 py-4"><div class="text-slate-800">' +
+            m.name +
+            '</div><div class="text-xs text-slate-400">' +
+            m.id +
+            " • " +
+            (m.nationalId || "-") +
+            "</div></td>" +
+            '<td class="px-6 py-4 text-right font-mono text-slate-700">' +
+            formatMoney(m.savings) +
+            "</td>" +
+            '<td class="px-6 py-4 text-right font-mono text-rose-600">' +
+            formatMoney(m.loanBalance) +
+            "</td>" +
+            '<td class="px-6 py-4 text-right font-mono text-rose-600">' +
+            formatMoney(m.guaranteed) +
+            "</td>" +
+            '<td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ' +
+            getStatusClasses(m.status) +
+            '">' +
+            m.status +
+            "</span></td>" +
+            '<td class="px-6 py-4 text-center"><button onclick="openMemberModal(\'' +
+            m.id +
+            '\')" class="text-slate-400 hover:text-sky-600 transition-colors"><i class="fas fa-edit"></i></button></td>' +
+            "</tr>";
+        });
+        container.innerHTML =
+          html || '<tr><td colspan="8" class="text-center py-6 text-slate-500">No members found.</td></tr>';
+      })
+      .withFailureHandler(handleErr)
+      .getMembersData();
+  }
+
+  function openMemberModal(memberId) {
+    const modal = document.getElementById("memberModal");
+    const form = document.getElementById("memberForm");
+    const title = document.getElementById("modalTitle");
+    form.reset();
+    document.getElementById("m-id").value = memberId || "";
+
+    if (memberId) {
+      title.innerText = "Edit Member Profile";
+      const member = currentMembers.find((m) => m.id === memberId);
+      if (member) {
+        const fullName = (member.fullName || "").trim().split(/\s+/);
+        document.getElementById("m-first").value = fullName[0] || "";
+        document.getElementById("m-middle").value = fullName.length > 2 ? fullName.slice(1, -1).join(" ") : "";
+        document.getElementById("m-last").value = fullName.length > 1 ? fullName[fullName.length - 1] : "";
+        document.getElementById("m-nid").value = member.nationalId || "";
+        document.getElementById("m-status").value = member.status || "Active";
+      }
+    } else {
+      title.innerText = "New Member Registration";
+    }
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeMemberModal() {
+    document.getElementById("memberModal").classList.add("hidden");
+  }
+
+  document.getElementById("memberForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const btn = e.submitter;
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+
+    const payload = {
+      id: document.getElementById("m-id").value,
+      firstName: document.getElementById("m-first").value,
+      middleName: document.getElementById("m-middle").value,
+      lastName: document.getElementById("m-last").value,
+      nationalId: document.getElementById("m-nid").value,
+      dob: document.getElementById("m-dob").value,
+      status: document.getElementById("m-status").value,
+    };
+
+    google.script.run
+      .withSuccessHandler(function () {
+        btn.disabled = false;
+        btn.innerText = "Save Member Profile";
+        closeMemberModal();
+        loadMembers();
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.innerText = "Try Again";
+        handleErr(err);
+      })
+      .saveMember(payload);
+  });
+</script>

@@ -1,0 +1,267 @@
+<section id="home" class="space-y-6">
+  <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3">
+    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Range</span>
+    <button id="range-this-month" onclick="setHomeRange('this_month')"
+      class="home-range-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">This
+      Month</button>
+    <button id="range-quarter" onclick="setHomeRange('quarter')"
+      class="home-range-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Quarter</button>
+    <button id="range-year" onclick="setHomeRange('year')"
+      class="home-range-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-colors">Year</button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-3">
+        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
+          <i class="fas fa-vault text-xl"></i>
+        </div>
+        <span class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded">LIQUIDITY</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Savings</p>
+        <h3 id="home-savings" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-3">
+        <div class="p-2 bg-rose-50 rounded-lg text-rose-600">
+          <i class="fas fa-hand-holding-dollar text-xl"></i>
+        </div>
+        <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded">OUTSTANDING</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Loans</p>
+        <h3 id="home-loans" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-3">
+        <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
+          <i class="fas fa-chart-line text-xl"></i>
+        </div>
+        <span class="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">GROWTH</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Year Contributions</p>
+        <h3 id="home-yearly-contrib" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-3">
+        <div class="p-2 bg-cyan-50 rounded-lg text-cyan-600">
+          <i class="fas fa-wallet text-xl"></i>
+        </div>
+        <span class="text-[10px] font-bold text-cyan-500 bg-cyan-50 px-2 py-1 rounded">LIQUID</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cash Available</p>
+        <h3 id="home-cash" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-3">
+        <div class="p-2 bg-amber-50 rounded-lg text-amber-600">
+          <i class="fas fa-users text-xl"></i>
+        </div>
+        <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded">COMMUNITY</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Members</p>
+        <h3 id="home-membercount" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-3">
+        <div class="p-2 bg-fuchsia-50 rounded-lg text-fuchsia-600">
+          <i class="fas fa-calendar-check text-xl"></i>
+        </div>
+        <span class="text-[10px] font-bold text-fuchsia-500 bg-fuchsia-50 px-2 py-1 rounded">MONTH</span>
+      </div>
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">This Month Contributions</p>
+        <h3 id="home-monthly-contrib" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">MoM Growth</p>
+      <h3 id="home-growth-mom" class="text-2xl font-bold text-slate-800 mt-2">0%</h3>
+      <p class="text-xs text-slate-400 mt-1">Current month vs previous month</p>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">YoY Growth (Month)</p>
+      <h3 id="home-growth-yoy-month" class="text-2xl font-bold text-slate-800 mt-2">0%</h3>
+      <p class="text-xs text-slate-400 mt-1">Current month vs same month last year</p>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Repayment Rate</p>
+      <h3 id="home-repayment-rate" class="text-2xl font-bold text-slate-800 mt-2">0%</h3>
+      <p class="text-xs text-slate-400 mt-1">Total paid vs total due</p>
+    </div>
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">PAR Rate</p>
+      <h3 id="home-par-rate" class="text-2xl font-bold text-slate-800 mt-2">0%</h3>
+      <p class="text-xs text-slate-400 mt-1">Shortfall over active outstanding</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h6 class="font-bold text-slate-800 mb-6">Savings vs Loans vs Cash</h6>
+      <div class="h-72">
+        <canvas id="capitalMixChart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h6 class="font-bold text-slate-800 mb-6">Monthly Contributions (12 Months)</h6>
+      <div class="h-72">
+        <canvas id="monthlyContribChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h6 class="font-bold text-slate-800 mb-6">Loan Status Breakdown</h6>
+      <div class="h-72">
+        <canvas id="loanStatusChart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h6 class="font-bold text-slate-800 mb-6">Yearly Contributions</h6>
+      <div class="h-72">
+        <canvas id="yearlyContribChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+    <div class="flex items-center justify-between mb-4">
+      <h6 class="font-bold text-slate-800">Top Contributors (Selected Range)</h6>
+      <span id="home-range-label" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Year</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-50 border-b border-slate-100">
+          <tr>
+            <th class="px-4 py-3 text-xs text-slate-500 uppercase">Member</th>
+            <th class="px-4 py-3 text-xs text-slate-500 uppercase text-right">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="home-top-contributors" class="divide-y divide-slate-50 text-sm"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+  let charts = {}; // Global object to track chart instances
+  function renderTopContributors(rows) {
+    const container = document.getElementById('home-top-contributors');
+    const items = rows || [];
+    if (!items.length) {
+      container.innerHTML = '<tr><td colspan="2" class="px-4 py-6 text-center text-slate-500">No contribution data in selected range.</td></tr>';
+      return;
+    }
+    container.innerHTML = items.map((row) => `
+      <tr>
+        <td class="px-4 py-3 text-slate-700">${row.name}</td>
+        <td class="px-4 py-3 text-right font-semibold text-slate-900">${formatMoney(row.amount)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderMainCharts(data) {
+    const chartConfigs = [
+      {
+        id: 'capitalMixChart',
+        type: 'doughnut',
+        labels: ['Total Savings', 'Outstanding Loans', 'Available Cash'],
+        vals: [data.savings || 0, data.loans || 0, data.cash || 0],
+        colors: ['#0ea5e9', '#ef4444', '#10b981']
+      },
+      {
+        id: 'monthlyContribChart',
+        type: 'line',
+        labels: (data.monthlyContributionsTrend && data.monthlyContributionsTrend.labels) || [],
+        vals: (data.monthlyContributionsTrend && data.monthlyContributionsTrend.values) || [],
+        colors: ['#8b5cf6']
+      },
+      {
+        id: 'loanStatusChart',
+        type: 'bar',
+        labels: ['Active', 'Pending', 'Settled'],
+        vals: [
+          (data.loanStatusBreakdown && data.loanStatusBreakdown.active) || 0,
+          (data.loanStatusBreakdown && data.loanStatusBreakdown.pending) || 0,
+          (data.loanStatusBreakdown && data.loanStatusBreakdown.settled) || 0
+        ],
+        colors: ['#f59e0b', '#3b82f6', '#10b981']
+      },
+      {
+        id: 'yearlyContribChart',
+        type: 'bar',
+        labels: (data.yearlyContributionTotals || []).map(y => y.year),
+        vals: (data.yearlyContributionTotals || []).map(y => y.total),
+        colors: ['#14b8a6']
+      }
+    ];
+
+    chartConfigs.forEach(config => {
+      const ctx = document.getElementById(config.id);
+      if (!ctx) return;
+      if (charts[config.id]) charts[config.id].destroy();
+
+      const dataset = {
+        label: config.type === 'line' ? 'Contributions' : '',
+        data: config.vals,
+        borderWidth: config.type === 'line' ? 3 : 0,
+        borderRadius: config.type === 'bar' ? 8 : 0,
+      };
+
+      if (config.type === 'line') {
+        dataset.borderColor = config.colors[0];
+        dataset.backgroundColor = 'rgba(139, 92, 246, 0.15)';
+        dataset.fill = true;
+        dataset.tension = 0.35;
+        dataset.pointRadius = 3;
+      } else {
+        dataset.backgroundColor = config.colors;
+      }
+
+      charts[config.id] = new Chart(ctx, {
+        type: config.type,
+        data: {
+          labels: config.labels,
+          datasets: [dataset]
+        },
+        options: {
+          maintainAspectRatio: false,
+          scales: config.type === 'doughnut' ? {} : {
+            y: {
+              beginAtZero: true
+            }
+          },
+          plugins: {
+            legend: {
+              display: config.type === 'doughnut',
+              position: 'bottom'
+            }
+          }
+        }
+      });
+    });
+  }
+</script>

@@ -1,0 +1,128 @@
+<script>
+  let currentPage = 1;
+  const rowsPerPage = 15;
+  let totalPages = 1;
+
+  function getPaymentModeStyle(mode) {
+    const styles = {
+      "M-Pesa": "bg-[#107c51] text-[#fbf6da]",
+      Refund: "bg-[#1357a6] text-[#e6dbad]",
+      Cash: "bg-[#433422] text-[#e6dbad]",
+      "Bank Payment": "bg-[#fee8ad] text-[#6d4d1d]",
+    };
+    const chipStyle = styles[mode] || "bg-slate-100 text-slate-600";
+    return "px-2 py-1 rounded text-[10px] font-bold uppercase " + chipStyle;
+  }
+
+  function renderContributionTable(data) {
+    const container = document.getElementById("contribution-table-body");
+    let html = "";
+    (data || []).forEach((c) => {
+      html +=
+        '<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">' +
+        '<td class="px-6 py-4 font-mono text-slate-600">' +
+        c.date +
+        "</td>" +
+        '<td class="px-6 py-4 text-slate-800">' +
+        c.name +
+        "</td>" +
+        '<td class="px-6 py-4 text-slate-500">' +
+        c.type +
+        "</td>" +
+        '<td class="px-6 py-4 text-right font-bold text-emerald-600">' +
+        c.amount +
+        "</td>" +
+        '<td class="px-6 py-4 text-center"><span class="' +
+        getPaymentModeStyle(c.mode) +
+        '">' +
+        c.mode +
+        "</span></td></tr>";
+    });
+    container.innerHTML =
+      html || '<tr><td colspan="5" class="p-8 text-center text-slate-500">No transactions found.</td></tr>';
+  }
+
+  function updatePaginationUI(current, total) {
+    document.getElementById("current-page-num").innerText = current;
+    document.getElementById("total-pages-num").innerText = total || 1;
+    document.getElementById("prev-btn").disabled = current <= 1;
+    document.getElementById("next-btn").disabled = current >= total;
+  }
+
+  function loadContributions(page) {
+    currentPage = page || 1;
+    document.getElementById("prev-btn").disabled = true;
+    document.getElementById("next-btn").disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function (response) {
+        if (!response || !response.success) {
+          handleErr(response || { message: "Failed to load contributions" });
+          return;
+        }
+        totalPages = response.totalPages || 1;
+        renderContributionTable(response.contributions);
+        updatePaginationUI(response.currentPage, response.totalPages);
+      })
+      .withFailureHandler(handleErr)
+      .getContributionsData(currentPage, rowsPerPage);
+  }
+
+  function changePage(direction) {
+    const newPage = currentPage + direction;
+    if (newPage >= 1 && newPage <= totalPages) loadContributions(newPage);
+  }
+
+  function openContributionModal() {
+    const modal = document.getElementById("contributionModal");
+    const memberSelect = document.getElementById("c-member");
+    document.getElementById("contributionForm").reset();
+    document.getElementById("c-date").value = new Date().toISOString().split("T")[0];
+
+    if (Array.isArray(currentMembers) && currentMembers.length > 0) {
+      let options = '<option value="" disabled selected>Select a Member</option>';
+      currentMembers.forEach((member) => {
+        options += '<option value="' + member.fullName + '">' + member.name + " (" + member.id + ")</option>";
+      });
+      memberSelect.innerHTML = options;
+    } else {
+      memberSelect.innerHTML = '<option value="" disabled>No members loaded yet.</option>';
+    }
+    modal.classList.remove("hidden");
+  }
+
+  function closeContributionModal() {
+    document.getElementById("contributionModal").classList.add("hidden");
+  }
+
+  document.getElementById("contributionForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const btn = e.submitter;
+    btn.disabled = true;
+    btn.innerText = "Posting...";
+
+    const payload = {
+      date: document.getElementById("c-date").value,
+      amount: document.getElementById("c-amount").value,
+      memberName: document.getElementById("c-member").value,
+      mode: document.getElementById("c-mode").value,
+      tid: document.getElementById("c-tid").value,
+      type: document.getElementById("c-type").value,
+    };
+
+    google.script.run
+      .withSuccessHandler(function () {
+        btn.disabled = false;
+        btn.innerText = "Record Transaction";
+        closeContributionModal();
+        loadContributions();
+        refreshDashboard();
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.innerText = "Try Again";
+        handleErr(err);
+      })
+      .saveContribution(payload);
+  });
+</script>

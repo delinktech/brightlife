@@ -1,0 +1,109 @@
+<section id="contributions">
+  <div class="flex justify-between items-end mb-8">
+    <div>
+      <h2 class="text-3xl font-bold text-slate-900">Financial Ledger</h2>
+      <p class="text-slate-500">Record and track all member contributions and payments.</p>
+    </div>
+    <button onclick="openContributionModal()"
+      class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-emerald-100">
+      <i class="fas fa-plus mr-2"></i> Post Transaction
+    </button>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <table class="w-full text-left border-collapse">
+      <thead class="bg-slate-50 border-b border-slate-100">
+        <tr>
+          <th class="px-6 py-4 text-xs text-slate-500 uppercase">Date</th>
+          <th class="px-6 py-4 text-xs text-slate-500 uppercase">Member</th>
+          <th class="px-6 py-4 text-xs text-slate-500 uppercase">Type</th>
+          <th class="px-6 py-4 text-xs text-slate-500 uppercase text-right">Amount</th>
+          <th class="px-6 py-4 text-xs text-slate-500 uppercase text-center">Mode</th>
+        </tr>
+      </thead>
+      <tbody id="contribution-table-body" class="divide-y divide-slate-50 text-sm">
+      </tbody>
+    </table>
+    <div class="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100 rounded-b-2xl">
+      <p class="text-sm text-slate-500">
+        Page <span id="current-page-num" class="font-bold text-slate-900">1</span> of <span id="total-pages-num"
+          class="font-bold text-slate-900">1</span>
+      </p>
+      <div class="flex space-x-2">
+        <button onclick="changePage(-1)" id="prev-btn"
+          class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i class="fas fa-chevron-left mr-1"></i> Previous
+        </button>
+        <button onclick="changePage(1)" id="next-btn"
+          class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
+          Next <i class="fas fa-chevron-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="contributionModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+      <div class="bg-emerald-600 px-6 py-4 flex justify-between items-center text-white">
+        <h3 class="text-xl font-bold">New Transaction</h3>
+        <button onclick="closeContributionModal()" class="hover:text-emerald-200"><i class="fas fa-times"></i></button>
+      </div>
+
+      <form id="contributionForm" class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Date</label>
+            <input type="date" id="c-date" required
+              class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Amount</label>
+            <input type="number" id="c-amount" required placeholder="0.00"
+              class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-wider">Member Name</label>
+          <select id="c-member" required
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 appearance-none transition-all">
+            <option value="" disabled selected>Loading members...</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
+            <select id="c-mode" class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
+              <option value="Cash">Cash</option>
+              <option value="M-Pesa">M-Pesa</option>
+              <option value="Bank Payment">Bank Payment</option>
+              <option value="Refund">Refund</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Transaction ID</label>
+            <input type="text" id="c-tid" placeholder="Ref No."
+              class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Transaction Type</label>
+          <select id="c-type" class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
+            <option value="Monthly Contribution">Monthly Contribution</option>
+            <option value="Loan Payment">Loan Payment</option>
+          </select>
+        </div>
+
+        <button type="submit"
+          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-100 transition-all mt-4">
+          Record Transaction
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
