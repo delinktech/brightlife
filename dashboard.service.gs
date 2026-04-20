@@ -136,6 +136,13 @@ function getHomeAnalyticsByRange_(rangeKey) {
     String(previousMonthDate.getMonth() + 1).padStart(2, "0");
   monthlyContributionsPrevious = monthlyContributionMap[previousMonthKey] || 0;
 
+  const twoMonthsAgoDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  const twoMonthsAgoKey =
+    twoMonthsAgoDate.getFullYear() +
+    "-" +
+    String(twoMonthsAgoDate.getMonth() + 1).padStart(2, "0");
+  const monthlyContributionsTwoMonthsAgo = monthlyContributionMap[twoMonthsAgoKey] || 0;
+
   const currentMonthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
   const sameMonthLastYearKey =
     now.getFullYear() - 1 + "-" + String(now.getMonth() + 1).padStart(2, "0");
@@ -159,6 +166,10 @@ function getHomeAnalyticsByRange_(rangeKey) {
   const monthlyGrowthMoM = calculateGrowthPercent_(
     monthlyContributionsCurrent,
     monthlyContributionsPrevious
+  );
+  const monthlyGrowthLastVsTwoMonthsAgo = calculateGrowthPercent_(
+    monthlyContributionsPrevious,
+    monthlyContributionsTwoMonthsAgo
   );
   const monthlyGrowthYoY = calculateGrowthPercent_(
     monthlyContributionMap[currentMonthKey] || 0,
@@ -251,11 +262,30 @@ function getHomeAnalyticsByRange_(rangeKey) {
     })
     .slice(0, 5);
 
+  let investmentCount = 0;
+  try {
+    const invSheet = getSpreadsheet_().getSheetByName(SHEETS.INVESTMENTS);
+    if (invSheet && invSheet.getLastRow() > 1) {
+      const invValues = invSheet.getDataRange().getValues();
+      if (invValues.length > 1) {
+        const invCol = getHeaderMap_(invValues[0]);
+        if (invCol["Investment ID"] !== undefined) {
+          for (let iv = 1; iv < invValues.length; iv++) {
+            if (invValues[iv][invCol["Investment ID"]]) investmentCount++;
+          }
+        }
+      }
+    }
+  } catch (invErr) {
+    investmentCount = 0;
+  }
+
   return {
     range: effectiveRange,
     savings: totalSavings,
     loans: totalLoans,
     invested: 0,
+    investmentCount: investmentCount,
     memberCount: memberCount,
     cash: totalSavings - totalLoans,
     yearlyContributions: filteredContributions,
@@ -265,6 +295,16 @@ function getHomeAnalyticsByRange_(rangeKey) {
       monthOverMonth: monthlyGrowthMoM,
       yearOverYearMonth: monthlyGrowthYoY,
       yearOverYearRange: rangeGrowthYoY,
+    },
+    contributionMonthCompare: {
+      thisMonth: {
+        percent: monthlyGrowthMoM,
+        delta: monthlyContributionsCurrent - monthlyContributionsPrevious,
+      },
+      lastMonth: {
+        percent: monthlyGrowthLastVsTwoMonthsAgo,
+        delta: monthlyContributionsPrevious - monthlyContributionsTwoMonthsAgo,
+      },
     },
     topContributors: topContributors,
     portfolio: {

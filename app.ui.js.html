@@ -11,6 +11,15 @@
     }).format(Number(value) || 0);
   }
 
+  /** Values ≥ 10,000 show as KES 39K to save horizontal space in tight cards. */
+  function formatMoneyCompactK(value) {
+    const n = Number(value) || 0;
+    if (n >= 10000) {
+      return "KES " + Math.round(n / 1000) + "K";
+    }
+    return formatMoney(n);
+  }
+
   function handleErr(err) {
     console.error(err);
     alert("Operation failed. Please retry.");
@@ -20,6 +29,36 @@
     const number = Number(value) || 0;
     const sign = number > 0 ? "+" : "";
     return sign + number.toFixed(1) + "%";
+  }
+
+  /**
+   * Caret + % only (no absolute delta). Delta is used only to pick direction / color.
+   */
+  function renderContributionMomIndicator(container, percent, delta) {
+    if (!container) return;
+    const d = Number(delta) || 0;
+    const p = Number(percent) || 0;
+    const unchanged = d === 0;
+    let cls;
+    let iconHtml;
+    if (unchanged) {
+      cls = "text-slate-500";
+      iconHtml = '<i class="fas fa-minus text-[9px] opacity-70" aria-hidden="true"></i>';
+    } else if (d > 0) {
+      cls = "text-emerald-600";
+      iconHtml = '<i class="fas fa-caret-up text-[10px]" aria-hidden="true"></i>';
+    } else {
+      cls = "text-amber-600";
+      iconHtml = '<i class="fas fa-caret-down text-[10px]" aria-hidden="true"></i>';
+    }
+    container.innerHTML =
+      '<span class="inline-flex items-center gap-0.5 ' +
+      cls +
+      '">' +
+      iconHtml +
+      "<span>" +
+      formatPercent(p) +
+      "</span></span>";
   }
 
   function rangeLabel(rangeKey) {
@@ -127,7 +166,28 @@
         document.getElementById("home-yearly-contrib").innerText = formatMoney(data.yearlyContributions);
         document.getElementById("home-membercount").innerText = (data.memberCount || 0).toLocaleString();
         document.getElementById("home-cash").innerText = formatMoney(data.cash);
-        document.getElementById("home-monthly-contrib").innerText = formatMoney(data.currentMonthContributions);
+        document.getElementById("home-monthly-contrib").innerText = formatMoneyCompactK(
+          data.currentMonthContributions
+        );
+        const prevMonthEl = document.getElementById("home-previous-month-contrib");
+        if (prevMonthEl) {
+          prevMonthEl.innerText = formatMoneyCompactK(data.previousMonthContributions);
+        }
+        const cmp = data.contributionMonthCompare || {};
+        const thisCmp = cmp.thisMonth || {};
+        const lastCmp = cmp.lastMonth || {};
+        renderContributionMomIndicator(
+          document.getElementById("home-monthly-contrib-mom"),
+          thisCmp.percent,
+          thisCmp.delta
+        );
+        renderContributionMomIndicator(
+          document.getElementById("home-previous-month-contrib-mom"),
+          lastCmp.percent,
+          lastCmp.delta
+        );
+        const invCountEl = document.getElementById("home-investment-count");
+        if (invCountEl) invCountEl.innerText = (data.investmentCount || 0).toLocaleString();
         document.getElementById("home-growth-mom").innerText = formatPercent(data.growth && data.growth.monthOverMonth);
         document.getElementById("home-growth-yoy-month").innerText = formatPercent(data.growth && data.growth.yearOverYearMonth);
         document.getElementById("home-repayment-rate").innerText = formatPercent(data.portfolio && data.portfolio.repaymentRate);
