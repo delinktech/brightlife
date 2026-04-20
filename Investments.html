@@ -1,0 +1,99 @@
+<section id="investments">
+  <div class="flex justify-between items-end mb-8">
+    <div>
+      <h2 class="text-3xl font-bold text-slate-900">Investments</h2>
+      <p class="text-slate-500 text-sm">Click a row to open the ledger.</p>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[900px]">
+        <thead class="bg-slate-50 border-b border-slate-100">
+          <tr>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase">ID</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase">Name</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase">Start Date</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase text-right">Money Invested</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase text-right">Revenue</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase text-right">ROI Amount</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase text-right">ROI %</th>
+            <th class="px-4 py-4 text-[10px] text-slate-400 uppercase text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody id="investments-table-body" class="divide-y divide-slate-50 text-sm">
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-6 py-4 bg-slate-50/50">
+      <span class="text-xs text-slate-500">Page <span id="inv-page-num">1</span></span>
+      <div class="flex space-x-2">
+        <button onclick="changeInvestmentPage(-1)" id="inv-prev" class="p-2 text-slate-400 hover:text-slate-600 disabled:opacity-30"><i class="fas fa-chevron-left"></i></button>
+        <button onclick="changeInvestmentPage(1)" id="inv-next" class="p-2 text-slate-400 hover:text-slate-600 disabled:opacity-30"><i class="fas fa-chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="investmentLedgerModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0">
+        <div>
+          <h3 id="inv-ledger-title" class="text-xl font-bold text-white">Investment Ledger</h3>
+          <p id="inv-ledger-subtitle" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+        <button onclick="closeInvestmentLedgerModal()" class="text-slate-400 hover:text-white"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm shrink-0">
+        <div class="bg-white rounded-xl border border-emerald-200 px-4 py-3 shadow-sm">
+          <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wide flex items-center gap-2">
+            <i class="fas fa-arrow-down text-emerald-500"></i> Revenue
+          </p>
+          <p id="inv-revenue" class="font-bold text-xl text-emerald-900 mt-1 tabular-nums">—</p>
+          <div id="inv-revenue-breakdown" class="mt-2 pt-2 border-t border-emerald-50 space-y-1 text-[10px]"></div>
+        </div>
+        <div class="bg-white rounded-xl border border-rose-200 px-4 py-3 shadow-sm">
+          <p class="text-[10px] font-bold text-rose-700 uppercase tracking-wide flex items-center gap-2">
+            <i class="fas fa-arrow-up text-rose-500"></i> Expenditures
+          </p>
+          <p id="inv-total-expenditures" class="font-bold text-xl text-rose-900 mt-1 tabular-nums">—</p>
+          <div class="mt-2 pt-2 border-t border-rose-50 space-y-1 text-[10px]">
+            <div class="flex justify-between gap-2 text-slate-600">
+              <span>OpEx</span>
+              <span id="inv-opex" class="font-semibold tabular-nums text-slate-800">—</span>
+            </div>
+            <div class="flex justify-between gap-2 text-slate-600">
+              <span>CapEx <span class="text-slate-400">(Capital in)</span></span>
+              <span id="inv-capex" class="font-semibold tabular-nums text-slate-800">—</span>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-amber-200 px-4 py-3 shadow-sm">
+          <p class="text-[10px] font-bold text-amber-800 uppercase tracking-wide flex items-center gap-2">
+            <i class="fas fa-arrow-up text-amber-600"></i> Withdrawals
+          </p>
+          <p id="inv-sum-withdrawals" class="font-bold text-xl text-amber-950 mt-1 tabular-nums">—</p>
+          <div id="inv-withdrawal-breakdown" class="mt-2 pt-2 border-t border-amber-50 space-y-1 text-[10px]"></div>
+        </div>
+      </div>
+      <div class="overflow-y-auto flex-1 p-0">
+        <table class="w-full text-left border-collapse text-sm">
+          <thead class="bg-slate-50 border-b border-slate-100 sticky top-0">
+            <tr>
+              <th class="px-4 py-3 text-[10px] text-slate-500 uppercase">Date</th>
+              <th class="px-4 py-3 text-[10px] text-slate-500 uppercase">Type</th>
+              <th class="px-4 py-3 text-[10px] text-slate-500 uppercase">Category</th>
+              <th class="px-4 py-3 text-[10px] text-slate-500 uppercase">Description</th>
+              <th class="px-4 py-3 text-[10px] text-slate-500 uppercase text-right">Amount</th>
+              <th class="px-4 py-3 text-[10px] text-slate-500 uppercase text-right">Fee</th>
+            </tr>
+          </thead>
+          <tbody id="inv-ledger-body" class="divide-y divide-slate-100">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

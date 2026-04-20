@@ -1,0 +1,241 @@
+<script>
+  let invPage = 1;
+  let invTotalPages = 1;
+  let invListCache = [];
+
+  function getInvestmentStatusStyle(status) {
+    const s = (status || "").toLowerCase();
+    if (s === "active") return "bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full text-[10px] font-semibold";
+    if (s === "closed" || s === "completed") return "bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-[10px] font-semibold";
+    if (s === "paused") return "bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-[10px] font-semibold";
+    if (s === "planning") return "bg-sky-100 text-sky-800 px-2 py-1 rounded-full text-[10px] font-semibold";
+    return "bg-slate-100 text-slate-600 px-2 py-1 rounded-full text-[10px] font-semibold";
+  }
+
+  function renderInvestmentsTable(rows) {
+    const body = document.getElementById("investments-table-body");
+    body.innerHTML = (rows || [])
+      .map(function (inv) {
+        const roiPct = Number(inv.roiPercent) || 0;
+        const roiAmt = Number(inv.roiAmount) || 0;
+        const roiDisplay =
+          Math.abs(roiPct) > 0 && Math.abs(roiPct) <= 1
+            ? (roiPct * 100).toFixed(1) + "%"
+            : roiPct.toFixed(1) + "%";
+        const roiAmountClass =
+          roiAmt < 0 ? "text-right font-medium text-rose-600" : "text-right font-medium text-emerald-700";
+        const roiPctClass =
+          roiPct < 0 ? "text-right font-medium text-rose-600" : "text-right font-medium text-slate-600";
+        const safeId = String(inv.id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+        return (
+          '<tr class="hover:bg-slate-50 cursor-pointer transition-colors" onclick="openInvestmentLedger(\'' +
+          safeId +
+          "')\">" +
+          '<td class="px-4 py-3 text-xs font-mono text-slate-400">' +
+          inv.id +
+          "</td>" +
+          '<td class="px-4 py-3 text-slate-800">' +
+          inv.name +
+          "</td>" +
+          '<td class="px-4 py-3 text-slate-600">' +
+          (inv.startDate || "—") +
+          "</td>" +
+          '<td class="px-4 py-3 text-right text-slate-700">' +
+          formatMoney(inv.moneyInvested) +
+          "</td>" +
+          '<td class="px-4 py-3 text-right font-semibold text-teal-700">' +
+          formatMoney(inv.revenue) +
+          "</td>" +
+          '<td class="px-4 py-3 ' +
+          roiAmountClass +
+          '">' +
+          formatMoney(inv.roiAmount) +
+          "</td>" +
+          '<td class="px-4 py-3 ' +
+          roiPctClass +
+          '">' +
+          roiDisplay +
+          "</td>" +
+          '<td class="px-4 py-3 text-center"><span class="' +
+          getInvestmentStatusStyle(inv.status) +
+          '">' +
+          inv.status +
+          "</span></td></tr>"
+        );
+      })
+      .join("");
+  }
+
+  function loadInvestments(page) {
+    invPage = page || 1;
+    startAppLoader();
+    document.getElementById("investments-table-body").innerHTML =
+      '<tr><td colspan="8" class="px-4 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width:60%"></div></div></td></tr>';
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || !res.success) {
+          stopAppLoader();
+          document.getElementById("investments-table-body").innerHTML =
+            '<tr><td colspan="8" class="px-4 py-6 text-center text-rose-600">' +
+            (res && res.error ? res.error : "Failed to load investments.") +
+            "</td></tr>";
+          handleErr(res || { message: "Failed to load investments." });
+          return;
+        }
+        invTotalPages = res.totalPages || 1;
+        invListCache = res.investments || [];
+        renderInvestmentsTable(res.investments);
+        document.getElementById("inv-page-num").innerText = res.currentPage;
+        document.getElementById("inv-prev").disabled = res.currentPage <= 1;
+        document.getElementById("inv-next").disabled = res.currentPage >= res.totalPages;
+        stopAppLoader();
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .getInvestmentsData(invPage, 15);
+  }
+
+  function changeInvestmentPage(dir) {
+    if (invPage + dir >= 1 && invPage + dir <= invTotalPages) {
+      loadInvestments(invPage + dir);
+    }
+  }
+
+  function openInvestmentLedger(id) {
+    const inv = invListCache.find(function (x) {
+      return String(x.id) === String(id);
+    });
+    const name = inv ? inv.name : "Investment";
+    startAppLoader();
+    document.getElementById("inv-ledger-body").innerHTML =
+      '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">Loading ledger…</td></tr>';
+    document.getElementById("investmentLedgerModal").classList.remove("hidden");
+    document.getElementById("inv-ledger-title").innerText = name || "Investment";
+    document.getElementById("inv-ledger-subtitle").innerText = id ? "ID: " + id : "";
+    renderLedgerBreakdown("inv-revenue-breakdown", []);
+    renderLedgerBreakdown("inv-withdrawal-breakdown", []);
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (!res || !res.success) {
+          document.getElementById("inv-ledger-body").innerHTML =
+            '<tr><td colspan="6" class="px-4 py-8 text-center text-rose-600">' +
+            (res && res.error ? res.error : "Could not load ledger.") +
+            "</td></tr>";
+          return;
+        }
+
+        const sum = res.summary || {};
+        document.getElementById("inv-revenue").innerText = formatMoney(sum.revenue);
+        renderLedgerBreakdown("inv-revenue-breakdown", sum.revenueBreakdown);
+        document.getElementById("inv-total-expenditures").innerText = formatMoney(sum.totalExpenditures);
+        document.getElementById("inv-opex").innerText = formatMoney(sum.operatingExpenses);
+        document.getElementById("inv-capex").innerText = formatMoney(sum.capitalExpenditures);
+        document.getElementById("inv-sum-withdrawals").innerText = formatMoney(sum.totalWithdrawals);
+        renderLedgerBreakdown("inv-withdrawal-breakdown", sum.withdrawalBreakdown);
+
+        const entries = res.entries || [];
+        if (!entries.length) {
+          document.getElementById("inv-ledger-body").innerHTML =
+            '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No ledger entries yet.</td></tr>';
+          return;
+        }
+
+        document.getElementById("inv-ledger-body").innerHTML = entries
+          .map(function (e) {
+            const amtClass = e.amount < 0 ? "text-rose-600" : "text-slate-800";
+            const typeBadge = ledgerTypeBadge(e.typeKey || "", e.type);
+            return (
+              "<tr class=\"hover:bg-slate-50\">" +
+              '<td class="px-4 py-3 font-mono text-slate-600">' +
+              e.date +
+              "</td>" +
+              '<td class="px-4 py-3">' +
+              typeBadge +
+              "</td>" +
+              '<td class="px-4 py-3 text-slate-600">' +
+              e.category +
+              "</td>" +
+              '<td class="px-4 py-3 text-slate-700">' +
+              (e.description || "—") +
+              "</td>" +
+              '<td class="px-4 py-3 text-right font-semibold ' +
+              amtClass +
+              '">' +
+              formatMoney(e.amount) +
+              "</td>" +
+              '<td class="px-4 py-3 text-right text-slate-500">' +
+              formatMoney(e.transactionFee) +
+              "</td></tr>"
+            );
+          })
+          .join("");
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .getInvestmentLedger(id);
+  }
+
+  function closeInvestmentLedgerModal() {
+    document.getElementById("investmentLedgerModal").classList.add("hidden");
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderLedgerBreakdown(elementId, rows) {
+    var el = document.getElementById(elementId);
+    if (!el) return;
+    if (!rows || !rows.length) {
+      el.innerHTML = "";
+      return;
+    }
+    el.innerHTML = rows
+      .map(function (r) {
+        return (
+          '<div class="flex justify-between gap-2 text-slate-600">' +
+          '<span class="truncate" title="' +
+          escapeHtml(r.category) +
+          '">' +
+          escapeHtml(r.category) +
+          "</span>" +
+          '<span class="font-semibold tabular-nums text-slate-800 shrink-0">' +
+          formatMoney(r.amount) +
+          "</span></div>"
+        );
+      })
+      .join("");
+  }
+
+  function ledgerTypeBadge(key, label) {
+    var text = label || key || "—";
+    var title =
+      key === "capital in"
+        ? "CapEx — fixed assets (e.g. hives, equipment)"
+        : key === "revenue"
+          ? "Sales / returns from operations"
+          : key === "expense"
+            ? "OpEx — operating costs"
+            : key === "withdrawal"
+              ? "Withdrawal"
+              : "";
+    var cls =
+      "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ";
+    if (key === "capital in") cls += "bg-slate-100 text-slate-800 border border-slate-200";
+    else if (key === "revenue") cls += "bg-emerald-50 text-emerald-900 border border-emerald-200";
+    else if (key === "expense") cls += "bg-rose-50 text-rose-800 border border-rose-200";
+    else if (key === "withdrawal") cls += "bg-amber-50 text-amber-900 border border-amber-200";
+    else cls += "bg-slate-100 text-slate-700";
+    return '<span class="' + cls + '" title="' + (title || "").replace(/"/g, "&quot;") + '">' + text + "</span>";
+  }
+</script>

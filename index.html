@@ -65,6 +65,10 @@
         onclick="showPage('loans')">
         <i class="fas fa-hand-holding-dollar w-6"></i> <span>Loans</span>
       </a>
+      <a data-page="investments" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+        onclick="showPage('investments')">
+        <i class="fas fa-seedling w-6"></i> <span>Investments</span>
+      </a>
     </div>
   </nav>
 
@@ -81,6 +85,9 @@
     <div id="loans-container" class="page-wrapper">
       <?!= include('Loans'); ?>
     </div>
+    <div id="investments-container" class="page-wrapper">
+      <?!= include('Investments'); ?>
+    </div>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -88,6 +95,7 @@
   <?!= include('members.ui.js'); ?>
   <?!= include('contributions.ui.js'); ?>
   <?!= include('loans.ui.js'); ?>
+  <?!= include('investments.ui.js'); ?>
 
 </body>
 
