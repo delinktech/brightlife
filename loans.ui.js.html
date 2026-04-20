@@ -42,9 +42,13 @@
 
   function loadLoans(page) {
     loanPage = page || 1;
+    startAppLoader();
+    document.getElementById("loan-table-body").innerHTML =
+      '<tr><td colspan="9" class="px-4 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
+          stopAppLoader();
           handleErr(res || { message: "Failed to load loans." });
           return;
         }
@@ -54,8 +58,12 @@
         document.getElementById("loan-page-num").innerText = res.currentPage;
         document.getElementById("l-prev").disabled = res.currentPage <= 1;
         document.getElementById("l-next").disabled = res.currentPage >= res.totalPages;
+        stopAppLoader();
       })
-      .withFailureHandler(handleErr)
+      .withFailureHandler((err) => {
+        stopAppLoader();
+        handleErr(err);
+      })
       .getLoansData(loanPage, 10);
   }
 

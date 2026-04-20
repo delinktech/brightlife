@@ -53,18 +53,26 @@
     currentPage = page || 1;
     document.getElementById("prev-btn").disabled = true;
     document.getElementById("next-btn").disabled = true;
+    startAppLoader();
+    document.getElementById("contribution-table-body").innerHTML =
+      '<tr><td colspan="5" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
 
     google.script.run
       .withSuccessHandler(function (response) {
         if (!response || !response.success) {
+          stopAppLoader();
           handleErr(response || { message: "Failed to load contributions" });
           return;
         }
         totalPages = response.totalPages || 1;
         renderContributionTable(response.contributions);
         updatePaginationUI(response.currentPage, response.totalPages);
+        stopAppLoader();
       })
-      .withFailureHandler(handleErr)
+      .withFailureHandler((err) => {
+        stopAppLoader();
+        handleErr(err);
+      })
       .getContributionsData(currentPage, rowsPerPage);
   }
 

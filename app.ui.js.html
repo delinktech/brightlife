@@ -1,5 +1,7 @@
 <script>
   let currentHomeRange = "year";
+  let appLoaderActiveRequests = 0;
+  let appLoaderTimer = null;
 
   function formatMoney(value) {
     return new Intl.NumberFormat("en-KE", {
@@ -44,6 +46,44 @@
     refreshDashboard();
   }
 
+  function startAppLoader() {
+    appLoaderActiveRequests++;
+    const loader = document.getElementById("app-loader");
+    const bar = document.getElementById("app-loader-bar");
+    if (!loader || !bar) return;
+
+    loader.classList.remove("opacity-0");
+    loader.classList.add("opacity-100");
+    if (appLoaderActiveRequests === 1) {
+      bar.style.width = "12%";
+      if (appLoaderTimer) clearInterval(appLoaderTimer);
+      appLoaderTimer = setInterval(() => {
+        const currentWidth = parseFloat(bar.style.width || "12");
+        const nextWidth = Math.min(currentWidth + 8, 90);
+        bar.style.width = nextWidth + "%";
+      }, 180);
+    }
+  }
+
+  function stopAppLoader() {
+    appLoaderActiveRequests = Math.max(0, appLoaderActiveRequests - 1);
+    const loader = document.getElementById("app-loader");
+    const bar = document.getElementById("app-loader-bar");
+    if (!loader || !bar) return;
+    if (appLoaderActiveRequests > 0) return;
+
+    if (appLoaderTimer) {
+      clearInterval(appLoaderTimer);
+      appLoaderTimer = null;
+    }
+    bar.style.width = "100%";
+    setTimeout(() => {
+      loader.classList.remove("opacity-100");
+      loader.classList.add("opacity-0");
+      bar.style.width = "0%";
+    }, 220);
+  }
+
   function toggleLoading(show) {
     const sidebar = document.getElementById("sidebar");
     sidebar.style.pointerEvents = show ? "none" : "auto";
@@ -77,6 +117,7 @@
 
   function refreshDashboard() {
     toggleLoading(true);
+    startAppLoader();
     google.script.run
       .withSuccessHandler((data) => {
         updateRangeButtons(data.range || currentHomeRange);
@@ -94,9 +135,11 @@
         renderTopContributors(data.topContributors || []);
         renderMainCharts(data);
         toggleLoading(false);
+        stopAppLoader();
       })
       .withFailureHandler((err) => {
         toggleLoading(false);
+        stopAppLoader();
         handleErr(err);
       })
       .getHomeAnalytics(currentHomeRange);
