@@ -17,16 +17,44 @@
     const body = document.getElementById("loan-table-body");
     body.innerHTML = (loans || [])
       .map(function (loan) {
+        const requested = Number(loan.requested) || 0;
+        const interest = Number(loan.interest) || 0;
+        const trsfee = Number(loan.trsfee) || 0;
+        const calculatedRepayment = requested + interest + trsfee;
+        const repaymentAmount = Number(loan.repayment) || calculatedRepayment;
+        const repaymentTooltip =
+          "Repayment = Requested + Interest + Transaction Fee (" +
+          formatMoney(requested) +
+          " + " +
+          formatMoney(interest) +
+          " + " +
+          formatMoney(trsfee) +
+          ")";
+
         return (
           '<tr class="hover:bg-slate-50 transition-all">' +
           '<td class="px-4 py-4 text-xs font-mono text-slate-400">#' +
           loan.id +
           "</td>" +
-          '<td class="px-4 py-4 font-bold text-slate-800">' +
+          '<td class="px-4 py-4 text-slate-800">' +
           loan.borrower +
+          "</td>" +
+          '<td class="px-4 py-4 text-slate-600">' +
+          (loan.date || "-") +
+          "</td>" +
+          '<td class="px-4 py-4 text-slate-600">' +
+          (loan.approveddate || "-") +
           "</td>" +
           '<td class="px-4 py-4 text-right text-slate-600">' +
           formatMoney(loan.requested) +
+          "</td>" +
+          '<td class="px-4 py-4 text-right text-slate-700" title="' +
+          repaymentTooltip +
+          '">' +
+          formatMoney(repaymentAmount) +
+          "</td>" +
+          '<td class="px-4 py-4 text-right text-emerald-700">' +
+          formatMoney(loan.paid) +
           "</td>" +
           '<td class="px-4 py-4 text-right font-bold text-rose-600">' +
           formatMoney(loan.balance) +
