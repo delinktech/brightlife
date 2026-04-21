@@ -33,38 +33,110 @@
         transform: translateY(0);
       }
     }
+
+    .nav-link {
+      border-left: 3px solid transparent;
+    }
+
+    .nav-link:hover:not(.active) {
+      background-color: rgb(30 41 59);
+      color: rgb(255 255 255);
+    }
+
+    .nav-link.active {
+      background-color: rgb(15 23 42);
+      color: rgb(255 255 255);
+      border-left-color: rgb(14 165 233);
+      font-weight: 600;
+    }
+
+    .nav-link.active i {
+      color: rgb(56 189 248);
+    }
   </style>
 </head>
 
 <body class="bg-slate-50 flex h-screen overflow-hidden">
-  <nav id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-10">
+  <div id="app-loader" class="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent opacity-0 transition-opacity duration-200">
+    <div id="app-loader-bar" class="h-full w-0 bg-sky-500 transition-[width] duration-200 ease-out"></div>
+  </div>
+
+  <nav id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-10 shrink-0">
     <div class="p-6 text-center border-b border-slate-800">
       <h5 class="text-white font-bold tracking-tight text-lg">
-        <i class="fas fa-vault mr-2 text-sky-500"></i>Brightlife
+        <i class="fas fa-vault mr-2 text-sky-500"></i>Brightlife SHG
       </h5>
     </div>
 
-    <div class="flex-1 py-4">
-      <a data-page="home" class="nav-link active flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
-        onclick="showPage('home')">
-        <i class="fas fa-chart-pie w-6"></i> <span>Home</span>
+    <div class="flex-1 py-4 min-h-0 overflow-y-auto">
+      <a data-page="home" href="javascript:void(0)" class="nav-link active flex items-center px-6 py-3 transition-colors cursor-pointer"
+        onclick="showPage('home')" aria-current="page">
+        <i class="fas fa-chart-pie w-6 text-center shrink-0"></i> <span>Home</span>
       </a>
-      <a data-page="members" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+      <a data-page="members" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
         onclick="showPage('members')">
-        <i class="fas fa-users w-6"></i> <span>Members</span>
+        <i class="fas fa-users w-6 text-center shrink-0"></i> <span>Members</span>
       </a>
-      <a data-page="contributions" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+      <a data-page="contributions" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
         onclick="showPage('contributions')">
-        <i class="fas fa-file-invoice-dollar w-6"></i> <span>Contributions</span>
+        <i class="fas fa-file-invoice-dollar w-6 text-center shrink-0"></i> <span>Contributions</span>
       </a>
-      <a data-page="loans" class="nav-link flex items-center px-6 py-3 hover:bg-slate-800 hover:text-white transition-colors cursor-pointer"
+      <a data-page="loans" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
         onclick="showPage('loans')">
-        <i class="fas fa-hand-holding-dollar w-6"></i> <span>Loans</span>
+        <i class="fas fa-hand-holding-dollar w-6 text-center shrink-0"></i> <span>Loans</span>
       </a>
+      <a data-page="investments" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
+        onclick="showPage('investments')">
+        <i class="fas fa-seedling w-6 text-center shrink-0"></i> <span>Investments</span>
+      </a>
+      <a data-page="accounts" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
+        onclick="showPage('accounts')">
+        <i class="fas fa-building-columns w-6 text-center shrink-0"></i> <span>Accounts</span>
+      </a>
+    </div>
+
+    <div class="mt-auto border-t border-slate-800 px-4 py-3 shrink-0">
+      <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500">
+        <span id="sidebar-version" class="font-mono text-slate-400">v—</span>
+        <span class="inline-flex items-center gap-1.5 text-emerald-400/95 font-semibold uppercase tracking-wide">
+          <span class="relative flex h-2 w-2" aria-hidden="true">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          </span>
+          Active
+        </span>
+      </div>
     </div>
   </nav>
 
-  <main id="main-content" class="flex-1 overflow-y-auto p-8">
+  <div class="flex-1 flex flex-col min-w-0 min-h-0">
+    <header class="shrink-0 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 gap-4 shadow-sm z-[5]">
+      <div class="min-w-0 flex items-baseline gap-2 sm:gap-3">
+        <span class="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current</span>
+        <h1 id="current-page-title" class="text-base font-bold text-slate-800 truncate">Home</h1>
+      </div>
+      <div class="flex items-center justify-end gap-3 shrink-0 min-w-0">
+        <div id="session-user-block" class="flex items-center gap-3 text-right hidden">
+          <div class="hidden sm:block relative h-9 w-9 shrink-0">
+            <img id="session-photo" src="" alt=""
+              class="absolute inset-0 h-9 w-9 rounded-full object-cover border border-slate-200 hidden"
+              width="36" height="36" decoding="async" />
+            <div id="session-photo-fallback"
+              class="h-9 w-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
+              <i class="fas fa-user text-sm"></i>
+            </div>
+          </div>
+          <div>
+            <div id="session-display-name" class="text-sm font-semibold text-slate-800 leading-tight">—</div>
+            <div id="session-email" class="text-xs text-slate-500 leading-tight">—</div>
+            <div id="session-role" class="text-[10px] font-semibold text-sky-600 uppercase tracking-wide mt-0.5 hidden"></div>
+          </div>
+        </div>
+        <div id="session-loading" class="text-sm text-slate-500">Loading session…</div>
+      </div>
+    </header>
+
+    <main id="main-content" class="flex-1 overflow-y-auto p-8 min-h-0">
     <div id="home-container" class="page-wrapper active">
       <?!= include('Home'); ?>
     </div>
@@ -77,13 +149,22 @@
     <div id="loans-container" class="page-wrapper">
       <?!= include('Loans'); ?>
     </div>
-  </main>
+    <div id="investments-container" class="page-wrapper">
+      <?!= include('Investments'); ?>
+    </div>
+    <div id="accounts-container" class="page-wrapper">
+      <?!= include('Accounts'); ?>
+    </div>
+    </main>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <?!= include('app.ui.js'); ?>
   <?!= include('members.ui.js'); ?>
   <?!= include('contributions.ui.js'); ?>
   <?!= include('loans.ui.js'); ?>
+  <?!= include('investments.ui.js'); ?>
+  <?!= include('accounts.ui.js'); ?>
 
 </body>
 
