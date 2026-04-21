@@ -164,7 +164,11 @@
         updateRangeButtons(data.range || currentHomeRange);
         document.getElementById("home-savings").innerText = formatMoney(data.savings);
         document.getElementById("home-loans").innerText = formatMoney(data.loans);
-        document.getElementById("home-yearly-contrib").innerText = formatMoney(data.yearlyContributions);
+        document.getElementById("home-yearly-contrib").innerText = formatMoney(
+          data.yearToDateContributions !== undefined && data.yearToDateContributions !== null
+            ? data.yearToDateContributions
+            : data.yearlyContributions
+        );
         document.getElementById("home-membercount").innerText = (data.memberCount || 0).toLocaleString();
         document.getElementById("home-cash").innerText = formatMoney(data.cash);
         document.getElementById("home-monthly-contrib").innerText = formatMoneyCompactK(

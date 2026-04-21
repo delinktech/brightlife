@@ -88,6 +88,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
   }
 
   let filteredContributions = 0;
+  let yearToDateContributions = 0;
   let monthlyContributionsCurrent = 0;
   let monthlyContributionsPrevious = 0;
   const monthlyContributionMap = {};
@@ -122,6 +123,9 @@ function getHomeAnalyticsByRange_(rangeKey) {
         if (memberName) {
           contributionByMember[memberName] = (contributionByMember[memberName] || 0) + amount;
         }
+      }
+      if (year === currentYear && rawDate <= now) {
+        yearToDateContributions += amount;
       }
       if (year === now.getFullYear() && month === now.getMonth()) {
         monthlyContributionsCurrent += amount;
@@ -235,20 +239,15 @@ function getHomeAnalyticsByRange_(rangeKey) {
     monthValues.push(monthlyContributionMap[key] || 0);
   }
 
-  const yearKeys = Object.keys(yearlyContributionMap)
-    .map(function (value) {
-      return Number(value);
-    })
-    .sort(function (a, b) {
-      return a - b;
+  const yearlySeries = [];
+  // last 10 years
+  for (let yOff = 9; yOff >= 0; yOff--) {
+    const y = currentYear - yOff;
+    yearlySeries.push({
+      year: String(y),
+      total: yearlyContributionMap[y] || 0,
     });
-  const recentYears = yearKeys.slice(-5);
-  const yearlySeries = recentYears.map(function (year) {
-    return {
-      year: String(year),
-      total: yearlyContributionMap[year] || 0,
-    };
-  });
+  }
 
   const topContributors = Object.keys(contributionByMember)
     .map(function (name) {
@@ -289,6 +288,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
     memberCount: memberCount,
     cash: totalSavings - totalLoans,
     yearlyContributions: filteredContributions,
+    yearToDateContributions: yearToDateContributions,
     currentMonthContributions: monthlyContributionsCurrent,
     previousMonthContributions: monthlyContributionsPrevious,
     growth: {
@@ -334,7 +334,7 @@ function getAccountsBalanceChartData_() {
   const rows = [];
   try {
     const ss = getSpreadsheet_();
-    const sheet = getSpreadsheet_().getSheetByName(SHEETS.ACCOUNTS);
+    const sheet = ss.getSheetByName(SHEETS.ACCOUNTS);
     if (!sheet) return { labels: labels, values: values, rows: rows };
     const raw = sheet.getDataRange().getValues();
     if (raw.length <= 1) return { labels: labels, values: values, rows: rows };
