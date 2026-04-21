@@ -13,16 +13,42 @@
     }
   }
 
+  function formatTimeAgoFromIso(isoValue) {
+    if (!isoValue) return "-";
+    const target = new Date(isoValue);
+    if (isNaN(target.getTime())) return "-";
+    const now = new Date();
+    const msDiff = now.getTime() - target.getTime();
+    if (msDiff < 0) return "just now";
+    const dayMs = 24 * 60 * 60 * 1000;
+    const totalDays = Math.floor(msDiff / dayMs);
+    if (totalDays < 30) return totalDays + " day" + (totalDays === 1 ? "" : "s");
+    if (totalDays < 365) {
+      const months = Math.floor(totalDays / 30);
+      return months + " mo" + (months === 1 ? "" : "s");
+    }
+    const years = Math.floor(totalDays / 365);
+    return years + " yr" + (years === 1 ? "" : "s");
+  }
+
+  function todayInputValue_() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return yyyy + "-" + mm + "-" + dd;
+  }
+
   function loadMembers() {
     const container = document.getElementById("member-table-body");
     startAppLoader();
     container.innerHTML =
-      '<tr><td colspan="8" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
+      '<tr><td colspan="9" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
     google.script.run
       .withSuccessHandler((response) => {
         if (!response || !response.success) {
           container.innerHTML =
-            '<tr><td colspan="8" class="text-center py-6 text-rose-600">' +
+            '<tr><td colspan="9" class="text-center py-6 text-rose-600">' +
             ((response && response.error) || "Failed to load members.") +
             "</td></tr>";
           stopAppLoader();
@@ -41,6 +67,17 @@
             " • " +
             (m.nationalId || "-") +
             "</div></td>" +
+            '<td class="px-6 py-4 text-center text-sm text-slate-700">' +
+            (m.gender || "-") +
+            "</td>" +
+            '<td class="px-6 py-4 text-center text-sm text-slate-700">' +
+            (m.dob || "-") +
+            "</td>" +
+            '<td class="px-6 py-4"><div class="text-slate-700 text-sm">' +
+            (m.registrationDate || "-") +
+            '</div><div class="text-xs text-slate-400">' +
+            formatTimeAgoFromIso(m.registrationDateIso) +
+            " ago</div></td>" +
             '<td class="px-6 py-4 text-right font-mono text-slate-700">' +
             formatMoney(m.savings) +
             "</td>" +
@@ -61,7 +98,7 @@
             "</tr>";
         });
         container.innerHTML =
-          html || '<tr><td colspan="8" class="text-center py-6 text-slate-500">No members found.</td></tr>';
+          html || '<tr><td colspan="9" class="text-center py-6 text-slate-500">No members found.</td></tr>';
         stopAppLoader();
       })
       .withFailureHandler((err) => {
@@ -75,11 +112,17 @@
     const modal = document.getElementById("memberModal");
     const form = document.getElementById("memberForm");
     const title = document.getElementById("modalTitle");
+    const statusWrap = document.getElementById("m-status-wrap");
     form.reset();
     document.getElementById("m-id").value = memberId || "";
+    document.getElementById("m-joined").value = todayInputValue_();
+    document.getElementById("m-status").value = "Pending";
+    document.getElementById("m-gender").value = "";
+    if (statusWrap) statusWrap.classList.add("hidden");
 
     if (memberId) {
       title.innerText = "Edit Member Profile";
+      if (statusWrap) statusWrap.classList.remove("hidden");
       const member = currentMembers.find((m) => m.id === memberId);
       if (member) {
         const fullName = (member.fullName || "").trim().split(/\s+/);
@@ -87,6 +130,9 @@
         document.getElementById("m-middle").value = fullName.length > 2 ? fullName.slice(1, -1).join(" ") : "";
         document.getElementById("m-last").value = fullName.length > 1 ? fullName[fullName.length - 1] : "";
         document.getElementById("m-nid").value = member.nationalId || "";
+        document.getElementById("m-gender").value = member.gender || "";
+        document.getElementById("m-dob").value = member.dobIso || "";
+        document.getElementById("m-joined").value = member.registrationDateIso || todayInputValue_();
         document.getElementById("m-status").value = member.status || "Active";
       }
     } else {
@@ -112,7 +158,9 @@
       middleName: document.getElementById("m-middle").value,
       lastName: document.getElementById("m-last").value,
       nationalId: document.getElementById("m-nid").value,
+      gender: document.getElementById("m-gender").value,
       dob: document.getElementById("m-dob").value,
+      registrationDate: document.getElementById("m-joined").value,
       status: document.getElementById("m-status").value,
     };
 

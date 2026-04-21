@@ -19,7 +19,9 @@ function getMembersData(page, limit) {
         "Middle Name",
         "Last Name",
         "National Id",
+        "Gender",
         "Date of Birth",
+        "Registration Date",
         "Total Savings",
         "Current Loan Balance",
         "Guaranteed Amount",
@@ -40,9 +42,20 @@ function getMembersData(page, limit) {
       const initial = middleName ? middleName.charAt(0) + "." : "";
       const firstName = row[col["First Name"]] || "";
       const lastName = row[col["Last Name"]] || "";
+      const registrationDateValue = row[col["Registration Date"]];
       return {
         id: row[col["Member ID"]],
         dob: formatDateValue_(row[col["Date of Birth"]], tz),
+        dobIso:
+          row[col["Date of Birth"]] instanceof Date
+            ? Utilities.formatDate(row[col["Date of Birth"]], tz, "yyyy-MM-dd")
+            : "",
+        gender: String(row[col["Gender"]] || "").trim(),
+        registrationDate: formatDateValue_(registrationDateValue, tz),
+        registrationDateIso:
+          registrationDateValue instanceof Date
+            ? Utilities.formatDate(registrationDateValue, tz, "yyyy-MM-dd")
+            : "",
         name: (firstName + " " + initial + " " + lastName).replace(/\s+/g, " ").trim(),
         fullName: (firstName + " " + middleName + " " + lastName).replace(/\s+/g, " ").trim(),
         nationalId: row[col["National Id"]] || "",
@@ -95,13 +108,18 @@ function saveMember(data) {
       "Middle Name",
       "Last Name",
       "National Id",
+      "Gender",
       "Date of Birth",
+      "Registration Date",
       "Status",
     ],
     SHEETS.MEMBERS
   );
 
   const dobValue = data.dob ? new Date(data.dob) : "";
+  const registrationDateValue = data.registrationDate
+    ? new Date(data.registrationDate)
+    : "";
 
   if (data.id) {
     for (let i = 1; i < values.length; i++) {
@@ -111,8 +129,16 @@ function saveMember(data) {
       sheet.getRange(row, col["Middle Name"] + 1).setValue(data.middleName || "");
       sheet.getRange(row, col["Last Name"] + 1).setValue(data.lastName || "");
       sheet.getRange(row, col["National Id"] + 1).setValue(data.nationalId || "");
+      if (col["Gender"] !== undefined) {
+        sheet.getRange(row, col["Gender"] + 1).setValue(data.gender || "");
+      }
       sheet.getRange(row, col["Date of Birth"] + 1).setValue(dobValue);
-      sheet.getRange(row, col["Status"] + 1).setValue(data.status || "Active");
+      if (col["Registration Date"] !== undefined) {
+        sheet
+          .getRange(row, col["Registration Date"] + 1)
+          .setValue(registrationDateValue || values[i][col["Registration Date"]] || "");
+      }
+      sheet.getRange(row, col["Status"] + 1).setValue(data.status || values[i][col["Status"]] || "Active");
       return { success: true, message: "Member details updated successfully." };
     }
     throw new Error("Member ID not found.");
@@ -124,9 +150,15 @@ function saveMember(data) {
   rowData[col["Middle Name"]] = data.middleName || "";
   rowData[col["Last Name"]] = data.lastName || "";
   rowData[col["National Id"]] = data.nationalId || "";
+  if (col["Gender"] !== undefined) {
+    rowData[col["Gender"]] = data.gender || "";
+  }
   rowData[col["Date of Birth"]] = dobValue;
+  if (col["Registration Date"] !== undefined) {
+    rowData[col["Registration Date"]] = registrationDateValue || new Date();
+  }
   if (col["Status"] !== undefined) {
-    rowData[col["Status"]] = data.status || "Active";
+    rowData[col["Status"]] = "Pending";
   }
   sheet.appendRow(rowData);
   return { success: true, message: "Member registered successfully." };
