@@ -52,9 +52,10 @@
       <select id="pl-member" required class="w-full p-2 border rounded-lg"></select>
       <input type="number" id="pl-amount" placeholder="Amount" required class="w-full p-2 border rounded-lg">
       <select id="pl-mode" class="w-full p-2 border rounded-lg">
-        <option>M-Pesa</option>
-        <option>Cash</option>
-        <option>Bank Payment</option>
+        <option value="M-Pesa">M-Pesa</option>
+        <option value="Cash">Cash</option>
+        <option value="Bank Payment">Bank Payment</option>
+        <option value="Refund">Refund</option>
       </select>
       <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">Post Payment</button>
       <button type="button" onclick="closePayLoanModal()" class="w-full text-slate-400 text-sm">Cancel</button>

@@ -1,7 +1,7 @@
 function doGet() {
   return HtmlService.createTemplateFromFile("Index")
     .evaluate()
-    .setTitle("Group Treasury Dashboard")
+    .setTitle("Brightlife Dashboard")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
