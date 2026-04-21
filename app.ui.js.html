@@ -129,6 +129,75 @@
     sidebar.style.opacity = show ? "0.7" : "1";
   }
 
+  function refreshSessionInfo() {
+    const loadingEl = document.getElementById("session-loading");
+    const userBlock = document.getElementById("session-user-block");
+    const nameEl = document.getElementById("session-display-name");
+    const emailEl = document.getElementById("session-email");
+    const verEl = document.getElementById("sidebar-version");
+
+    const photoEl = document.getElementById("session-photo");
+    const photoFallbackEl = document.getElementById("session-photo-fallback");
+
+    google.script.run
+      .withSuccessHandler((info) => {
+        if (loadingEl) loadingEl.classList.add("hidden");
+        if (info && info.success) {
+          if (userBlock) userBlock.classList.remove("hidden");
+          if (nameEl) {
+            nameEl.textContent = info.displayName || "User";
+          }
+          if (emailEl) {
+            emailEl.textContent =
+              info.email ||
+              "Sign in with Google (deploy as: user accessing the app)";
+          }
+          if (verEl) {
+            verEl.textContent = "v" + String(info.version || "0.0.0");
+          }
+          if (photoEl && photoFallbackEl) {
+            var url = info.photoUrl && String(info.photoUrl).trim();
+            if (url) {
+              photoEl.onload = function () {
+                photoEl.classList.remove("hidden");
+                photoFallbackEl.classList.add("hidden");
+              };
+              photoEl.onerror = function () {
+                photoEl.classList.add("hidden");
+                photoFallbackEl.classList.remove("hidden");
+                photoEl.removeAttribute("src");
+              };
+              photoEl.alt = info.displayName || "Profile";
+              photoEl.src = url;
+            } else {
+              photoEl.classList.add("hidden");
+              photoFallbackEl.classList.remove("hidden");
+              photoEl.removeAttribute("src");
+            }
+          }
+        } else if (loadingEl) {
+          loadingEl.textContent = "Session unavailable";
+          loadingEl.classList.remove("hidden");
+        }
+      })
+      .withFailureHandler(() => {
+        if (loadingEl) {
+          loadingEl.textContent = "Could not load session";
+          loadingEl.classList.remove("hidden");
+        }
+      })
+      .getSessionInfo();
+  }
+
+  const PAGE_TITLE_LABELS = {
+    home: "Home",
+    members: "Members",
+    contributions: "Contributions",
+    loans: "Loans",
+    investments: "Investments",
+    accounts: "Accounts",
+  };
+
   function showPage(pageId) {
     document.querySelectorAll(".page-wrapper").forEach((container) => {
       container.classList.remove("active");
@@ -137,11 +206,20 @@
     const target = document.getElementById(pageId + "-container");
     if (target) target.classList.add("active");
 
+    const titleEl = document.getElementById("current-page-title");
+    if (titleEl) {
+      titleEl.textContent = PAGE_TITLE_LABELS[pageId] || pageId;
+    }
+
     document.querySelectorAll(".nav-link").forEach((link) => {
       link.classList.remove("active");
+      link.removeAttribute("aria-current");
     });
     const activeLink = document.querySelector('[data-page="' + pageId + '"]');
-    if (activeLink) activeLink.classList.add("active");
+    if (activeLink) {
+      activeLink.classList.add("active");
+      activeLink.setAttribute("aria-current", "page");
+    }
 
     if (pageId === "home") refreshDashboard();
     if (pageId === "members") loadMembers();
@@ -212,6 +290,7 @@
   }
 
   window.onload = function () {
+    refreshSessionInfo();
     showPage("home");
   };
 </script>

@@ -1,3 +1,6 @@
+/** App release label (shown in sidebar). Bump when you ship meaningful changes. */
+const APP_VERSION = "0.0.1";
+
 const SHEETS = Object.freeze({
   MEMBERS: "Members",
   CONTRIBUTIONS: "Contributions",
