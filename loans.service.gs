@@ -73,6 +73,7 @@ function getLoansData(page, limit) {
 }
 
 function processLoanPayment(data) {
+  requirePermission_("loanPayment");
   if (!data || !data.borrower || !data.amount) {
     return { success: false, error: "Borrower and amount are required." };
   }

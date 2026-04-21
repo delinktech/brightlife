@@ -4,8 +4,8 @@
       <h2 class="text-3xl font-bold text-slate-900">Members Directory</h2>
       <p class="text-slate-500">Manage contributions and guarantee eligibility.</p>
     </div>
-    <button onclick="openMemberModal()"
-      class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-sky-200">
+    <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
+      class="hidden bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-sky-200">
       <i class="fas fa-plus mr-2"></i> Register Member
     </button>
   </div>
@@ -22,7 +22,7 @@
           <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Loan Bal</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Guaranteed</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Status</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Actions</th>
+          <th data-require-perm="membersWrite" class="hidden px-6 py-4 text-xs font-bold text-slate-500 text-center">Actions</th>
         </tr>
       </thead>
       <tbody id="member-table-body" class="divide-y divide-slate-50">

@@ -1,5 +1,5 @@
 /** App release label (shown in sidebar). Bump when you ship meaningful changes. */
-const APP_VERSION = "0.0.1";
+const APP_VERSION = "0.0.2";
 
 const SHEETS = Object.freeze({
   MEMBERS: "Members",
@@ -9,6 +9,17 @@ const SHEETS = Object.freeze({
   INVESTMENTS: "Investments",
   INVESTMENT_LEDGER: "InvestmentLedger",
   ACCOUNTS: "Accounts",
+  /** Columns: Email, Name, Role, Active */
+  ROLES: "Roles",
+  AUDIT_LOG: "AuditLog",
+});
+
+/** Normalized role keys from the Roles sheet */
+const ROLE_KEY = Object.freeze({
+  ADMIN: "admin",
+  SECRETARY: "secretary",
+  MEMBER: "member",
+  NONE: "none",
 });
 
 const LOAN_STATUS = Object.freeze({

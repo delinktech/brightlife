@@ -22,7 +22,29 @@
 
   function handleErr(err) {
     console.error(err);
-    alert("Operation failed. Please retry.");
+    var msg = "Operation failed. Please retry.";
+    if (err && err.message) msg = String(err.message);
+    else if (typeof err === "string") msg = err;
+    alert(msg);
+  }
+
+  /** Set from getSessionInfo(); used for UI gating (server still enforces). */
+  window.APP_PERMS = null;
+
+  function applyRolePermissions(perms) {
+    if (!perms) return;
+    window.APP_PERMS = perms;
+    document.querySelectorAll("[data-require-perm]").forEach(function (el) {
+      var key = el.getAttribute("data-require-perm");
+      var allowed = perms[key] === true;
+      if (allowed) {
+        el.classList.remove("hidden");
+        el.removeAttribute("aria-hidden");
+      } else {
+        el.classList.add("hidden");
+        el.setAttribute("aria-hidden", "true");
+      }
+    });
   }
 
   function formatPercent(value) {
@@ -175,6 +197,12 @@
               photoEl.removeAttribute("src");
             }
           }
+          var roleEl = document.getElementById("session-role");
+          if (roleEl) {
+            roleEl.textContent = info.roleLabel || "";
+            roleEl.classList.toggle("hidden", !info.roleLabel);
+          }
+          applyRolePermissions(info.permissions || {});
         } else if (loadingEl) {
           loadingEl.textContent = "Session unavailable";
           loadingEl.classList.remove("hidden");

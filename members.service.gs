@@ -96,6 +96,7 @@ function generateNextMemberId_(sheet, colIndex) {
 }
 
 function saveMember(data) {
+  requirePermission_("membersWrite");
   const sheet = getRequiredSheet_(SHEETS.MEMBERS);
   const values = sheet.getDataRange().getValues();
   const headers = values[0] || [];
@@ -139,6 +140,17 @@ function saveMember(data) {
           .setValue(registrationDateValue || values[i][col["Registration Date"]] || "");
       }
       sheet.getRange(row, col["Status"] + 1).setValue(data.status || values[i][col["Status"]] || "Active");
+      appendAuditLog_(
+        "member.update",
+        "Member",
+        String(data.id || ""),
+        "Updated member " + String(data.id || ""),
+        JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          status: data.status,
+        })
+      );
       return { success: true, message: "Member details updated successfully." };
     }
     throw new Error("Member ID not found.");
@@ -160,6 +172,17 @@ function saveMember(data) {
   if (col["Status"] !== undefined) {
     rowData[col["Status"]] = "Pending";
   }
+  const newId = rowData[col["Member ID"]];
   sheet.appendRow(rowData);
+  appendAuditLog_(
+    "member.create",
+    "Member",
+    String(newId || ""),
+    "Registered member " + String(newId || ""),
+    JSON.stringify({
+      firstName: data.firstName,
+      lastName: data.lastName,
+    })
+  );
   return { success: true, message: "Member registered successfully." };
 }

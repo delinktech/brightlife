@@ -1,4 +1,5 @@
 function saveContribution(data) {
+  requirePermission_("contributionsWrite");
   const range = getSpreadsheet_().getRangeByName("BL_CONTRIBUTIONS");
   if (!range) throw new Error("Named range 'BL_CONTRIBUTIONS' not found.");
 
@@ -19,6 +20,19 @@ function saveContribution(data) {
   newRow[col["Type"]] = data.type || "Monthly Contribution";
 
   range.getSheet().appendRow(newRow);
+  var typeLabel = String(data.type || "Contribution");
+  appendAuditLog_(
+    "contribution.create",
+    "Contribution",
+    "",
+    typeLabel + " — " + String(data.memberName || "").slice(0, 80),
+    JSON.stringify({
+      amount: Number(data.amount) || 0,
+      mode: data.mode,
+      type: data.type,
+      tid: data.tid || "",
+    })
+  );
   return { success: true };
 }
 

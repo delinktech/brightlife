@@ -2,24 +2,18 @@
  * Current user context for the web app UI.
  * Requires deploy: Execute as "User accessing the web app" for per-user email.
  *
- * Display name resolution: optional AppUsers sheet override, then People API
- * (Advanced Service "People API"), then friendly name from email local part.
+ * Display name: Roles.Name (when the user has an active row), then People API,
+ * then a friendly name derived from the email local part.
  */
 
 function getSessionInfo() {
-  var email = "";
-  try {
-    email = String(Session.getActiveUser().getEmail() || "").trim();
-  } catch (e) {
-    email = "";
-  }
-
+  var email = getCurrentUserEmail_();
   var profile = getGoogleProfile_();
+  var roleCtx = getSessionRoleContext_(email);
 
+  var nameFromRoles = roleCtx.roleSheetName ? String(roleCtx.roleSheetName).trim() : "";
   var displayName =
-    lookupAppUserDisplayName_(email) ||
-    profile.displayName ||
-    friendlyNameFromEmail_(email);
+    nameFromRoles || profile.displayName || friendlyNameFromEmail_(email);
 
   return {
     success: true,
@@ -28,6 +22,9 @@ function getSessionInfo() {
     photoUrl: profile.photoUrl || "",
     version: typeof APP_VERSION !== "undefined" ? APP_VERSION : "0.0.0",
     status: "active",
+    role: roleCtx.roleKey,
+    roleLabel: roleCtx.roleLabel,
+    permissions: roleCtx.permissions,
   };
 }
 
@@ -85,33 +82,4 @@ function friendlyNameFromEmail_(email) {
       return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
     })
     .join(" ");
-}
-
-/**
- * Optional sheet "AppUsers" with columns: Email, Display Name
- */
-function lookupAppUserDisplayName_(email) {
-  if (!email) return "";
-  try {
-    var sheet = getSpreadsheet_().getSheetByName("AppUsers");
-    if (!sheet || sheet.getLastRow() < 2) return "";
-    var values = sheet.getDataRange().getValues();
-    var headers = values[0];
-    var col = getHeaderMap_(headers);
-    if (col["Email"] === undefined || col["Display Name"] === undefined) return "";
-    var lower = email.toLowerCase();
-    for (var i = 1; i < values.length; i++) {
-      var row = values[i];
-      var em = String(row[col["Email"]] || "")
-        .trim()
-        .toLowerCase();
-      if (em === lower) {
-        var name = String(row[col["Display Name"]] || "").trim();
-        return name || "";
-      }
-    }
-  } catch (err) {
-    return "";
-  }
-  return "";
 }

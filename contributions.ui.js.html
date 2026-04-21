@@ -82,6 +82,10 @@
   }
 
   function openContributionModal() {
+    if (!window.APP_PERMS || !window.APP_PERMS.contributionsWrite) {
+      alert("You do not have permission to post transactions.");
+      return;
+    }
     const modal = document.getElementById("contributionModal");
     const memberSelect = document.getElementById("c-member");
     document.getElementById("contributionForm").reset();

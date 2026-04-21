@@ -101,7 +101,15 @@
     }
   }
 
+  function openRequestLoanModal() {
+    alert("Loan requests are not available in the app yet. Contact an administrator.");
+  }
+
   function openPayLoanModal() {
+    if (!window.APP_PERMS || !window.APP_PERMS.loanPayment) {
+      alert("You do not have permission to record loan payments.");
+      return;
+    }
     const select = document.getElementById("pl-member");
     select.innerHTML = (currentMembers || [])
       .map(function (member) {
@@ -114,4 +122,45 @@
   function closePayLoanModal() {
     document.getElementById("payLoanModal").classList.add("hidden");
   }
+
+  document.getElementById("payLoanForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!window.APP_PERMS || !window.APP_PERMS.loanPayment) {
+      alert("You do not have permission to record loan payments.");
+      return;
+    }
+    const btn = e.submitter;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Posting...";
+    }
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Post Payment";
+        }
+        if (!res || !res.success) {
+          handleErr(res && res.error ? { message: res.error } : { message: "Payment failed." });
+          return;
+        }
+        closePayLoanModal();
+        document.getElementById("payLoanForm").reset();
+        loadLoans(loanPage);
+        if (typeof refreshDashboard === "function") refreshDashboard();
+      })
+      .withFailureHandler(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = "Post Payment";
+        }
+        handleErr(err);
+      })
+      .processLoanPayment({
+        borrower: document.getElementById("pl-member").value,
+        amount: document.getElementById("pl-amount").value,
+        mode: document.getElementById("pl-mode").value,
+        tid: "",
+      });
+  });
 </script>

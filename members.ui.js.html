@@ -92,13 +92,16 @@
             '">' +
             m.status +
             "</span></td>" +
-            '<td class="px-6 py-4 text-center"><button onclick="openMemberModal(\'' +
+            '<td class="px-6 py-4 text-center hidden" data-require-perm="membersWrite"><button type="button" onclick="openMemberModal(\'' +
             m.id +
             '\')" class="text-slate-400 hover:text-sky-600 transition-colors"><i class="fas fa-edit"></i></button></td>' +
             "</tr>";
         });
         container.innerHTML =
           html || '<tr><td colspan="9" class="text-center py-6 text-slate-500">No members found.</td></tr>';
+        if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
+          applyRolePermissions(window.APP_PERMS);
+        }
         stopAppLoader();
       })
       .withFailureHandler((err) => {
@@ -109,6 +112,10 @@
   }
 
   function openMemberModal(memberId) {
+    if (!window.APP_PERMS || !window.APP_PERMS.membersWrite) {
+      alert("You do not have permission to add or edit members.");
+      return;
+    }
     const modal = document.getElementById("memberModal");
     const form = document.getElementById("memberForm");
     const title = document.getElementById("modalTitle");
