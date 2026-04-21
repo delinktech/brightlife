@@ -5,6 +5,7 @@ const SHEETS = Object.freeze({
   GUARANTORS: "Guarantors",
   INVESTMENTS: "Investments",
   INVESTMENT_LEDGER: "InvestmentLedger",
+  ACCOUNTS: "Accounts",
 });
 
 const LOAN_STATUS = Object.freeze({

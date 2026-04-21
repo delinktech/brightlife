@@ -168,6 +168,28 @@
     </div>
   </div>
 
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+      <h6 class="font-bold text-slate-800 mb-6">Account Balances</h6>
+      <div class="h-72 max-w-xl mx-auto">
+        <canvas id="accountBalanceChart"></canvas>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-50 border-b border-slate-100">
+          <tr>
+            <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">Name</th>
+            <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">Account</th>
+            <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">Date</th>
+            <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase text-right">Balance</th>
+          </tr>
+        </thead>
+        <tbody id="home-accounts-table-body" class="divide-y divide-slate-50"></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="border-t border-slate-100 pt-2">
     <h5 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Investments</h5>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -233,6 +255,31 @@
     `).join('');
   }
 
+  function maskAccountForHome(value) {
+    const raw = String(value || '').replace(/\s+/g, '');
+    if (!raw) return '-';
+    if (raw.length <= 5) return raw.slice(0, 2) + '**' + raw.slice(-1);
+    return raw.slice(0, 4) + '****' + raw.slice(-3);
+  }
+
+  function renderHomeAccountsTable(rows) {
+    const container = document.getElementById('home-accounts-table-body');
+    if (!container) return;
+    const items = rows || [];
+    if (!items.length) {
+      container.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">No account balances yet.</td></tr>';
+      return;
+    }
+    container.innerHTML = items.map((a) => `
+      <tr>
+        <td class="px-4 py-3 text-slate-700">${a.orgName || '-'}</td>
+        <td class="px-4 py-3 text-slate-700 font-mono">${maskAccountForHome(a.accountNumber)}</td>
+        <td class="px-4 py-3 text-slate-700">${a.balanceDate || '-'}</td>
+        <td class="px-4 py-3 text-right font-semibold text-slate-900">${formatMoney(a.balance)}</td>
+      </tr>
+    `).join('');
+  }
+
   function renderMainCharts(data) {
     const chartConfigs = [
       {
@@ -266,6 +313,15 @@
         labels: (data.yearlyContributionTotals || []).map(y => y.year),
         vals: (data.yearlyContributionTotals || []).map(y => y.total),
         colors: ['#14b8a6']
+      },
+      {
+        id: 'accountBalanceChart',
+        type: 'doughnut',
+        labels: (data.accountsBalanceChart && data.accountsBalanceChart.labels) || ['No accounts'],
+        vals: (data.accountsBalanceChart && data.accountsBalanceChart.values && data.accountsBalanceChart.values.length)
+          ? data.accountsBalanceChart.values
+          : [0],
+        colors: ['#0ea5e9', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6', '#6366f1', '#ef4444']
       }
     ];
 
@@ -314,6 +370,7 @@
       });
     });
 
+    renderHomeAccountsTable((data.accountsBalanceChart && data.accountsBalanceChart.rows) || []);
     renderInvestmentCharts(data.investments);
   }
 

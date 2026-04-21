@@ -1,0 +1,108 @@
+<script>
+  function maskAccountNumber(value) {
+    const raw = String(value || "").replace(/\s+/g, "");
+    if (!raw) return "-";
+    if (raw.length <= 5) {
+      return raw.slice(0, 2) + "**" + raw.slice(-1);
+    }
+    return raw.slice(0, 4) + "****" + raw.slice(-3);
+  }
+
+  function paymentGuideHtml(account) {
+    const mode = String(account.paymentMode || "").toLowerCase();
+    const paybill = account.paybill || "N/A";
+    const fullAcc = account.accountNumber || "N/A";
+    if (mode.indexOf("mpesa") >= 0 || mode.indexOf("m-pesa") >= 0) {
+      return (
+        '<ol class="mt-3 text-xs text-slate-600 space-y-1 list-decimal list-inside">' +
+        "<li>Go to M-PESA on your phone.</li>" +
+        "<li>Select <span class='font-semibold'>Lipa na M-PESA</span> then <span class='font-semibold'>Paybill</span>.</li>" +
+        "<li>Enter Business Number: <span class='font-semibold'>" +
+        paybill +
+        "</span>.</li>" +
+        "<li>Enter Account Number: <span class='font-semibold font-mono'>" +
+        fullAcc +
+        "</span>.</li>" +
+        "<li>Enter Amount and your PIN to confirm.</li>" +
+        "</ol>"
+      );
+    }
+    return (
+      '<ol class="mt-3 text-xs text-slate-600 space-y-1 list-decimal list-inside">' +
+      "<li>Use payment method: <span class='font-semibold uppercase'>" +
+      (account.paymentMode || "N/A") +
+      "</span>.</li>" +
+      "<li>Reference account number: <span class='font-semibold font-mono'>" +
+      fullAcc +
+      "</span>.</li>" +
+      "<li>If paybill is required, use: <span class='font-semibold'>" +
+      paybill +
+      "</span>.</li>" +
+      "<li>Enter amount and complete authorization/PIN.</li>" +
+      "</ol>"
+    );
+  }
+
+  function loadAccounts() {
+    const cardList = document.getElementById("accounts-card-list");
+    if (!cardList) return;
+    startAppLoader();
+    cardList.innerHTML =
+      '<div class="md:col-span-2 xl:col-span-3 px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 48%"></div></div></div>';
+
+    google.script.run
+      .withSuccessHandler(function (response) {
+        if (!response || !response.success) {
+          cardList.innerHTML =
+            '<div class="md:col-span-2 xl:col-span-3 text-center py-6 text-rose-600 bg-white rounded-2xl border border-slate-100">' +
+            ((response && response.error) || "Failed to load accounts.") +
+            "</div>";
+          stopAppLoader();
+          return;
+        }
+
+        const rows = response.accounts || [];
+        if (!rows.length) {
+          cardList.innerHTML =
+            '<div class="md:col-span-2 xl:col-span-3 text-center py-6 text-slate-500 bg-white rounded-2xl border border-slate-100">No account details available.</div>';
+          stopAppLoader();
+          return;
+        }
+
+        cardList.innerHTML = rows
+          .map(function (a) {
+            return (
+              '<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">' +
+              '<div class="flex items-start justify-between gap-3">' +
+              '<div class="min-w-0">' +
+              '<p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Organization</p>' +
+              '<h4 class="font-semibold text-slate-900 truncate">' +
+              (a.orgName || "-") +
+              "</h4>" +
+              "</div>" +
+              '<span class="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-600 font-semibold uppercase">' +
+              (a.paymentMode || "N/A") +
+              "</span>" +
+              "</div>" +
+              '<div class="mt-3 grid grid-cols-2 gap-3 text-sm">' +
+              '<div><p class="text-[10px] text-slate-400 uppercase">Account</p><p class="font-mono text-slate-700">' +
+              a.accountNumber +
+              "</p></div>" +
+              '<div><p class="text-[10px] text-slate-400 uppercase">Paybill</p><p class="text-slate-700">' +
+              (a.paybill || "-") +
+              "</p></div>" +
+              "</div>" +
+              paymentGuideHtml(a) +
+              "</div>"
+            );
+          })
+          .join("");
+        stopAppLoader();
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .getAccountsData();
+  }
+</script>

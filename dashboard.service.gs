@@ -323,8 +323,55 @@ function getHomeAnalyticsByRange_(rangeKey) {
       pending: pendingLoanCount,
       settled: settledLoanCount,
     },
+    accountsBalanceChart: getAccountsBalanceChartData_(),
     investments: buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds),
   };
+}
+
+function getAccountsBalanceChartData_() {
+  const labels = [];
+  const values = [];
+  const rows = [];
+  try {
+    const ss = getSpreadsheet_();
+    const sheet = getSpreadsheet_().getSheetByName(SHEETS.ACCOUNTS);
+    if (!sheet) return { labels: labels, values: values, rows: rows };
+    const raw = sheet.getDataRange().getValues();
+    if (raw.length <= 1) return { labels: labels, values: values, rows: rows };
+    const col = getHeaderMap_(raw[0]);
+    const tz = ss.getSpreadsheetTimeZone();
+    if (
+      col["Org. Name"] === undefined ||
+      col["Acc. Number"] === undefined ||
+      col["Balance"] === undefined
+    ) {
+      return { labels: labels, values: values, rows: rows };
+    }
+
+    for (let i = 1; i < raw.length; i++) {
+      const row = raw[i];
+      const org = String(row[col["Org. Name"]] || "").trim();
+      const number = String(row[col["Acc. Number"]] || "").trim();
+      const balance = Number(row[col["Balance"]]) || 0;
+      if (!org && !number) continue;
+      const labelBase = org || "Account";
+      const numberTail = number ? " • " + number.slice(-4) : "";
+      labels.push(labelBase + numberTail);
+      values.push(balance);
+      rows.push({
+        orgName: org,
+        accountNumber: number,
+        balanceDate:
+          col["Balance Date"] !== undefined
+            ? formatDateValue_(row[col["Balance Date"]], tz)
+            : "",
+        balance: balance,
+      });
+    }
+  } catch (err) {
+    return { labels: [], values: [], rows: [] };
+  }
+  return { labels: labels, values: values, rows: rows };
 }
 
 /**
