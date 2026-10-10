@@ -50,33 +50,88 @@ function getOrCreateRolesSheet_() {
   return sheet;
 }
 
+function extractEmailFromString_(val) {
+  if (!val) return "";
+  if (typeof val === "object") {
+    if (val.email) return String(val.email).trim().toLowerCase();
+    try {
+      val = JSON.stringify(val);
+    } catch (e) {
+      val = String(val);
+    }
+  }
+  var str = String(val || "");
+  var match = str.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i);
+  if (match) return match[0].trim().toLowerCase();
+  return str.replace(/[\s\u00A0]+/g, "").toLowerCase();
+}
+
 function lookupRoleRowForEmail_(email) {
-  if (!email) return null;
+  var targetEmail = extractEmailFromString_(email);
+  if (!targetEmail) return null;
+
   try {
     var sheet = getOrCreateRolesSheet_();
     if (!sheet || sheet.getLastRow() < 2) return null;
-    var values = sheet.getDataRange().getValues();
-    var headers = values[0];
-    var col = getHeaderMap_(headers);
-    if (
-      col["Email"] === undefined ||
-      col["Role"] === undefined ||
-      col["Active"] === undefined
-    ) {
+
+    var range = sheet.getDataRange();
+    var values = range.getValues();
+    var displayValues = range.getDisplayValues();
+    if (!values || values.length < 2) return null;
+
+    var headerRowIndex = 0;
+    var colMap = getHeaderMap_(values[0]);
+    var emailCol = colMap["email"];
+
+    if (emailCol === undefined) {
+      for (var h = 0; h < Math.min(values.length, 5); h++) {
+        var testMap = getHeaderMap_(values[h]);
+        if (testMap["email"] !== undefined) {
+          headerRowIndex = h;
+          colMap = testMap;
+          emailCol = testMap["email"];
+          break;
+        }
+      }
+    }
+
+    if (emailCol === undefined) {
+      console.error("Roles sheet missing 'Email' header");
       return null;
     }
-    var lower = String(email).trim().toLowerCase();
-    for (var i = 1; i < values.length; i++) {
+
+    var roleCol = colMap["role"];
+    var activeCol = colMap["active"];
+    var nameCol = colMap["name"];
+
+    for (var i = headerRowIndex + 1; i < values.length; i++) {
       var row = values[i];
-      var em = String(row[col["Email"]] || "")
-        .trim()
-        .toLowerCase();
-      if (em !== lower) continue;
-      if (!isActiveRoleFlag_(row[col["Active"]])) return null;
+      var displayRow = displayValues[i];
+
+      var rawEmailVal = emailCol !== undefined ? row[emailCol] : "";
+      var dispEmailVal = displayRow && emailCol !== undefined ? displayRow[emailCol] : "";
+
+      var rowEmail = extractEmailFromString_(rawEmailVal) || extractEmailFromString_(dispEmailVal);
+      if (rowEmail !== targetEmail) continue;
+
+      var rawActive = activeCol !== undefined ? row[activeCol] : true;
+      var dispActive = displayRow && activeCol !== undefined ? displayRow[activeCol] : "";
+      var isActive = isActiveRoleFlag_(rawActive) || isActiveRoleFlag_(dispActive);
+
+      if (!isActive) return null;
+
+      var rawRole = roleCol !== undefined ? row[roleCol] : "";
+      var dispRole = displayRow && roleCol !== undefined ? displayRow[roleCol] : "";
+      var roleVal = String(rawRole || dispRole || "").trim();
+
+      var rawName = nameCol !== undefined ? row[nameCol] : "";
+      var dispName = displayRow && nameCol !== undefined ? displayRow[nameCol] : "";
+      var nameVal = String(rawName || dispName || "").trim();
+
       return {
-        email: row[col["Email"]],
-        name: col["Name"] !== undefined ? String(row[col["Name"]] || "").trim() : "",
-        roleRaw: row[col["Role"]],
+        email: targetEmail,
+        name: nameVal,
+        roleRaw: roleVal,
       };
     }
   } catch (err) {

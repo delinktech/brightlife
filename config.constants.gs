@@ -68,6 +68,7 @@ function getHeaderMap_(headers) {
     const trimmed = raw.trim();
     map[raw] = index;
     map[trimmed] = index;
+    map[trimmed.toLowerCase()] = index;
   });
   return map;
 }
