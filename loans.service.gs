@@ -2,6 +2,7 @@ function getLoansData(page, limit) {
   const currentPage = Number(page) > 0 ? Number(page) : 1;
   const pageLimit = Number(limit) > 0 ? Number(limit) : 100;
   try {
+    requireAccess_();
     const ss = getSpreadsheet_();
     const sheet = getRequiredSheet_(SHEETS.LOANS);
     const values = sheet.getDataRange().getValues();

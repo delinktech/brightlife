@@ -1,4 +1,5 @@
 function getDashboardData() {
+  requireAccess_();
   const ss = getSpreadsheet_();
   const members = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
   const loans = getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
@@ -54,6 +55,7 @@ function getHomeAnalytics(rangeKey) {
 }
 
 function getHomeAnalyticsByRange_(rangeKey) {
+  requireAccess_();
   const ss = getSpreadsheet_();
   const now = new Date();
   const currentYear = now.getFullYear();

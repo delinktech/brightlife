@@ -24,6 +24,7 @@ function getSessionInfo() {
     status: "active",
     role: roleCtx.roleKey,
     roleLabel: roleCtx.roleLabel,
+    hasAccess: roleCtx.hasAccess,
     permissions: roleCtx.permissions,
   };
 }
@@ -34,6 +35,7 @@ function getSessionInfo() {
 function getGoogleProfile_() {
   var out = { displayName: "", photoUrl: "" };
   try {
+    if (typeof People === "undefined" || !People || !People.People) return out;
     var person = People.People.get("people/me", {
       personFields: "names,photos",
     });

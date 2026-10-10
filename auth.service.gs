@@ -4,7 +4,10 @@
 
 function getCurrentUserEmail_() {
   try {
-    return String(Session.getActiveUser().getEmail() || "").trim();
+    var activeEmail = String(Session.getActiveUser().getEmail() || "").trim();
+    if (activeEmail) return activeEmail;
+    var effectiveEmail = String(Session.getEffectiveUser().getEmail() || "").trim();
+    return effectiveEmail;
   } catch (e) {
     return "";
   }
@@ -28,10 +31,29 @@ function normalizeRoleKey_(raw) {
   return ROLE_KEY.NONE;
 }
 
+function getOrCreateRolesSheet_() {
+  var ss = getSpreadsheet_();
+  var sheet = ss.getSheetByName(SHEETS.ROLES);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.ROLES);
+  }
+  if (sheet.getLastRow() < 1) {
+    sheet.appendRow(["Email", "Name", "Role", "Active"]);
+    sheet.setFrozenRows(1);
+  }
+  if (sheet.getLastRow() === 1) {
+    var ownerEmail = String(Session.getEffectiveUser().getEmail() || "").trim();
+    if (ownerEmail) {
+      sheet.appendRow([ownerEmail, "Owner Admin", "Admin", true]);
+    }
+  }
+  return sheet;
+}
+
 function lookupRoleRowForEmail_(email) {
   if (!email) return null;
   try {
-    var sheet = getSpreadsheet_().getSheetByName(SHEETS.ROLES);
+    var sheet = getOrCreateRolesSheet_();
     if (!sheet || sheet.getLastRow() < 2) return null;
     var values = sheet.getDataRange().getValues();
     var headers = values[0];
@@ -43,7 +65,7 @@ function lookupRoleRowForEmail_(email) {
     ) {
       return null;
     }
-    var lower = email.toLowerCase();
+    var lower = String(email).trim().toLowerCase();
     for (var i = 1; i < values.length; i++) {
       var row = values[i];
       var em = String(row[col["Email"]] || "")
@@ -58,6 +80,7 @@ function lookupRoleRowForEmail_(email) {
       };
     }
   } catch (err) {
+    console.error("lookupRoleRowForEmail_ error: " + err.message);
     return null;
   }
   return null;
@@ -117,15 +140,30 @@ function getSessionRoleContext_(email) {
     roleLabel: labels[roleKey] || roleKey,
     permissions: perms,
     roleSheetName: row ? row.name || "" : "",
+    hasAccess: roleKey !== ROLE_KEY.NONE,
   };
+}
+
+/**
+ * Ensures current user is listed in the Roles table with an active role (Admin, Secretary, or Member).
+ */
+function requireAccess_() {
+  var email = getCurrentUserEmail_();
+  var ctx = getSessionRoleContext_(email);
+  if (!ctx.hasAccess) {
+    var identifier = email ? ("email '" + email + "'") : "account";
+    throw new Error(
+      "Access Denied: Your Google " + identifier + " is not authorized. Please ask an Administrator to add your email to the Roles sheet."
+    );
+  }
+  return ctx;
 }
 
 /**
  * @param {string} permKey — "membersWrite" | "contributionsWrite" | "loanPayment" | "loanRequest"
  */
 function requirePermission_(permKey) {
-  var email = getCurrentUserEmail_();
-  var ctx = getSessionRoleContext_(email);
+  var ctx = requireAccess_();
   if (!ctx.permissions[permKey]) {
     throw new Error("You do not have permission to perform this action.");
   }

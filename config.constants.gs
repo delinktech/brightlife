@@ -30,8 +30,26 @@ const LOAN_STATUS = Object.freeze({
   REJECTED: "Rejected",
 });
 
+/** 
+ * Spreadsheet ID for standalone Apps Script deployments.
+ * If your Apps Script is standalone (not created via Extensions > Apps Script inside the sheet),
+ * paste your Google Sheet ID here (e.g. "1a2b3c4d5e..."). Leave empty if container-bound.
+ */
+const SPREADSHEET_ID = "";
+
 function getSpreadsheet_() {
-  return SpreadsheetApp.getActiveSpreadsheet();
+  if (typeof SPREADSHEET_ID !== "undefined" && SPREADSHEET_ID && String(SPREADSHEET_ID).trim()) {
+    try {
+      return SpreadsheetApp.openById(String(SPREADSHEET_ID).trim());
+    } catch (err) {
+      console.error("Failed to open spreadsheet by SPREADSHEET_ID: " + err.message);
+    }
+  }
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error(
+    "No active spreadsheet found. If this is a standalone Apps Script project, please update config constants.gs and set SPREADSHEET_ID to your Google Sheet's ID."
+  );
 }
 
 function getRequiredSheet_(sheetName) {
@@ -44,8 +62,12 @@ function getRequiredSheet_(sheetName) {
 
 function getHeaderMap_(headers) {
   const map = {};
+  if (!headers || !Array.isArray(headers)) return map;
   headers.forEach(function (name, index) {
-    map[name] = index;
+    const raw = String(name || "");
+    const trimmed = raw.trim();
+    map[raw] = index;
+    map[trimmed] = index;
   });
   return map;
 }

@@ -1,5 +1,6 @@
 function getAccountsData() {
   try {
+    requireAccess_();
     const ss = getSpreadsheet_();
     const sheet = getRequiredSheet_(SHEETS.ACCOUNTS);
     const rows = sheet.getDataRange().getValues();

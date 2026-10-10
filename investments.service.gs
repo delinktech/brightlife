@@ -6,6 +6,7 @@ function getInvestmentsData(page, limit) {
   const currentPage = Number(page) > 0 ? Number(page) : 1;
   const pageLimit = Number(limit) > 0 ? Number(limit) : 100;
   try {
+    requireAccess_();
     const ss = getSpreadsheet_();
     const sheet = getRequiredSheet_(SHEETS.INVESTMENTS);
     const values = sheet.getDataRange().getValues();
@@ -64,6 +65,7 @@ function getInvestmentsData(page, limit) {
 
 function getInvestmentLedger(investmentId) {
   try {
+    requireAccess_();
     if (!investmentId) {
       return { success: false, error: "Investment ID is required.", entries: [], summary: null };
     }

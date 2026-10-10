@@ -2,23 +2,29 @@
 
 Google Apps Script web app for a savings and credit group: members, contributions, loans, investments, and accounts. The UI is served from `Index.html` (`index.html`) with Tailwind (CDN) and Chart.js.
 
-## Requirements
+## Requirements & Setup
 
-- A Google Spreadsheet with this project **bound** to it (Extensions → Apps Script), or deployed with access to the target spreadsheet.
-- Sheet tabs named to match `SHEETS` in `config.constants.gs` (e.g. `Members`, `Contributions`, `Loans`, `Roles`, …).
-- A **named range** `BL_CONTRIBUTIONS` pointing at the Contributions table (including headers) — used when posting transactions.
-- Optional: **People API** (Advanced Google Service) for profile name and photo in the header. If unavailable, the app falls back to `Roles.Name` or a friendly name from the email address.
+- **Google Spreadsheet**:
+  - Bound to this script (Extensions → Apps Script inside the sheet), OR
+  - Standalone script with **`SPREADSHEET_ID`** set in `config.constants.gs`.
+- **Sheet tabs** named to match `SHEETS` in `config.constants.gs` (`Members`, `Contributions`, `Loans`, `Roles`, `Accounts`, `Investments`, `InvestmentLedger`, `Guarantors`, `AuditLog`).
+- **Roles tab**: Columns must be `Email`, `Name`, `Role`, `Active`. The `Roles` tab is automatically initialized with headers if missing.
+- **Named range**: `BL_CONTRIBUTIONS` pointing at the Contributions table (including headers) — used when posting transactions.
+- **People API**: Advanced Google Service for user profile names and photos (safely optional).
 
-## Deployment
+## Troubleshooting "Exception: You do not have permission to call SpreadsheetApp..."
 
-1. In Apps Script, deploy as **Web app**.
-2. For **role-based access** and a correct **per-user email**, set:
-   - **Execute as:** *User accessing the web app*
-   - **Who has access:** your org (e.g. *Anyone within …* or *Anyone*), as appropriate.
+If you see an error dialog saying **"You do not have permission to call SpreadsheetApp..."**:
 
-If the app runs as a single fixed user, `Session.getActiveUser().getEmail()` will not reflect each visitor; RBAC and audit logs would then be wrong for multi-user use.
-
-`appsscript.json` may still show template defaults; the **Web app** deployment dialog in the Apps Script UI is what actually applies execute-as and access.
+1. **Authorize OAuth Scopes**:
+   - In Google Apps Script, click **Deploy > New deployment** (or **Test deployments**).
+   - Authorize the requested permissions (`Google Sheets`, `User email`, `User profile`) when prompted.
+2. **For Standalone Apps Script Projects**:
+   - Open `config.constants.gs`.
+   - Copy your Google Sheet ID from its URL (`https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit`) and paste it into `const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID";`.
+3. **Web App Deployment Settings**:
+   - **Execute as:** *User accessing the web app* (or *Me* if sharing single context).
+   - **Who has access:** *Anyone with Google account* (or *Anyone within domain*).
 
 ## Spreadsheet layout
 

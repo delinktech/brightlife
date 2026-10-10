@@ -25,7 +25,24 @@
     var msg = "Operation failed. Please retry.";
     if (err && err.message) msg = String(err.message);
     else if (typeof err === "string") msg = err;
+
+    if (msg.indexOf("Access Denied") !== -1) {
+      showAccessDenied();
+      return;
+    }
     alert(msg);
+  }
+
+  function showAccessDenied(email) {
+    const msgEl = document.getElementById("access-denied-msg");
+    if (msgEl) {
+      if (email) {
+        msgEl.innerHTML = "Your Google account (<strong>" + email + "</strong>) is not listed in the group's <strong>Roles</strong> table or is set to inactive.";
+      } else {
+        msgEl.innerHTML = "Your Google account is not listed in the group's <strong>Roles</strong> table or is set to inactive.";
+      }
+    }
+    showPage("access-denied");
   }
 
   /** Set from getSessionInfo(); used for UI gating (server still enforces). */
@@ -172,7 +189,7 @@
           if (emailEl) {
             emailEl.textContent =
               info.email ||
-              "Sign in with Google (deploy as: user accessing the app)";
+              "Sign in with Google";
           }
           if (verEl) {
             verEl.textContent = "v" + String(info.version || "0.0.0");
@@ -202,6 +219,10 @@
             roleEl.textContent = info.roleLabel || "";
             roleEl.classList.toggle("hidden", !info.roleLabel);
           }
+          if (info.hasAccess === false) {
+            showAccessDenied(info.email);
+            return;
+          }
           applyRolePermissions(info.permissions || {});
         } else if (loadingEl) {
           loadingEl.textContent = "Session unavailable";
@@ -224,6 +245,7 @@
     loans: "Loans",
     investments: "Investments",
     accounts: "Accounts",
+    "access-denied": "Access Denied",
   };
 
   function showPage(pageId) {
