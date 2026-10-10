@@ -1,0 +1,147 @@
+<script>
+  let currentRoles = [];
+
+  function getRoleBadge(roleKey) {
+    const r = (roleKey || "").toLowerCase();
+    switch (r) {
+      case "admin":
+        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-700 border border-sky-200"><i class="fas fa-shield-alt mr-1"></i> Admin</span>';
+      case "treasurer":
+        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200"><i class="fas fa-wallet mr-1"></i> Treasurer</span>';
+      case "secretary":
+        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><i class="fas fa-user-pen mr-1"></i> Secretary</span>';
+      default:
+        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fas fa-user mr-1"></i> Member</span>';
+    }
+  }
+
+  function getActiveStatusBadge(active) {
+    if (active) {
+      return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active</span>';
+    }
+    return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inactive</span>';
+  }
+
+  function loadUserRoles() {
+    const container = document.getElementById("roles-table-body");
+    if (!container) return;
+    startAppLoader();
+    container.innerHTML =
+      '<tr><td colspan="5" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+
+    google.script.run
+      .withSuccessHandler((response) => {
+        if (!response || !response.success) {
+          container.innerHTML =
+            '<tr><td colspan="5" class="text-center py-6 text-rose-600">' +
+            ((response && response.error) || "Failed to load user roles.") +
+            "</td></tr>";
+          stopAppLoader();
+          return;
+        }
+
+        currentRoles = response.roles || [];
+        let html = "";
+        currentRoles.forEach((item) => {
+          html +=
+            '<tr class="hover:bg-slate-50/50 transition-colors">' +
+            '<td class="px-6 py-4"><div class="font-semibold text-slate-800">' +
+            (item.name || "User") +
+            "</div></td>" +
+            '<td class="px-6 py-4 text-slate-600 font-mono text-xs">' +
+            item.email +
+            "</td>" +
+            '<td class="px-6 py-4 text-center">' +
+            getRoleBadge(item.roleKey) +
+            "</td>" +
+            '<td class="px-6 py-4 text-center">' +
+            getActiveStatusBadge(item.active) +
+            "</td>" +
+            '<td class="px-6 py-4 text-center" data-require-perm="isAdmin"><button type="button" onclick="openRoleModal(\'' +
+            item.email +
+            '\')" class="text-slate-400 hover:text-sky-600 transition-colors px-2 py-1"><i class="fas fa-edit"></i></button></td>' +
+            "</tr>";
+        });
+
+        container.innerHTML =
+          html || '<tr><td colspan="5" class="text-center py-6 text-slate-500">No user roles configured.</td></tr>';
+
+        if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
+          applyRolePermissions(window.APP_PERMS);
+        }
+        stopAppLoader();
+      })
+      .withFailureHandler((err) => {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .getAllUserRoles();
+  }
+
+  function openRoleModal(email) {
+    if (!window.APP_PERMS || !window.APP_PERMS.isAdmin) {
+      alert("Only Administrators can modify user roles.");
+      return;
+    }
+    const modal = document.getElementById("roleModal");
+    const form = document.getElementById("roleForm");
+    const title = document.getElementById("roleModalTitle");
+    const emailInput = document.getElementById("r-email");
+    form.reset();
+
+    if (email) {
+      title.innerText = "Edit User Role";
+      emailInput.value = email;
+      emailInput.readOnly = true;
+      emailInput.classList.add("bg-slate-50");
+
+      const item = currentRoles.find((r) => r.email === email);
+      if (item) {
+        document.getElementById("r-name").value = item.name || "";
+        document.getElementById("r-role").value = item.role || "Member";
+        document.getElementById("r-active").value = item.active ? "true" : "false";
+      }
+    } else {
+      title.innerText = "Add System User Role";
+      emailInput.readOnly = false;
+      emailInput.classList.remove("bg-slate-50");
+      document.getElementById("r-role").value = "Member";
+      document.getElementById("r-active").value = "true";
+    }
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeRoleModal() {
+    document.getElementById("roleModal").classList.add("hidden");
+  }
+
+  document.getElementById("roleForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const btn = e.submitter;
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+
+    const payload = {
+      name: document.getElementById("r-name").value,
+      email: document.getElementById("r-email").value,
+      role: document.getElementById("r-role").value,
+      active: document.getElementById("r-active").value === "true",
+    };
+
+    google.script.run
+      .withSuccessHandler(function (response) {
+        btn.disabled = false;
+        btn.innerText = "Save Role";
+        closeRoleModal();
+        loadUserRoles();
+        refreshSessionInfo();
+      })
+      .withFailureHandler(function (err) {
+        btn.disabled = false;
+        btn.innerText = "Try Again";
+        handleErr(err);
+      })
+      .saveUserRole(payload);
+  });
+</script>

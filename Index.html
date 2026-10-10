@@ -93,6 +93,10 @@
         onclick="showPage('accounts')">
         <i class="fas fa-building-columns w-6 text-center shrink-0"></i> <span>Accounts</span>
       </a>
+      <a data-page="roles" data-require-perm="isAdmin" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer hidden"
+        onclick="showPage('roles')">
+        <i class="fas fa-user-shield w-6 text-center shrink-0"></i> <span>User Roles</span>
+      </a>
     </div>
 
     <div class="mt-auto border-t border-slate-800 px-4 py-3 shrink-0">
@@ -176,6 +180,9 @@
     <div id="accounts-container" class="page-wrapper">
       <?!= include('Accounts'); ?>
     </div>
+    <div id="roles-container" class="page-wrapper">
+      <?!= include('Roles'); ?>
+    </div>
     </main>
   </div>
 
@@ -186,6 +193,7 @@
   <?!= include('loans.ui.js'); ?>
   <?!= include('investments.ui.js'); ?>
   <?!= include('accounts.ui.js'); ?>
+  <?!= include('roles.ui.js'); ?>
 
 </body>
 
