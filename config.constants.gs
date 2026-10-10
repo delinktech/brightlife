@@ -9,7 +9,6 @@ const SHEETS = Object.freeze({
   INVESTMENTS: "Investments",
   INVESTMENT_LEDGER: "InvestmentLedger",
   ACCOUNTS: "Accounts",
-  /** Columns: Email, Name, Role, Active */
   ROLES: "Roles",
   AUDIT_LOG: "AuditLog",
 });
@@ -17,6 +16,7 @@ const SHEETS = Object.freeze({
 /** Normalized role keys from the Roles sheet */
 const ROLE_KEY = Object.freeze({
   ADMIN: "admin",
+  TREASURER: "treasurer",
   SECRETARY: "secretary",
   MEMBER: "member",
   NONE: "none",
@@ -35,25 +35,44 @@ const LOAN_STATUS = Object.freeze({
  * If your Apps Script is standalone (not created via Extensions > Apps Script inside the sheet),
  * paste your Google Sheet ID here (e.g. "1a2b3c4d5e..."). Leave empty if container-bound.
  */
-const SPREADSHEET_ID = "";
+const SPREADSHEET_ID = "18zbE2MSVciTkdbwjgtiVqASJ9VEO3IEnlrTGZoXbu_0";
 
 function getSpreadsheet_() {
+  var lastErr = "";
   if (typeof SPREADSHEET_ID !== "undefined" && SPREADSHEET_ID && String(SPREADSHEET_ID).trim()) {
     try {
       return SpreadsheetApp.openById(String(SPREADSHEET_ID).trim());
     } catch (err) {
-      console.error("Failed to open spreadsheet by SPREADSHEET_ID: " + err.message);
+      lastErr = "openById error: " + err.message;
+      console.error(lastErr);
     }
   }
-  const active = SpreadsheetApp.getActiveSpreadsheet();
-  if (active) return active;
+  try {
+    const active = SpreadsheetApp.getActiveSpreadsheet();
+    if (active) return active;
+  } catch (err) {
+    if (!lastErr) lastErr = "getActiveSpreadsheet error: " + err.message;
+    console.error("getActiveSpreadsheet error: " + err.message);
+  }
   throw new Error(
-    "No active spreadsheet found. If this is a standalone Apps Script project, please update config constants.gs and set SPREADSHEET_ID to your Google Sheet's ID."
+    "Could not access spreadsheet (" + (lastErr || "No ID set") + "). Please grant permissions in Apps Script or update Web App Deployment."
   );
 }
 
+function getSheetByNameInsensitive_(ss, targetName) {
+  if (!ss || !targetName) return null;
+  const target = String(targetName).trim().toLowerCase();
+  const sheets = ss.getSheets();
+  for (let i = 0; i < sheets.length; i++) {
+    const name = sheets[i].getName().trim().toLowerCase();
+    if (name === target) return sheets[i];
+  }
+  return null;
+}
+
 function getRequiredSheet_(sheetName) {
-  const sheet = getSpreadsheet_().getSheetByName(sheetName);
+  const ss = getSpreadsheet_();
+  const sheet = getSheetByNameInsensitive_(ss, sheetName);
   if (!sheet) {
     throw new Error('Missing required sheet: "' + sheetName + '"');
   }

@@ -41,7 +41,11 @@ If you see an error dialog saying **"You do not have permission to call Spreadsh
 
 - **Email** — must match the signed-in Google account (case-insensitive).
 - **Name** — shown in the app header when set (preferred over the People API name for display).
-- **Role** — one of: `admin`, `secretary`, `member` (aliases like `administrator` / `members` are normalized).
+- **Role** — one of: `admin`, `treasurer`, `secretary`, `member` (aliases like `chairperson` / `finance` / `administrator` are normalized).
+  - 🔵 **Admin**: Full system control & role administration.
+  - 🟣 **Treasurer**: Financial operations (Contributions, Loan Payments, Accounts, Investments).
+  - 🟢 **Secretary**: Member registry management & Loan Request Intake.
+  - ⚪ **Member**: View-only group analytics + submit loan requests.
 - **Active** — `TRUE`, `yes`, `1`, etc. for an active assignment.
 
 Permissions are defined in `auth.service.gs` (`getPermissionsForRoleKey_`) and enforced on the server with `requirePermission_`. The client uses `getSessionInfo()` (`session.service.gs`) to receive `permissions` and toggles UI with `data-require-perm` attributes.

@@ -35,7 +35,7 @@
     alert(msg);
   }
 
-  function showAccessDenied(email) {
+  function showAccessDenied(email, info) {
     const activeEmail = email || currentSessionEmail || (document.getElementById("session-email") ? document.getElementById("session-email").textContent : "");
     const cleanEmail = activeEmail && activeEmail !== "—" ? activeEmail.trim() : "";
     
@@ -51,6 +51,17 @@
     const emailDisplayEl = document.getElementById("access-denied-email-display");
     if (emailDisplayEl) {
       emailDisplayEl.textContent = cleanEmail ? cleanEmail : "(your email)";
+    }
+
+    if (info && (info.spreadsheetName || info.spreadsheetId)) {
+      const debugBlock = document.getElementById("access-denied-debug");
+      const nameEl = document.getElementById("debug-ss-name");
+      const idEl = document.getElementById("debug-ss-id");
+      if (debugBlock && nameEl && idEl) {
+        nameEl.textContent = info.spreadsheetName || "Unknown";
+        idEl.textContent = info.spreadsheetId || "N/A";
+        debugBlock.classList.remove("hidden");
+      }
     }
 
     showPage("access-denied");
@@ -229,10 +240,17 @@
           var roleEl = document.getElementById("session-role");
           if (roleEl) {
             roleEl.textContent = info.roleLabel || "";
+            var r = String(info.role || "").toLowerCase();
+            var badgeCls = "bg-slate-100 text-slate-700 border-slate-200";
+            if (r === "admin") badgeCls = "bg-sky-100 text-sky-700 border-sky-200";
+            else if (r === "treasurer") badgeCls = "bg-purple-100 text-purple-700 border-purple-200";
+            else if (r === "secretary") badgeCls = "bg-emerald-100 text-emerald-700 border-emerald-200";
+            else if (r === "member") badgeCls = "bg-slate-100 text-slate-600 border-slate-200";
+            roleEl.className = "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mt-0.5 border " + badgeCls;
             roleEl.classList.toggle("hidden", !info.roleLabel);
           }
           if (info.hasAccess === false) {
-            showAccessDenied(info.email);
+            showAccessDenied(info.email, info);
             return;
           }
           applyRolePermissions(info.permissions || {});

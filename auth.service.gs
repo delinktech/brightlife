@@ -15,9 +15,11 @@ function getCurrentUserEmail_() {
 
 function isActiveRoleFlag_(value) {
   if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
   var s = String(value || "")
     .trim()
     .toLowerCase();
+  if (!s) return false;
   return s === "true" || s === "yes" || s === "y" || s === "1" || s === "active";
 }
 
@@ -25,7 +27,8 @@ function normalizeRoleKey_(raw) {
   var s = String(raw || "")
     .trim()
     .toLowerCase();
-  if (s === "admin" || s === "administrator") return ROLE_KEY.ADMIN;
+  if (s === "admin" || s === "administrator" || s === "chairperson") return ROLE_KEY.ADMIN;
+  if (s === "treasurer" || s === "finance") return ROLE_KEY.TREASURER;
   if (s === "secretary") return ROLE_KEY.SECRETARY;
   if (s === "member" || s === "members") return ROLE_KEY.MEMBER;
   return ROLE_KEY.NONE;
@@ -33,19 +36,15 @@ function normalizeRoleKey_(raw) {
 
 function getOrCreateRolesSheet_() {
   var ss = getSpreadsheet_();
-  var sheet = ss.getSheetByName(SHEETS.ROLES);
-  if (!sheet) {
-    sheet = ss.insertSheet(SHEETS.ROLES);
-  }
-  if (sheet.getLastRow() < 1) {
-    sheet.appendRow(["Email", "Name", "Role", "Active"]);
-    sheet.setFrozenRows(1);
-  }
-  if (sheet.getLastRow() === 1) {
-    var ownerEmail = String(Session.getEffectiveUser().getEmail() || "").trim();
-    if (ownerEmail) {
-      sheet.appendRow([ownerEmail, "Owner Admin", "Admin", true]);
-    }
+  var sheet = getSheetByNameInsensitive_(ss, SHEETS.ROLES);
+  if (sheet) return sheet;
+
+  sheet = ss.insertSheet(SHEETS.ROLES);
+  sheet.appendRow(["Email", "Name", "Role", "Active"]);
+  sheet.setFrozenRows(1);
+  var ownerEmail = String(Session.getEffectiveUser().getEmail() || "").trim();
+  if (ownerEmail) {
+    sheet.appendRow([ownerEmail, "Owner Admin", "Admin", true]);
   }
   return sheet;
 }
@@ -71,7 +70,11 @@ function lookupRoleRowForEmail_(email) {
   if (!targetEmail) return null;
 
   try {
-    var sheet = getOrCreateRolesSheet_();
+    var ss = getSpreadsheet_();
+    var sheet = getSheetByNameInsensitive_(ss, SHEETS.ROLES);
+    if (!sheet) {
+      sheet = getOrCreateRolesSheet_();
+    }
     if (!sheet || sheet.getLastRow() < 2) return null;
 
     var range = sheet.getDataRange();
@@ -79,44 +82,39 @@ function lookupRoleRowForEmail_(email) {
     var displayValues = range.getDisplayValues();
     if (!values || values.length < 2) return null;
 
-    var headerRowIndex = 0;
-    var colMap = getHeaderMap_(values[0]);
-    var emailCol = colMap["email"];
-
-    if (emailCol === undefined) {
-      for (var h = 0; h < Math.min(values.length, 5); h++) {
-        var testMap = getHeaderMap_(values[h]);
-        if (testMap["email"] !== undefined) {
-          headerRowIndex = h;
-          colMap = testMap;
-          emailCol = testMap["email"];
-          break;
-        }
+    var headerRowIndex = -1;
+    var colMap = {};
+    for (var h = 0; h < Math.min(values.length, 5); h++) {
+      var testMap = getHeaderMap_(values[h]);
+      if (testMap["email"] !== undefined) {
+        headerRowIndex = h;
+        colMap = testMap;
+        break;
       }
     }
 
-    if (emailCol === undefined) {
-      console.error("Roles sheet missing 'Email' header");
+    if (headerRowIndex === -1 || colMap["email"] === undefined) {
       return null;
     }
 
+    var emailCol = colMap["email"];
     var roleCol = colMap["role"];
     var activeCol = colMap["active"];
     var nameCol = colMap["name"];
 
     for (var i = headerRowIndex + 1; i < values.length; i++) {
       var row = values[i];
-      var displayRow = displayValues[i];
+      var displayRow = displayValues ? displayValues[i] : [];
 
       var rawEmailVal = emailCol !== undefined ? row[emailCol] : "";
       var dispEmailVal = displayRow && emailCol !== undefined ? displayRow[emailCol] : "";
 
       var rowEmail = extractEmailFromString_(rawEmailVal) || extractEmailFromString_(dispEmailVal);
-      if (rowEmail !== targetEmail) continue;
+      if (!rowEmail || rowEmail !== targetEmail) continue;
 
       var rawActive = activeCol !== undefined ? row[activeCol] : true;
       var dispActive = displayRow && activeCol !== undefined ? displayRow[activeCol] : "";
-      var isActive = isActiveRoleFlag_(rawActive) || isActiveRoleFlag_(dispActive);
+      var isActive = activeCol === undefined ? true : (isActiveRoleFlag_(rawActive) || isActiveRoleFlag_(dispActive));
 
       if (!isActive) return null;
 
@@ -148,24 +146,41 @@ function getPermissionsForRoleKey_(roleKey) {
       contributionsWrite: true,
       loanPayment: true,
       loanRequest: true,
+      accountsWrite: true,
+      investmentsWrite: true,
       isAdmin: true,
+    };
+  }
+  if (roleKey === ROLE_KEY.TREASURER) {
+    return {
+      membersWrite: false,
+      contributionsWrite: true,
+      loanPayment: true,
+      loanRequest: false,
+      accountsWrite: true,
+      investmentsWrite: true,
+      isAdmin: false,
     };
   }
   if (roleKey === ROLE_KEY.SECRETARY) {
     return {
       membersWrite: true,
       contributionsWrite: false,
-      loanPayment: true,
+      loanPayment: false,
       loanRequest: true,
+      accountsWrite: false,
+      investmentsWrite: false,
       isAdmin: false,
     };
   }
   if (roleKey === ROLE_KEY.MEMBER) {
     return {
       membersWrite: false,
-      contributionsWrite: true,
-      loanPayment: true,
+      contributionsWrite: false,
+      loanPayment: false,
       loanRequest: true,
+      accountsWrite: false,
+      investmentsWrite: false,
       isAdmin: false,
     };
   }
@@ -174,6 +189,8 @@ function getPermissionsForRoleKey_(roleKey) {
     contributionsWrite: false,
     loanPayment: false,
     loanRequest: false,
+    accountsWrite: false,
+    investmentsWrite: false,
     isAdmin: false,
   };
 }
@@ -187,6 +204,7 @@ function getSessionRoleContext_(email) {
   var perms = getPermissionsForRoleKey_(roleKey);
   var labels = {};
   labels[ROLE_KEY.ADMIN] = "Admin";
+  labels[ROLE_KEY.TREASURER] = "Treasurer";
   labels[ROLE_KEY.SECRETARY] = "Secretary";
   labels[ROLE_KEY.MEMBER] = "Member";
   labels[ROLE_KEY.NONE] = "No role";
@@ -200,7 +218,7 @@ function getSessionRoleContext_(email) {
 }
 
 /**
- * Ensures current user is listed in the Roles table with an active role (Admin, Secretary, or Member).
+ * Ensures current user is listed in the Roles table with an active role (Admin, Treasurer, Secretary, or Member).
  */
 function requireAccess_() {
   var email = getCurrentUserEmail_();
@@ -215,7 +233,7 @@ function requireAccess_() {
 }
 
 /**
- * @param {string} permKey — "membersWrite" | "contributionsWrite" | "loanPayment" | "loanRequest"
+ * @param {string} permKey — "membersWrite" | "contributionsWrite" | "loanPayment" | "loanRequest" | "accountsWrite" | "investmentsWrite"
  */
 function requirePermission_(permKey) {
   var ctx = requireAccess_();
