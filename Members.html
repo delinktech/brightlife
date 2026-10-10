@@ -4,10 +4,15 @@
       <h2 class="text-3xl font-bold text-slate-900">Members Directory</h2>
       <p class="text-slate-500">Manage contributions and guarantee eligibility.</p>
     </div>
-    <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
-      class="hidden bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-sky-200">
-      <i class="fas fa-plus mr-2"></i> Register Member
-    </button>
+    <div class="flex items-center space-x-3">
+      <button type="button" onclick="openPrintContributionsReport()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm">
+        <i class="fas fa-print mr-2 text-slate-500"></i> Print Summary
+      </button>
+      <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
+        class="hidden bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-sky-200">
+        <i class="fas fa-plus mr-2"></i> Register Member
+      </button>
+    </div>
   </div>
 
   <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -22,7 +27,7 @@
           <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Loan Bal</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Guaranteed</th>
           <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Status</th>
-          <th data-require-perm="membersWrite" class="hidden px-6 py-4 text-xs font-bold text-slate-500 text-center">Actions</th>
+          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Actions</th>
         </tr>
       </thead>
       <tbody id="member-table-body" class="divide-y divide-slate-50">

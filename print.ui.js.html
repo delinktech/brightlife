@@ -1,0 +1,254 @@
+<script>
+  function formatDateForLetterhead(d) {
+    const dateObj = d instanceof Date ? d : new Date();
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    const day = dateObj.getDate();
+    const month = months[dateObj.getMonth()];
+    const year = dateObj.getFullYear();
+    return day + " " + month + " " + year;
+  }
+
+  function triggerBrowserPrint() {
+    window.print();
+  }
+
+  function closePrintModal() {
+    const modal = document.getElementById("printReportModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function openPrintMemberStatement(memberId) {
+    const member = (typeof currentMembers !== "undefined" ? currentMembers : []).find((m) => m.id === memberId);
+    if (!member) {
+      alert("Member details not found.");
+      return;
+    }
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "MEMBER FINANCIAL STATEMENT";
+    document.getElementById("print-report-badge").textContent = member.status || "Active";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official financial statement for " + member.name + " (" + member.id + " • NID: " + (member.nationalId || "-") + ")";
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Savings</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + formatMoney(member.savings) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Current Loan Balance</div>' +
+      '<div class="text-sm font-bold text-rose-600 font-mono mt-0.5">' + formatMoney(member.loanBalance) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Guaranteed Amount</div>' +
+      '<div class="text-sm font-bold text-purple-600 font-mono mt-0.5">' + formatMoney(member.guaranteed) + '</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Financial Item</th>' +
+      '<th class="px-4 py-3">Reference / Code</th>' +
+      '<th class="px-4 py-3">Details</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      '</tr>';
+
+    document.getElementById("print-table-body").innerHTML =
+      '<tr>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-piggy-bank text-emerald-600 mr-2"></i> Accumulated Member Savings</td>' +
+      '<td class="px-4 py-3 font-mono text-slate-500">' + member.id + '-SAV</td>' +
+      '<td class="px-4 py-3 text-slate-600">Total monthly contributions & deposits</td>' +
+      '<td class="px-4 py-3 text-right font-mono font-bold text-slate-800">' + formatMoney(member.savings) + '</td>' +
+      '</tr>' +
+      '<tr>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-hand-holding-dollar text-rose-600 mr-2"></i> Active Loan Outstanding Balance</td>' +
+      '<td class="px-4 py-3 font-mono text-slate-500">' + member.id + '-LN</td>' +
+      '<td class="px-4 py-3 text-slate-600">Principal + interest balance remaining</td>' +
+      '<td class="px-4 py-3 text-right font-mono font-bold text-rose-600">' + formatMoney(member.loanBalance) + '</td>' +
+      '</tr>' +
+      '<tr>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-shield-cat text-purple-600 mr-2"></i> Guarantor Liability Commitment</td>' +
+      '<td class="px-4 py-3 font-mono text-slate-500">' + member.id + '-GTR</td>' +
+      '<td class="px-4 py-3 text-slate-600">Savings pledged to guarantee loans</td>' +
+      '<td class="px-4 py-3 text-right font-mono font-bold text-purple-600">' + formatMoney(member.guaranteed) + '</td>' +
+      '</tr>';
+
+    document.getElementById("printReportModal").classList.remove("hidden");
+  }
+
+  function openPrintContributionsReport() {
+    const list = typeof currentContributions !== "undefined" ? currentContributions : [];
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "GROUP CONTRIBUTIONS STATEMENT";
+    document.getElementById("print-report-badge").textContent = "Financial Report";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official statement of member contributions and monthly deposits (" + list.length + " entries listed).";
+
+    let totalSum = 0;
+    list.forEach((c) => {
+      totalSum += parseFloat(String(c.amount || "0").replace(/[^0-9.-]+/g, "")) || 0;
+    });
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Contribution Volume</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono mt-0.5">' + formatMoney(totalSum) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Recorded Transactions</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + list.length + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Group Status</div>' +
+      '<div class="text-sm font-bold text-sky-600 font-mono mt-0.5">Active & Verified</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Date</th>' +
+      '<th class="px-4 py-3">Member Name</th>' +
+      '<th class="px-4 py-3">Payment Mode</th>' +
+      '<th class="px-4 py-3">Type</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      '</tr>';
+
+    let bodyHtml = "";
+    list.forEach((c) => {
+      bodyHtml +=
+        '<tr>' +
+        '<td class="px-4 py-2.5 font-mono text-slate-500">' + (c.date || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + (c.name || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + (c.mode || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + (c.type || "Contribution") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono font-bold text-slate-800">' + (c.amount || "-") + '</td>' +
+        '</tr>';
+    });
+
+    document.getElementById("print-table-body").innerHTML =
+      bodyHtml || '<tr><td colspan="5" class="text-center py-6 text-slate-400">No contributions records found.</td></tr>';
+
+    document.getElementById("printReportModal").classList.remove("hidden");
+  }
+
+  function openPrintLoansReport() {
+    const list = typeof currentLoans !== "undefined" ? currentLoans : [];
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "LOANS PORTFOLIO REPORT";
+    document.getElementById("print-report-badge").textContent = "Portfolio Statement";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official statement of member loan applications, repayments, and outstanding balances.";
+
+    let activeCount = 0;
+    let totalOutstanding = 0;
+    list.forEach((l) => {
+      if ((l.status || "").toLowerCase() === "active") activeCount++;
+      totalOutstanding += Number(l.balance) || 0;
+    });
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Active Loans</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + activeCount + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Portfolio Balance</div>' +
+      '<div class="text-sm font-bold text-rose-600 font-mono mt-0.5">' + formatMoney(totalOutstanding) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Portfolio Status</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono mt-0.5">Healthy</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Loan ID</th>' +
+      '<th class="px-4 py-3">Borrower Name</th>' +
+      '<th class="px-4 py-3 text-right">Requested</th>' +
+      '<th class="px-4 py-3 text-right">Repayment</th>' +
+      '<th class="px-4 py-3 text-right">Paid</th>' +
+      '<th class="px-4 py-3 text-right">Balance</th>' +
+      '<th class="px-4 py-3 text-center">Status</th>' +
+      '</tr>';
+
+    let bodyHtml = "";
+    list.forEach((l) => {
+      bodyHtml +=
+        '<tr>' +
+        '<td class="px-4 py-2.5 font-mono text-slate-500">' + l.id + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + (l.borrower || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono text-slate-700">' + formatMoney(l.requested) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono text-slate-700">' + formatMoney(l.repayment) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono text-emerald-600 font-semibold">' + formatMoney(l.paid) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono text-rose-600 font-bold">' + formatMoney(l.balance) + '</td>' +
+        '<td class="px-4 py-2.5 text-center font-bold text-xs">' + l.status + '</td>' +
+        '</tr>';
+    });
+
+    document.getElementById("print-table-body").innerHTML =
+      bodyHtml || '<tr><td colspan="7" class="text-center py-6 text-slate-400">No loan records found.</td></tr>';
+
+    document.getElementById("printReportModal").classList.remove("hidden");
+  }
+
+  function openPrintAccountsReport() {
+    const list = typeof currentAccounts !== "undefined" ? currentAccounts : [];
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "ACCOUNTS & BANK BALANCES OVERVIEW";
+    document.getElementById("print-report-badge").textContent = "Financial Audit";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official statement of group bank accounts, mobile money wallets, and liquid assets.";
+
+    let totalCash = 0;
+    list.forEach((a) => {
+      totalCash += Number(a.balance) || 0;
+    });
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Liquid Balance</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono mt-0.5">' + formatMoney(totalCash) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Registered Accounts</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + list.length + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Audit Status</div>' +
+      '<div class="text-sm font-bold text-sky-600 font-mono mt-0.5">Reconciled</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Organization / Bank</th>' +
+      '<th class="px-4 py-3">Account Number</th>' +
+      '<th class="px-4 py-3">Payment Mode</th>' +
+      '<th class="px-4 py-3">Paybill / Till</th>' +
+      '<th class="px-4 py-3">Balance Date</th>' +
+      '<th class="px-4 py-3 text-right">Current Balance (KES)</th>' +
+      '</tr>';
+
+    let bodyHtml = "";
+    list.forEach((a) => {
+      bodyHtml +=
+        '<tr>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + (a.orgName || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono text-slate-600">' + (a.accountNumber || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + (a.paymentMode || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono text-slate-600">' + (a.paybill || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono text-slate-500 text-xs">' + (a.balanceDate || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono font-bold text-slate-800">' + formatMoney(a.balance) + '</td>' +
+        '</tr>';
+    });
+
+    document.getElementById("print-table-body").innerHTML =
+      bodyHtml || '<tr><td colspan="6" class="text-center py-6 text-slate-400">No account records found.</td></tr>';
+
+    document.getElementById("printReportModal").classList.remove("hidden");
+  }
+</script>

@@ -4,7 +4,10 @@
       <h2 class="text-3xl font-bold text-slate-900">Loan Portfolio</h2>
       <p class="text-slate-500">View and manage member loan applications and balances.</p>
     </div>
-    <div class="flex space-x-3">
+    <div class="flex items-center space-x-3">
+      <button type="button" onclick="openPrintLoansReport()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm">
+        <i class="fas fa-print mr-2 text-slate-500"></i> Print Report
+      </button>
       <button type="button" onclick="openPayLoanModal()" data-require-perm="loanPayment" class="hidden bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold transition-all">
         <i class="fas fa-hand-holding-dollar mr-2"></i> Pay Loan
       </button>

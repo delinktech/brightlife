@@ -4,10 +4,15 @@
       <h2 class="text-3xl font-bold text-slate-900">Financial Ledger</h2>
       <p class="text-slate-500">Record and track all member contributions and payments.</p>
     </div>
-    <button type="button" onclick="openContributionModal()" data-require-perm="contributionsWrite"
-      class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-emerald-100">
-      <i class="fas fa-plus mr-2"></i> Post Transaction
-    </button>
+    <div class="flex items-center space-x-3">
+      <button type="button" onclick="openPrintContributionsReport()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm">
+        <i class="fas fa-print mr-2 text-slate-500"></i> Print Report
+      </button>
+      <button type="button" onclick="openContributionModal()" data-require-perm="contributionsWrite"
+        class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-emerald-100">
+        <i class="fas fa-plus mr-2"></i> Post Transaction
+      </button>
+    </div>
   </div>
 
   <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">

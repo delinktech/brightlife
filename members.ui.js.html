@@ -92,9 +92,11 @@
             '">' +
             m.status +
             "</span></td>" +
-            '<td class="px-6 py-4 text-center hidden" data-require-perm="membersWrite"><button type="button" onclick="openMemberModal(\'' +
+            '<td class="px-6 py-4 text-center"><button type="button" onclick="openPrintMemberStatement(\'' +
             m.id +
-            '\')" class="text-slate-400 hover:text-sky-600 transition-colors"><i class="fas fa-edit"></i></button></td>' +
+            '\')" title="Print Member Statement" class="text-slate-400 hover:text-emerald-600 transition-colors mr-2.5"><i class="fas fa-print"></i></button><button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' +
+            m.id +
+            '\')" title="Edit Member Profile" class="text-slate-400 hover:text-sky-600 transition-colors hidden"><i class="fas fa-edit"></i></button></td>' +
             "</tr>";
         });
         container.innerHTML =

@@ -53,6 +53,38 @@
     .nav-link.active i {
       color: rgb(56 189 248);
     }
+
+    @media print {
+      body {
+        background: white !important;
+        font-size: 11pt !important;
+        color: #0f172a !important;
+        overflow: visible !important;
+      }
+      #sidebar, header, #app-loader, .no-print, nav, .page-wrapper {
+        display: none !important;
+      }
+      #printReportModal {
+        position: static !important;
+        display: block !important;
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      #printReportModal > div {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+      }
+      #blg-printable-area {
+        padding-left: 1.5rem !important;
+        padding-right: 0.5rem !important;
+      }
+    }
   </style>
 </head>
 
@@ -183,6 +215,7 @@
     <div id="roles-container" class="page-wrapper">
       <?!= include('Roles'); ?>
     </div>
+    <?!= include('PrintReportModal'); ?>
     </main>
   </div>
 
@@ -194,6 +227,7 @@
   <?!= include('investments.ui.js'); ?>
   <?!= include('accounts.ui.js'); ?>
   <?!= include('roles.ui.js'); ?>
+  <?!= include('print.ui.js'); ?>
 
 </body>
 
