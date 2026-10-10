@@ -33,6 +33,7 @@ function saveContribution(data) {
       tid: data.tid || "",
     })
   );
+  clearDashboardCache_();
   return { success: true };
 }
 

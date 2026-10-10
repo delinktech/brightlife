@@ -152,6 +152,7 @@ function saveMember(data) {
           status: data.status,
         })
       );
+      clearDashboardCache_();
       return { success: true, message: "Member details updated successfully." };
     }
     throw new Error("Member ID not found.");
@@ -185,5 +186,6 @@ function saveMember(data) {
       lastName: data.lastName,
     })
   );
+  clearDashboardCache_();
   return { success: true, message: "Member registered successfully." };
 }

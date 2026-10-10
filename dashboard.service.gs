@@ -50,17 +50,37 @@ function getDashboardData() {
   };
 }
 
+function clearDashboardCache_() {
+  try {
+    var cache = CacheService.getScriptCache();
+    cache.removeAll(["home_analytics_year", "home_analytics_quarter", "home_analytics_this_month"]);
+  } catch (err) {
+    console.error("clearDashboardCache_ error: " + err.message);
+  }
+}
+
 function getHomeAnalytics(rangeKey) {
   return getHomeAnalyticsByRange_(rangeKey || "year");
 }
 
 function getHomeAnalyticsByRange_(rangeKey) {
   requireAccess_();
+  const effectiveRange = normalizeRangeKey_(rangeKey);
+  const cacheKey = "home_analytics_" + effectiveRange;
+
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (cacheErr) {
+    console.error("Cache read error: " + cacheErr.message);
+  }
+
   const ss = getSpreadsheet_();
   const now = new Date();
   const currentYear = now.getFullYear();
   const tz = ss.getSpreadsheetTimeZone();
-  const effectiveRange = normalizeRangeKey_(rangeKey);
   const rangeBounds = getDateRangeBounds_(effectiveRange, now);
 
   const memberRows = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
@@ -281,7 +301,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
     investmentCount = 0;
   }
 
-  return {
+  const result = {
     range: effectiveRange,
     savings: totalSavings,
     loans: totalLoans,
@@ -328,6 +348,17 @@ function getHomeAnalyticsByRange_(rangeKey) {
     accountsBalanceChart: getAccountsBalanceChartData_(),
     investments: buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds),
   };
+
+  try {
+    const payloadStr = JSON.stringify(result);
+    if (payloadStr.length < 100000) {
+      CacheService.getScriptCache().put(cacheKey, payloadStr, 300);
+    }
+  } catch (putErr) {
+    console.error("Cache put error: " + putErr.message);
+  }
+
+  return result;
 }
 
 function getAccountsBalanceChartData_() {
