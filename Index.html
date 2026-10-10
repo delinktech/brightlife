@@ -147,13 +147,12 @@
         </div>
         <h3 class="text-xl font-bold text-slate-800 mb-2">Access Restricted</h3>
         <p id="access-denied-msg" class="text-slate-600 text-sm mb-6 leading-relaxed">
-          Your Google account is not listed in the group's <strong>Roles</strong> table or is set to inactive.
+          Your Google account is not authorized to access the dashboard or is set to inactive.
         </p>
         <div class="p-4 bg-slate-50 rounded-xl text-left text-xs text-slate-600 space-y-2 mb-6">
           <div class="font-semibold text-slate-800"><i class="fas fa-info-circle mr-1 text-sky-500"></i> How to get access:</div>
           <div>1. Contact your group Administrator or Secretary.</div>
-          <div>2. Ask them to add your email address to the <strong>Roles</strong> sheet tab in the Google Sheet.</div>
-          <div>3. Ensure your role is set to <code>Admin</code>, <code>Secretary</code>, or <code>Member</code> and Active is set to <code>TRUE</code>.</div>
+          <div>2. Ask them to activate or grant access to your email address: <strong id="access-denied-email-display" class="text-slate-800 font-mono">()</strong> in the <strong>Roles</strong> tab.</div>
         </div>
         <button onclick="refreshSessionInfo(); showPage('home');" class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white font-medium text-xs rounded-xl hover:bg-slate-800 transition-colors">
           <i class="fas fa-arrows-rotate"></i> Refresh & Retry

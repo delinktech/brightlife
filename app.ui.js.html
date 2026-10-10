@@ -20,6 +20,8 @@
     return formatMoney(n);
   }
 
+  let currentSessionEmail = "";
+
   function handleErr(err) {
     console.error(err);
     var msg = "Operation failed. Please retry.";
@@ -34,14 +36,23 @@
   }
 
   function showAccessDenied(email) {
+    const activeEmail = email || currentSessionEmail || (document.getElementById("session-email") ? document.getElementById("session-email").textContent : "");
+    const cleanEmail = activeEmail && activeEmail !== "—" ? activeEmail.trim() : "";
+    
     const msgEl = document.getElementById("access-denied-msg");
     if (msgEl) {
-      if (email) {
-        msgEl.innerHTML = "Your Google account (<strong>" + email + "</strong>) is not listed in the group's <strong>Roles</strong> table or is set to inactive.";
+      if (cleanEmail) {
+        msgEl.innerHTML = "Your Google account (<strong>" + cleanEmail + "</strong>) is not authorized to access the dashboard or is set to inactive.";
       } else {
-        msgEl.innerHTML = "Your Google account is not listed in the group's <strong>Roles</strong> table or is set to inactive.";
+        msgEl.innerHTML = "Your Google account is not authorized to access the dashboard or is set to inactive.";
       }
     }
+
+    const emailDisplayEl = document.getElementById("access-denied-email-display");
+    if (emailDisplayEl) {
+      emailDisplayEl.textContent = cleanEmail ? cleanEmail : "(your email)";
+    }
+
     showPage("access-denied");
   }
 
@@ -182,6 +193,7 @@
       .withSuccessHandler((info) => {
         if (loadingEl) loadingEl.classList.add("hidden");
         if (info && info.success) {
+          currentSessionEmail = info.email || "";
           if (userBlock) userBlock.classList.remove("hidden");
           if (nameEl) {
             nameEl.textContent = info.displayName || "User";
