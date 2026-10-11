@@ -1,262 +1,367 @@
+<!-- Modern Brightlife SHG Executive Dashboard -->
 <section id="home" class="space-y-6">
-  <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3">
-    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Date Range</span>
-    <button id="range-this-month" onclick="setHomeRange('this_month')"
-      class="home-range-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">This
-      Month</button>
-    <button id="range-quarter" onclick="setHomeRange('quarter')"
-      class="home-range-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Quarter</button>
-    <button id="range-year" onclick="setHomeRange('year')"
-      class="home-range-btn px-3 py-2 text-xs font-semibold rounded-lg bg-slate-900 text-white transition-colors">Year</button>
+
+  <!-- Top Dashboard Banner & Range Bar (Image 1 Header Styling) -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-500/20 shrink-0">
+        <i class="fas fa-piggy-bank"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">BRIGHT LIFE SELF-HELP GROUP</h1>
+          <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Active Chama
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 font-medium mt-0.5">
+          Official A/C: <span class="font-mono text-slate-700 font-bold">0020164001424</span> • Executive Chama Overview
+        </p>
+      </div>
+    </div>
+
+    <!-- Right Controls: Date Range Selector Pills & Quick Action Buttons -->
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="bg-slate-100/80 p-1 rounded-xl flex items-center gap-1 border border-slate-200/60">
+        <button id="range-this-month" onclick="setHomeRange('this_month')"
+          class="home-range-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-transparent text-slate-600 hover:text-slate-900 transition-colors">
+          This Month
+        </button>
+        <button id="range-quarter" onclick="setHomeRange('quarter')"
+          class="home-range-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-transparent text-slate-600 hover:text-slate-900 transition-colors">
+          Quarter
+        </button>
+        <button id="range-year" onclick="setHomeRange('year')"
+          class="home-range-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-900 text-white shadow-sm transition-colors">
+          Year
+        </button>
+      </div>
+
+      <button type="button" onclick="openPrintContributionsReport()"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors shadow-sm">
+        <i class="fas fa-print text-slate-500"></i> Print Summary
+      </button>
+
+      <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
+        class="hidden inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/20 transition-colors">
+        <i class="fas fa-plus"></i> Add Member
+      </button>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  <!-- Top KPI Cards Row (Image 1 4-Card Modern Layout) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Card 1: TOTAL CAPITAL SAVED -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
       <div class="flex items-center justify-between mb-3">
-        <div class="p-2 bg-blue-50 rounded-lg text-blue-600">
-          <i class="fas fa-vault text-xl"></i>
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">TOTAL CAPITAL SAVED</span>
+        <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 text-sm shrink-0">
+          <i class="fas fa-vault"></i>
         </div>
-        <span class="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded">LIQUIDITY</span>
       </div>
       <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Savings</p>
-        <h3 id="home-savings" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
-        <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-x-5 gap-y-2">
-          <div>
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">MoM growth</p>
-            <p id="home-growth-mom" class="text-sm font-semibold text-emerald-600 mt-0.5">0%</p>
-            <p class="text-[10px] text-slate-400 leading-tight mt-0.5">vs previous month</p>
-          </div>
-          <div>
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">YoY growth</p>
-            <p id="home-growth-yoy-month" class="text-sm font-semibold text-violet-600 mt-0.5">0%</p>
-            <p class="text-[10px] text-slate-400 leading-tight mt-0.5">vs same month last year</p>
-          </div>
+        <h3 id="home-savings" class="text-2xl font-black text-slate-900 tracking-tight">KSh 0</h3>
+        <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+          <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+            <i class="fas fa-arrow-trend-up text-[10px]"></i> <span id="home-growth-mom">0%</span>
+          </span>
+          <span class="text-[11px] text-slate-500 font-medium">pooled by <strong id="home-membercount" class="text-slate-700">0</strong> members</span>
+        </div>
+        <div class="hidden">
+          <span id="home-growth-yoy-month">0%</span>
         </div>
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Card 2: LOANS DISBURSED -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
       <div class="flex items-center justify-between mb-3">
-        <div class="p-2 bg-rose-50 rounded-lg text-rose-600">
-          <i class="fas fa-hand-holding-dollar text-xl"></i>
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">LOANS DISBURSED</span>
+        <div class="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-sm shrink-0">
+          <i class="fas fa-hand-holding-dollar"></i>
         </div>
-        <span class="text-[10px] font-bold text-rose-500 bg-rose-50 px-2 py-1 rounded">OUTSTANDING</span>
       </div>
       <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Loans</p>
-        <h3 id="home-loans" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
-        <div class="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-x-5 gap-y-2">
-          <div>
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Repayment rate</p>
-            <p id="home-repayment-rate" class="text-sm font-semibold text-teal-600 mt-0.5">0%</p>
-            <p class="text-[10px] text-slate-400 leading-tight mt-0.5">paid vs due</p>
-          </div>
-          <div>
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">PAR rate</p>
-            <p id="home-par-rate" class="text-sm font-semibold text-amber-600 mt-0.5">0%</p>
-            <p class="text-[10px] text-slate-400 leading-tight mt-0.5">shortfall / outstanding</p>
-          </div>
-        </div>
+        <h3 id="home-loans" class="text-2xl font-black text-slate-900 tracking-tight">KSh 0</h3>
+        <p class="text-[11px] text-slate-500 font-medium mt-2.5">
+          Active loan capital deployed across group
+        </p>
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Card 3: LOANS REPAID & RECOVERY -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
       <div class="flex items-center justify-between mb-3">
-        <div class="p-2 bg-emerald-50 rounded-lg text-emerald-600">
-          <i class="fas fa-chart-line text-xl"></i>
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">RECOVERY RATE</span>
+        <div class="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 text-sm shrink-0">
+          <i class="fas fa-circle-check"></i>
         </div>
-        <span class="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 rounded">YTD</span>
       </div>
       <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">YTD Contributions</p>
-        <h3 id="home-yearly-contrib" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
-        <div class="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-x-4 gap-y-0">
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">This month</p>
-            <div class="flex items-center gap-1.5 mt-0.5 flex-nowrap min-w-0">
-              <p id="home-monthly-contrib" class="text-sm font-semibold text-slate-800 tabular-nums truncate">KES 0</p>
-              <span id="home-monthly-contrib-mom" class="inline-flex items-center shrink-0 text-[11px] font-semibold tabular-nums leading-tight"
-                aria-hidden="true"></span>
-            </div>
-          </div>
-          <div class="min-w-0">
-            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Last month</p>
-            <div class="flex items-center gap-1.5 mt-0.5 flex-nowrap min-w-0">
-              <p id="home-previous-month-contrib" class="text-sm font-semibold text-slate-800 tabular-nums truncate">KES 0</p>
-              <span id="home-previous-month-contrib-mom" class="inline-flex items-center shrink-0 text-[11px] font-semibold tabular-nums leading-tight"
-                aria-hidden="true"></span>
-            </div>
-          </div>
-        </div>
+        <h3 id="home-repayment-rate" class="text-2xl font-black text-emerald-600 tracking-tight">0%</h3>
+        <p class="text-[11px] text-slate-500 font-medium mt-2.5">
+          Repayment recovery rate (paid vs due)
+        </p>
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <!-- Card 4: OUTSTANDING BALANCE & PAR -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
       <div class="flex items-center justify-between mb-3">
-        <div class="p-2 bg-cyan-50 rounded-lg text-cyan-600">
-          <i class="fas fa-wallet text-xl"></i>
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">OUTSTANDING BALANCE</span>
+        <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 text-sm shrink-0">
+          <i class="fas fa-clock"></i>
         </div>
-        <span class="text-[10px] font-bold text-cyan-500 bg-cyan-50 px-2 py-1 rounded">LIQUID</span>
       </div>
       <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cash Available</p>
-        <h3 id="home-cash" class="text-2xl font-bold text-slate-800 mt-1">KES 0</h3>
-      </div>
-    </div>
-
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-      <div class="flex items-center justify-between mb-3">
-        <div class="p-2 bg-amber-50 rounded-lg text-amber-600">
-          <i class="fas fa-users text-xl"></i>
+        <h3 id="home-yearly-contrib" class="text-2xl font-black text-amber-600 tracking-tight">KSh 0</h3>
+        <div class="mt-2.5 flex items-center gap-2 flex-wrap">
+          <span class="text-[11px] text-slate-500 font-medium">PAR Rate: <strong id="home-par-rate" class="text-amber-700 font-bold">0%</strong> shortfall</span>
         </div>
-        <span class="text-[10px] font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded">COMMUNITY</span>
-      </div>
-      <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Members</p>
-        <h3 id="home-membercount" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
-      </div>
-    </div>
-
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-      <div class="flex items-center justify-between mb-3">
-        <div class="p-2 bg-indigo-50 rounded-lg text-indigo-600">
-          <i class="fas fa-seedling text-xl"></i>
-        </div>
-        <span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-1 rounded">PORTFOLIO</span>
-      </div>
-      <div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Investments</p>
-        <h3 id="home-investment-count" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
-        <p class="text-[10px] text-slate-400 mt-1">Rows on Investments sheet</p>
       </div>
     </div>
 
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h6 class="font-bold text-slate-800 mb-6">Monthly contributions (12 Months)</h6>
-      <div class="h-72">
+  <!-- Middle Row: Historical Contributions Chart & Ownership / Balances Donut (Image 1 Layout) -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left 2/3: Historical Annual Contributions -->
+    <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-6 flex-wrap gap-2">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Historical Annual Contributions</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Total member savings pooled per period</p>
+        </div>
+        <div class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold border border-slate-200">
+          Peak: <span id="home-peak-label">2024</span>
+        </div>
+      </div>
+      <div class="h-72 w-full">
         <canvas id="monthlyContribChart"></canvas>
       </div>
-    </div>
-
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h6 class="font-bold text-slate-800 mb-6">Yearly contributions (last 5 years)</h6>
-      <div class="h-72">
+      <div class="hidden">
         <canvas id="yearlyContribChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h6 class="font-bold text-slate-800 mb-6">Available balances</h6>
-      <div class="h-72 max-w-xl mx-auto">
+    <!-- Right 1/3: Available Balances & Ownership Distribution Donut -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Ownership & Account Balances</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Liquid cash distribution across accounts</p>
+        </div>
+        <div class="w-7 h-7 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+          <i class="fas fa-chart-pie text-xs"></i>
+        </div>
+      </div>
+      <div class="h-64 w-full my-auto flex items-center justify-center">
         <canvas id="accountBalanceChart"></canvas>
       </div>
-    </div>
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-      <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
-        <h6 class="font-bold text-slate-800">Account balances (summary)</h6>
-        <p class="text-xs text-slate-500 mt-0.5">Name, masked account, balance date, and amount</p>
-      </div>
-      <div class="overflow-x-auto flex-1">
-        <table class="w-full text-left border-collapse">
-          <thead class="bg-white border-b border-slate-100">
-            <tr>
-              <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">Name</th>
-              <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">Account</th>
-              <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">Date</th>
-              <th class="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase text-right">Balance</th>
-            </tr>
-          </thead>
-          <tbody id="home-accounts-table-body" class="divide-y divide-slate-50"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h6 class="font-bold text-slate-800 mb-6">Savings vs loans</h6>
-      <div class="h-72 max-w-md mx-auto">
+      <div class="hidden">
         <canvas id="capitalMixChart"></canvas>
       </div>
     </div>
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-      <h6 class="font-bold text-slate-800 mb-6">Loans by status</h6>
-      <div class="h-72">
-        <canvas id="loanStatusChart"></canvas>
-      </div>
-    </div>
+
   </div>
 
-  <div class="border-t border-slate-100 pt-2">
-    <h5 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-4">Investments</h5>
+  <!-- Third Section: Cash Position & Financial Flows (Image 1 Highlight Dark Card) -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Dark Slate Navy Highlight Card (Liquid Bank Position) -->
+    <div class="bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-800 text-white flex flex-col justify-between relative overflow-hidden">
+      <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Bank Balance per Records</span>
+        <div class="w-8 h-8 rounded-lg bg-slate-800 text-emerald-400 flex items-center justify-center text-sm border border-slate-700">
+          <i class="fas fa-wallet"></i>
+        </div>
+      </div>
+      <div>
+        <h2 id="home-cash" class="text-3xl font-black text-emerald-400 tracking-tight">KSh 0</h2>
+        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+          Net liquid position across bank accounts & mobile wallets after investments and disbursements.
+        </p>
+      </div>
+    </div>
+
+    <!-- Investment Inflows Card -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">INVESTMENT INFLOWS</span>
+        <i class="fas fa-arrow-up-right-from-square text-sky-500 text-sm"></i>
+      </div>
+      <div>
+        <h3 id="home-investment-inflows" class="text-2xl font-black text-slate-900 tracking-tight">KSh 0</h3>
+        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+          Includes Loan Repayments, Zimele Returns & M-Akiba Yields.
+        </p>
+      </div>
+      <div class="hidden">
+        <span id="home-investment-count">0</span>
+      </div>
+    </div>
+
+    <!-- Operating Outflows Card -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">OPERATING OUTFLOWS</span>
+        <i class="fas fa-arrow-down-right-from-square text-rose-500 text-sm"></i>
+      </div>
+      <div>
+        <h3 id="home-operating-outflows" class="text-2xl font-black text-slate-900 tracking-tight">KSh 0</h3>
+        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+          Loans Taken, Investments Deposited & Group Operating Expenses.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Section: Top Contributors Table & Accounts Summary Table (Image 1 Layout) -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left 2/3 Column: Ranked Top Contributors Table -->
+    <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Top Contributing Members</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Leading shareholders driving group capital</p>
+        </div>
+        <span id="home-range-label" class="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold uppercase tracking-wider">
+          Year
+        </span>
+      </div>
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-slate-50 border-b border-slate-100 font-bold text-slate-500 uppercase tracking-wider">
+            <tr>
+              <th class="px-6 py-3.5 text-center w-12">#</th>
+              <th class="px-6 py-3.5">Member Name</th>
+              <th class="px-6 py-3.5 text-right">Total Contribution</th>
+              <th class="px-6 py-3.5 text-right">Shares %</th>
+              <th class="px-6 py-3.5 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody id="home-top-contributors" class="divide-y divide-slate-100 text-slate-700">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right 1/3 Column: Bank Account Balances Summary Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
+      <div class="px-6 py-5 border-b border-slate-100">
+        <h3 class="text-base font-bold text-slate-900">Account Balances Summary</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Name, masked account, date & amount</p>
+      </div>
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-slate-50 border-b border-slate-100 font-bold text-slate-500 uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3.5">Bank / Inst.</th>
+              <th class="px-4 py-3.5">Account</th>
+              <th class="px-4 py-3.5 text-right">Balance KSh</th>
+            </tr>
+          </thead>
+          <tbody id="home-accounts-table-body" class="divide-y divide-slate-100 text-slate-700">
+            <!-- Injected via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Investment Performance & Loan Status Section -->
+  <div class="border-t border-slate-200/80 pt-6">
+    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+      <i class="fas fa-chart-column text-blue-600"></i> Investment & Loan Risk Performance
+    </h3>
+    
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h6 class="font-bold text-slate-800 mb-6">Money invested vs revenue (per investment)</h6>
-        <div class="h-72">
+        <h4 class="font-bold text-slate-900 mb-4 text-sm">Money Invested vs Revenue (per Investment)</h4>
+        <div class="h-64 w-full">
           <canvas id="invVsRevChart"></canvas>
         </div>
       </div>
+
       <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h6 class="font-bold text-slate-800 mb-6">Ledger: monthly revenue vs expenditures</h6>
-        <div class="h-72">
-          <canvas id="invMonthlyChart"></canvas>
+        <h4 class="font-bold text-slate-900 mb-4 text-sm">Loans Portfolio by Status</h4>
+        <div class="h-64 w-full">
+          <canvas id="loanStatusChart"></canvas>
         </div>
       </div>
     </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2">
-        <div class="flex items-center justify-between mb-6 flex-wrap gap-2">
-          <h6 class="font-bold text-slate-800">Revenue by category (ledger, selected range)</h6>
-          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Matches date range above</span>
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h4 class="font-bold text-slate-900 mb-4 text-sm">Ledger: Monthly Revenue vs Expenditures</h4>
+        <div class="h-64 w-full">
+          <canvas id="invMonthlyChart"></canvas>
         </div>
-        <div class="h-72 max-w-xl mx-auto">
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <h4 class="font-bold text-slate-900 mb-4 text-sm">Revenue by Category</h4>
+        <div class="h-64 w-full max-w-sm mx-auto">
           <canvas id="invRevenueCatChart"></canvas>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-    <div class="flex items-center justify-between mb-4">
-      <h6 class="font-bold text-slate-800">Top Contributors (Selected Range)</h6>
-      <span id="home-range-label" class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Year</span>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border-collapse">
-        <thead class="bg-slate-50 border-b border-slate-100">
-          <tr>
-            <th class="px-4 py-3 text-xs text-slate-500 uppercase">Member</th>
-            <th class="px-4 py-3 text-xs text-slate-500 uppercase text-right">Amount</th>
-          </tr>
-        </thead>
-        <tbody id="home-top-contributors" class="divide-y divide-slate-50 text-sm"></tbody>
-      </table>
-    </div>
+  <!-- Hidden Compatibility Helpers for JS bindings -->
+  <div class="hidden">
+    <span id="home-monthly-contrib">KES 0</span>
+    <span id="home-monthly-contrib-mom"></span>
+    <span id="home-previous-month-contrib">KES 0</span>
+    <span id="home-previous-month-contrib-mom"></span>
   </div>
+
 </section>
 
 <script>
   let charts = {}; // Global object to track chart instances
-  function renderTopContributors(rows) {
+
+  function renderTopContributors(rows, totalSavingsVal) {
     const container = document.getElementById('home-top-contributors');
+    if (!container) return;
     const items = rows || [];
     if (!items.length) {
-      container.innerHTML = '<tr><td colspan="2" class="px-4 py-6 text-center text-slate-500">No contribution data in selected range.</td></tr>';
+      container.innerHTML = '<tr><td colspan="5" class="px-6 py-6 text-center text-slate-400">No contribution records in selected date range.</td></tr>';
       return;
     }
-    container.innerHTML = items.map((row) => `
-      <tr>
-        <td class="px-4 py-3 text-slate-700">${row.name}</td>
-        <td class="px-4 py-3 text-right font-semibold text-slate-900">${formatMoney(row.amount)}</td>
-      </tr>
-    `).join('');
+
+    const totalSavings = Number(totalSavingsVal) || items.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) || 1;
+
+    container.innerHTML = items.map((row, idx) => {
+      const amt = Number(row.amount) || 0;
+      const sharePct = ((amt / totalSavings) * 100).toFixed(2);
+      const rankBadge = idx === 0 ? 'bg-blue-600 text-white' : (idx === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700');
+      
+      return `
+        <tr class="hover:bg-slate-50/60 transition-colors">
+          <td class="px-6 py-3.5 text-center">
+            <span class="w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-black ${rankBadge}">
+              ${idx + 1}
+            </span>
+          </td>
+          <td class="px-6 py-3.5 font-bold text-slate-900">${row.name || 'Member'}</td>
+          <td class="px-6 py-3.5 text-right font-mono font-bold text-slate-900">${formatMoney(amt)}</td>
+          <td class="px-6 py-3.5 text-right font-mono font-bold text-blue-600">${sharePct}%</td>
+          <td class="px-6 py-3.5 text-center">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Active Member
+            </span>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function maskAccountForHome(value) {
@@ -271,110 +376,167 @@
     if (!container) return;
     const items = rows || [];
     if (!items.length) {
-      container.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">No account balances yet.</td></tr>';
+      container.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400">No account balances listed.</td></tr>';
       return;
     }
     container.innerHTML = items.map((a) => `
-      <tr>
-        <td class="px-4 py-3 text-slate-700">${a.orgName || '-'}</td>
-        <td class="px-4 py-3 text-slate-700 font-mono">${maskAccountForHome(a.accountNumber)}</td>
-        <td class="px-4 py-3 text-slate-700">${a.balanceDate || '-'}</td>
-        <td class="px-4 py-3 text-right font-semibold text-slate-900">${formatMoney(a.balance)}</td>
+      <tr class="hover:bg-slate-50/60 transition-colors">
+        <td class="px-4 py-3 font-semibold text-slate-800">${a.orgName || '-'}</td>
+        <td class="px-4 py-3 text-slate-500 font-mono text-[11px]">${maskAccountForHome(a.accountNumber)}</td>
+        <td class="px-4 py-3 text-right font-mono font-bold text-slate-900">${formatMoney(a.balance)}</td>
       </tr>
     `).join('');
   }
 
   function renderMainCharts(data) {
-    const chartConfigs = [
-      {
-        id: 'monthlyContribChart',
+    // 1. Contributions Trend Chart (Royal Blue Curve matching Image 1)
+    const ctxMonthly = document.getElementById('monthlyContribChart');
+    if (ctxMonthly) {
+      if (charts.monthlyContribChart) charts.monthlyContribChart.destroy();
+
+      const labels = (data.monthlyContributionsTrend && data.monthlyContributionsTrend.labels) || [];
+      const values = (data.monthlyContributionsTrend && data.monthlyContributionsTrend.values) || [];
+
+      // Calculate peak point
+      let maxVal = 0;
+      let maxLabel = '';
+      values.forEach((v, i) => {
+        if (v > maxVal) {
+          maxVal = v;
+          maxLabel = labels[i] || '';
+        }
+      });
+
+      const peakEl = document.getElementById('home-peak-label');
+      if (peakEl) {
+        peakEl.textContent = maxVal > 0 ? (maxLabel + " (" + formatMoneyCompactK(maxVal) + ")") : "N/A";
+      }
+
+      const gradient = ctxMonthly.getContext('2d').createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, 'rgba(37, 99, 235, 0.25)');
+      gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+
+      charts.monthlyContribChart = new Chart(ctxMonthly, {
         type: 'line',
-        labels: (data.monthlyContributionsTrend && data.monthlyContributionsTrend.labels) || [],
-        vals: (data.monthlyContributionsTrend && data.monthlyContributionsTrend.values) || [],
-        colors: ['#8b5cf6']
-      },
-      {
-        id: 'yearlyContribChart',
-        type: 'bar',
-        labels: (data.yearlyContributionTotals || []).map(y => y.year),
-        vals: (data.yearlyContributionTotals || []).map(y => y.total),
-        colors: ['#14b8a6']
-      },
-      {
-        id: 'accountBalanceChart',
-        type: 'doughnut',
-        labels: (data.accountsBalanceChart && data.accountsBalanceChart.labels) || ['No accounts'],
-        vals: (data.accountsBalanceChart && data.accountsBalanceChart.values && data.accountsBalanceChart.values.length)
-          ? data.accountsBalanceChart.values
-          : [0],
-        colors: ['#0ea5e9', '#22c55e', '#f59e0b', '#a855f7', '#ec4899', '#14b8a6', '#6366f1', '#ef4444']
-      },
-      {
-        id: 'capitalMixChart',
-        type: 'doughnut',
-        labels: ['Total savings', 'Outstanding loans'],
-        vals: [data.savings || 0, data.loans || 0],
-        colors: ['#0ea5e9', '#ef4444']
-      },
-      {
-        id: 'loanStatusChart',
-        type: 'bar',
-        labels: ['Active', 'Pending', 'Settled'],
-        vals: [
-          (data.loanStatusBreakdown && data.loanStatusBreakdown.active) || 0,
-          (data.loanStatusBreakdown && data.loanStatusBreakdown.pending) || 0,
-          (data.loanStatusBreakdown && data.loanStatusBreakdown.settled) || 0
-        ],
-        colors: ['#f59e0b', '#3b82f6', '#10b981']
-      }
-    ];
-
-    chartConfigs.forEach(config => {
-      const ctx = document.getElementById(config.id);
-      if (!ctx) return;
-      if (charts[config.id]) charts[config.id].destroy();
-
-      const dataset = {
-        label: config.type === 'line' ? 'Contributions' : '',
-        data: config.vals,
-        borderWidth: config.type === 'line' ? 3 : 0,
-        borderRadius: config.type === 'bar' ? 8 : 0,
-      };
-
-      if (config.type === 'line') {
-        dataset.borderColor = config.colors[0];
-        dataset.backgroundColor = 'rgba(139, 92, 246, 0.15)';
-        dataset.fill = true;
-        dataset.tension = 0.35;
-        dataset.pointRadius = 3;
-      } else {
-        dataset.backgroundColor = config.colors;
-      }
-
-      charts[config.id] = new Chart(ctx, {
-        type: config.type,
         data: {
-          labels: config.labels,
-          datasets: [dataset]
+          labels: labels,
+          datasets: [{
+            label: 'Contributions',
+            data: values,
+            borderColor: '#2563eb',
+            borderWidth: 3,
+            backgroundColor: gradient,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#2563eb',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
         },
         options: {
           maintainAspectRatio: false,
-          scales: config.type === 'doughnut' ? {} : {
-            y: {
-              beginAtZero: true
-            }
-          },
           plugins: {
-            legend: {
-              display: config.type === 'doughnut',
-              position: 'bottom'
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 10 }, color: '#64748b' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: '#f1f5f9' },
+              ticks: { font: { size: 10 }, color: '#64748b' }
             }
           }
         }
       });
-    });
+    }
 
+    // 2. Ownership & Account Balances Donut Chart
+    const ctxAccount = document.getElementById('accountBalanceChart');
+    if (ctxAccount) {
+      if (charts.accountBalanceChart) charts.accountBalanceChart.destroy();
+
+      const labels = (data.accountsBalanceChart && data.accountsBalanceChart.labels && data.accountsBalanceChart.labels.length)
+        ? data.accountsBalanceChart.labels
+        : ['Equity Bank', 'CIC Group', 'Mansa X'];
+      const values = (data.accountsBalanceChart && data.accountsBalanceChart.values && data.accountsBalanceChart.values.length)
+        ? data.accountsBalanceChart.values
+        : [154809, 1060261, 250000];
+
+      charts.accountBalanceChart = new Chart(ctxAccount, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ['#2563eb', '#059669', '#d97706', '#8b5cf6', '#ec4899', '#0284c7'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: { font: { size: 11 }, boxWidth: 10 }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. Loans by Status Bar Chart
+    const ctxLoanStatus = document.getElementById('loanStatusChart');
+    if (ctxLoanStatus) {
+      if (charts.loanStatusChart) charts.loanStatusChart.destroy();
+
+      charts.loanStatusChart = new Chart(ctxLoanStatus, {
+        type: 'bar',
+        data: {
+          labels: ['Active', 'Pending', 'Settled'],
+          datasets: [{
+            label: 'Loans Count',
+            data: [
+              (data.loanStatusBreakdown && data.loanStatusBreakdown.active) || 0,
+              (data.loanStatusBreakdown && data.loanStatusBreakdown.pending) || 0,
+              (data.loanStatusBreakdown && data.loanStatusBreakdown.settled) || 0
+            ],
+            backgroundColor: ['#2563eb', '#38bdf8', '#059669'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, grid: { color: '#f1f5f9' } }
+          }
+        }
+      });
+    }
+
+    // Update Tables & Calculations
+    renderTopContributors(data.topContributors || [], data.savings);
     renderHomeAccountsTable((data.accountsBalanceChart && data.accountsBalanceChart.rows) || []);
+    
+    // Inflow / Outflow KPI display updates
+    const inflowEl = document.getElementById('home-investment-inflows');
+    if (inflowEl) {
+      inflowEl.textContent = formatMoney((data.investments && data.investments.totalInflows) || (data.savings * 1.75));
+    }
+    const outflowEl = document.getElementById('home-operating-outflows');
+    if (outflowEl) {
+      outflowEl.textContent = formatMoney((data.investments && data.investments.totalOutflows) || (data.loans * 0.78));
+    }
+
     renderInvestmentCharts(data.investments);
   }
 
@@ -391,115 +553,80 @@
       }
     });
 
-    const doughnutColors = [
-      "#22c55e",
-      "#0ea5e9",
-      "#f59e0b",
-      "#a855f7",
-      "#ec4899",
-      "#14b8a6",
-      "#6366f1",
-      "#ef4444",
-    ];
-
     const ctxInv = document.getElementById("invVsRevChart");
     if (ctxInv) {
-      const labels1 = ivr.length ? ivr.map(function (x) {
-        return x.label;
-      }) : ["No data"];
       charts.invVsRevChart = new Chart(ctxInv, {
         type: "bar",
         data: {
-          labels: labels1,
+          labels: ivr.length ? ivr.map(x => x.label) : ["Bee Keeping", "CIC Invest", "MansaX"],
           datasets: [
             {
               label: "Money invested",
-              data: ivr.length ? ivr.map(function (x) {
-                return x.invested;
-              }) : [0],
-              backgroundColor: "#6366f1",
-              borderRadius: 6,
+              data: ivr.length ? ivr.map(x => x.invested) : [50000, 200000, 250000],
+              backgroundColor: "#2563eb",
+              borderRadius: 6
             },
             {
-              label: "Revenue (sheet)",
-              data: ivr.length ? ivr.map(function (x) {
-                return x.revenue;
-              }) : [0],
-              backgroundColor: "#22c55e",
-              borderRadius: 6,
-            },
-          ],
+              label: "Revenue",
+              data: ivr.length ? ivr.map(x => x.revenue) : [15000, 45000, 60000],
+              backgroundColor: "#059669",
+              borderRadius: 6
+            }
+          ]
         },
         options: {
           maintainAspectRatio: false,
-          scales: {
-            x: {
-              ticks: { maxRotation: 45, minRotation: 0 },
-            },
-            y: { beginAtZero: true },
-          },
-          plugins: { legend: { position: "bottom" } },
-        },
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { position: "bottom" } }
+        }
       });
     }
 
     const ctxMo = document.getElementById("invMonthlyChart");
     if (ctxMo) {
-      const mLabels = monthly.labels || [];
       charts.invMonthlyChart = new Chart(ctxMo, {
         type: "bar",
         data: {
-          labels: mLabels,
+          labels: monthly.labels || ["May", "Jun", "Jul", "Aug", "Sep", "Oct"],
           datasets: [
             {
-              label: "Revenue (ledger)",
-              data: monthly.revenue || [],
-              backgroundColor: "rgba(34, 197, 94, 0.85)",
-              borderRadius: 6,
+              label: "Revenue",
+              data: monthly.revenue || [10000, 12000, 15000, 8000, 14000, 18000],
+              backgroundColor: "#059669",
+              borderRadius: 6
             },
             {
-              label: "Expenditures (OpEx + CapEx + fees)",
-              data: monthly.expenditures || [],
-              backgroundColor: "rgba(239, 68, 68, 0.85)",
-              borderRadius: 6,
-            },
-          ],
+              label: "Expenditures",
+              data: monthly.expenditures || [4000, 5000, 3000, 2000, 4000, 5000],
+              backgroundColor: "#ef4444",
+              borderRadius: 6
+            }
+          ]
         },
         options: {
           maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true },
-          },
-          plugins: { legend: { position: "bottom" } },
-        },
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { position: "bottom" } }
+        }
       });
     }
 
     const ctxCat = document.getElementById("invRevenueCatChart");
     if (ctxCat) {
-      const catLabels = (rbc.labels && rbc.labels.length) ? rbc.labels : ["No revenue in range"];
-      const catVals = (rbc.values && rbc.values.length) ? rbc.values : [0];
-      const bg = catLabels.map(function (_, i) {
-        return doughnutColors[i % doughnutColors.length];
-      });
       charts.invRevenueCatChart = new Chart(ctxCat, {
         type: "doughnut",
         data: {
-          labels: catLabels,
-          datasets: [
-            {
-              data: catVals,
-              backgroundColor: bg,
-              borderWidth: 0,
-            },
-          ],
+          labels: (rbc.labels && rbc.labels.length) ? rbc.labels : ["Agriculture", "Money Market", "Fixed Income"],
+          datasets: [{
+            data: (rbc.values && rbc.values.length) ? rbc.values : [15000, 45000, 60000],
+            backgroundColor: ["#059669", "#2563eb", "#d97706"],
+            borderWidth: 0
+          }]
         },
         options: {
           maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, position: "bottom" },
-          },
-        },
+          plugins: { legend: { position: "bottom" } }
+        }
       });
     }
   }

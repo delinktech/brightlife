@@ -133,10 +133,10 @@
       const button = document.getElementById("range-" + token);
       if (!button) return;
       button.className =
-        "home-range-btn px-3 py-2 text-xs font-semibold rounded-lg transition-colors " +
+        "home-range-btn px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors " +
         (rangeKey === token.replace("-", "_")
-          ? "bg-slate-900 text-white"
-          : "bg-slate-100 text-slate-600 hover:bg-slate-200");
+          ? "bg-slate-900 text-white shadow-sm font-bold"
+          : "bg-transparent text-slate-600 hover:text-slate-900 font-medium");
     });
   }
 
