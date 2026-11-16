@@ -2,11 +2,18 @@
  * Current user context for the web app UI.
  * Requires deploy: Execute as "User accessing the web app" for per-user email.
  *
- * Display name: Roles.Name (when the user has an active row), then People API,
+ * Display name: Roles.Member/Name (when the user has an active row), then People API,
  * then a friendly name derived from the email local part.
  */
 
 function getSessionInfo() {
+  // Ensure schema columns & foreign keys exist on load
+  try {
+    runSchemaMigrationAddMemberIds_();
+  } catch (mErr) {
+    console.warn("Schema migration auto-check notice: " + mErr.message);
+  }
+
   var email = getCurrentUserEmail_();
   var profile = getGoogleProfile_();
   var roleCtx = getSessionRoleContext_(email);
@@ -19,6 +26,8 @@ function getSessionInfo() {
     success: true,
     email: email,
     displayName: displayName,
+    memberId: roleCtx.memberId || "",
+    memberName: roleCtx.memberName || displayName,
     photoUrl: profile.photoUrl || "",
     version: typeof APP_VERSION !== "undefined" ? APP_VERSION : "0.0.0",
     status: "active",
@@ -58,30 +67,13 @@ function getGoogleProfile_() {
       var primary = person.photos.filter(function (p) {
         return p.metadata && p.metadata.primary;
       })[0];
-      var photo = primary || person.photos[0];
-      if (photo && photo.url && String(photo.url).trim()) {
-        out.photoUrl = String(photo.url).trim();
+      var chosen = primary || person.photos[0];
+      if (chosen && chosen.url) {
+        out.photoUrl = String(chosen.url);
       }
     }
-  } catch (e) {
-    return out;
+  } catch (err) {
+    // People API is optional
   }
   return out;
-}
-
-function friendlyNameFromEmail_(email) {
-  var local = String(email || "")
-    .split("@")[0]
-    .trim();
-  if (!local) return "User";
-  return local
-    .replace(/[._-]+/g, " ")
-    .split(" ")
-    .filter(function (w) {
-      return w.length > 0;
-    })
-    .map(function (w) {
-      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-    })
-    .join(" ");
 }

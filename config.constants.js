@@ -5,12 +5,21 @@ const SHEETS = Object.freeze({
   MEMBERS: "Members",
   CONTRIBUTIONS: "Contributions",
   LOANS: "Loans",
+  LOAN_REPAYMENTS: "Loan Repayments",
   GUARANTORS: "Guarantors",
   INVESTMENTS: "Investments",
   INVESTMENT_LEDGER: "InvestmentLedger",
   ACCOUNTS: "Accounts",
   ROLES: "Roles",
   AUDIT_LOG: "AuditLog",
+  CONSTANTS: "Constants",
+  FUND_STATEMENTS: "Fund Statements",
+});
+
+const TRANSACTION_STATUS = Object.freeze({
+  PENDING: "Pending",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
 });
 
 /** Normalized role keys from the Roles sheet */
@@ -28,6 +37,21 @@ const LOAN_STATUS = Object.freeze({
   APPROVED: "Approved",
   SETTLED: "Settled",
   REJECTED: "Rejected",
+});
+
+const DEPOSIT_CHANNELS = Object.freeze({
+  CASH: "Cash",
+  EQUITY_BANK: "Equity Bank",
+  CIC_MMF: "CIC MMF",
+  MANSA_X: "Mansa X",
+  REFUND_OFFSET: "Refund / Expense Offset",
+});
+
+const TRANSACTION_TYPES = Object.freeze({
+  MONTHLY_CONTRIBUTION: "Monthly Contribution",
+  LOAN_REPAYMENT: "Loan Repayment",
+  MEMBERSHIP_FEE: "Membership Fee",
+  DIVIDEND_CAPITALIZATION: "Dividend Capitalization",
 });
 
 /** 
@@ -105,6 +129,19 @@ function requireHeaders_(headerMap, requiredHeaders, sheetName) {
 
 function formatDateValue_(value, tz) {
   return value instanceof Date ? Utilities.formatDate(value, tz, "dd MMM yyyy") : "";
+}
+
+function parseDateInput_(val, tz) {
+  if (!val) return "";
+  if (val instanceof Date) return val;
+  const s = String(val).trim();
+  if (!s) return "";
+  // Check if already in standard ISO or Date format
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    return parsed;
+  }
+  return s;
 }
 
 function formatCurrency_(value) {

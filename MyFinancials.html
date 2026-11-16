@@ -1,0 +1,205 @@
+<!-- Modern Personal Member Financials Portal (shadcn-admin style) -->
+<section id="my-financials" class="space-y-4 sm:space-y-6">
+
+  <!-- Personal Member Header Banner -->
+  <div class="bg-slate-900 rounded-xl p-4 sm:p-6 text-white shadow-sm border border-slate-800 relative overflow-hidden">
+    <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-sky-400 text-xl font-bold shrink-0">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 id="pf-user-name" class="text-base sm:text-xl font-bold tracking-tight text-white">Loading profile…</h1>
+            <span id="pf-member-badge" class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/20 text-sky-300 border border-sky-400/30">
+              Member
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-medium mt-0.5">
+            ID: <span id="pf-member-id" class="font-mono text-slate-200 font-semibold">—</span> • 
+            Registered: <span id="pf-member-reg" class="text-slate-300 font-mono">—</span> • 
+            Status: <span id="pf-member-status" class="text-emerald-400 font-semibold">Active</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="loadPersonalFinancials()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors">
+          <i class="fas fa-arrows-rotate text-[11px]"></i> <span>Refresh</span>
+        </button>
+        <button type="button" onclick="window.print()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+          <i class="fas fa-print text-[11px]"></i> <span>Statement</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Personal KPI Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+    
+    <!-- Card 1: My Savings -->
+    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm relative">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">My Savings</span>
+        <div class="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 text-xs shrink-0">
+          <i class="fas fa-wallet"></i>
+        </div>
+      </div>
+      <div>
+        <h3 id="pf-my-savings" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight font-mono">KSh 0</h3>
+        <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
+          Cumulative equity in chama
+        </p>
+      </div>
+    </div>
+
+    <!-- Card 2: My Group Ownership / Shares -->
+    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm relative">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">Shares %</span>
+        <div class="w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 text-xs shrink-0">
+          <i class="fas fa-chart-pie"></i>
+        </div>
+      </div>
+      <div>
+        <h3 id="pf-my-shares" class="text-lg sm:text-2xl font-bold text-blue-600 tracking-tight font-mono">0.00%</h3>
+        <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
+          Ownership of group capital
+        </p>
+      </div>
+    </div>
+
+    <!-- Card 3: Active Loan Balance -->
+    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm relative">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">My Loan Balance</span>
+        <div class="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 text-xs shrink-0">
+          <i class="fas fa-hand-holding-dollar"></i>
+        </div>
+      </div>
+      <div>
+        <h3 id="pf-my-loan-balance" class="text-lg sm:text-2xl font-bold text-amber-600 tracking-tight font-mono">KSh 0</h3>
+        <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
+          Outstanding principal & interest
+        </p>
+      </div>
+    </div>
+
+    <!-- Card 4: Dividend / Profit Share -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">PROFIT / DIVIDEND SHARE</span>
+        <div class="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-sm shrink-0">
+          <i class="fas fa-seedling"></i>
+        </div>
+      </div>
+      <div>
+        <h3 id="pf-my-profit-share" class="text-2xl font-black text-indigo-600 tracking-tight">KSh 0</h3>
+        <p class="text-[11px] text-slate-500 font-medium mt-2">
+          Estimated return from group investments
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Group Macro Health (Safe for all members to see together) -->
+  <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5">
+    <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-shield-halved text-sky-600"></i>
+        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Group Overview</h3>
+      </div>
+      <span class="text-[11px] text-slate-500">Bright Life Self-Help Group</span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+        <div class="text-[10px] font-semibold text-slate-400 uppercase">Total Chama Capital</div>
+        <div id="pf-group-pool" class="text-base font-black text-slate-900 mt-0.5">KSh 0</div>
+      </div>
+      <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+        <div class="text-[10px] font-semibold text-slate-400 uppercase">Capital Invested</div>
+        <div id="pf-group-invested" class="text-base font-black text-slate-900 mt-0.5">KSh 0</div>
+      </div>
+      <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+        <div class="text-[10px] font-semibold text-slate-400 uppercase">Net Group Returns</div>
+        <div id="pf-group-profit" class="text-base font-black text-emerald-600 mt-0.5">KSh 0</div>
+      </div>
+      <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
+        <div class="text-[10px] font-semibold text-slate-400 uppercase">Active Members</div>
+        <div id="pf-group-members" class="text-base font-black text-slate-900 mt-0.5">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Section: Personal Contributions & Personal Loans Tables -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Left: Personal Contribution Statement -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">My Contribution History</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Your recorded monthly deposits and payments</p>
+        </div>
+        <span id="pf-contrib-count" class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg">
+          0 entries
+        </span>
+      </div>
+
+      <div class="flex-1 overflow-x-auto min-h-[220px]">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold">
+              <th class="pb-2">Date</th>
+              <th class="pb-2">Type</th>
+              <th class="pb-2">Mode</th>
+              <th class="pb-2 text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="pf-contrib-tbody" class="divide-y divide-slate-100 text-slate-700">
+            <tr>
+              <td colspan="4" class="py-6 text-center text-slate-400">Loading your contributions…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right: My Active Loans & Guarantor Liabilities -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">My Loans & Guarantees</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Personal borrowing status & obligations</p>
+        </div>
+        <span id="pf-loan-count" class="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg">
+          0 active
+        </span>
+      </div>
+
+      <div class="flex-1 overflow-x-auto min-h-[220px]">
+        <table class="w-full text-left text-xs">
+          <thead>
+            <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold">
+              <th class="pb-2">Loan ID</th>
+              <th class="pb-2">Requested</th>
+              <th class="pb-2">Repaid</th>
+              <th class="pb-2">Balance</th>
+              <th class="pb-2 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody id="pf-loans-tbody" class="divide-y divide-slate-100 text-slate-700">
+            <tr>
+              <td colspan="5" class="py-6 text-center text-slate-400">Loading your loans…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</section>

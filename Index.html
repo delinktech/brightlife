@@ -1,25 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" class="h-full">
 
 <head>
   <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Brightlife SHG</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            border: '#e2e8f0',
+            sidebar: {
+              DEFAULT: '#090d16',
+              foreground: '#94a3b8',
+              active: '#f8fafc',
+              border: '#1e293b'
+            }
+          }
+        }
+      }
+    }
+  </script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/flatpickr@4.6.13/dist/flatpickr.min.css">
 
   <style>
     body {
       font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
-    /* Keep only the core layout logic that Tailwind isn't great at in GAS */
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Page Switcher Animation */
     .page-wrapper {
       display: none;
     }
 
     .page-wrapper.active {
       display: block;
-      animation: fadeIn 0.3s ease-out;
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes fadeIn {
@@ -27,33 +59,462 @@
         opacity: 0;
         transform: translateY(4px);
       }
-
       to {
         opacity: 1;
         transform: translateY(0);
       }
     }
 
-    .nav-link {
-      border-left: 3px solid transparent;
+    /* Shadcn Themed Flatpickr Calendar */
+    .flatpickr-calendar {
+      background: #ffffff !important;
+      border: 1px solid #e2e8f0 !important;
+      border-radius: 0.75rem !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+      font-family: 'Inter', sans-serif !important;
+      padding: 0.5rem !important;
+      width: auto !important;
+      max-width: 320px !important;
+      box-sizing: border-box !important;
+    }
+    .flatpickr-innerContainer {
+      overflow: visible !important;
+    }
+    .flatpickr-rContainer {
+      width: 100% !important;
+    }
+    .flatpickr-days {
+      width: 100% !important;
+    }
+    .dayContainer {
+      width: 100% !important;
+      min-width: 280px !important;
+      max-width: 300px !important;
+    }
+    .flatpickr-weekdays {
+      width: 100% !important;
+      overflow: visible !important;
+    }
+    .flatpickr-calendar.arrowTop:before, .flatpickr-calendar.arrowTop:after,
+    .flatpickr-calendar.arrowBottom:before, .flatpickr-calendar.arrowBottom:after {
+      display: none !important;
+    }
+    .flatpickr-months {
+      padding: 0.25rem 0.5rem !important;
+    }
+    .flatpickr-current-month {
+      font-size: 0.85rem !important;
+      font-weight: 600 !important;
+      color: #0f172a !important;
+    }
+    .flatpickr-current-month .numInputWrapper {
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+    span.flatpickr-weekday {
+      color: #64748b !important;
+      font-size: 0.75rem !important;
+      font-weight: 600 !important;
+      flex: 1 !important;
+    }
+    .flatpickr-day {
+      border-radius: 0.5rem !important;
+      font-size: 0.75rem !important;
+      font-weight: 500 !important;
+      color: #334155 !important;
+      height: 34px !important;
+      line-height: 34px !important;
+      max-width: 38px !important;
+      flex-basis: 14.2857% !important;
+    }
+    .flatpickr-day:hover {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+    .flatpickr-day.today {
+      border-color: #cbd5e1 !important;
+      background: #f8fafc !important;
+      font-weight: 700 !important;
+    }
+    .flatpickr-day.selected, .flatpickr-day.selected:hover {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      border-color: #0f172a !important;
+      font-weight: 600 !important;
+    }
+    .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay {
+      color: #cbd5e1 !important;
     }
 
-    .nav-link:hover:not(.active) {
-      background-color: rgb(30 41 59);
-      color: rgb(255 255 255);
+    /* Clean Select Styling */
+    select {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23475569' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+      background-position: right 0.75rem center;
+      background-repeat: no-repeat;
+      background-size: 1.1em 1.1em;
+      padding-right: 2.25rem !important;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      cursor: pointer;
     }
 
-    .nav-link.active {
-      background-color: rgb(15 23 42);
-      color: rgb(255 255 255);
-      border-left-color: rgb(14 165 233);
+    select option {
+      background-color: #ffffff;
+      color: #0f172a;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+
+    /* Modern Shadcn Select / Autocomplete Dropdown Listbox */
+    .custom-combobox-panel, .shadcn-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.35rem;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      z-index: 70;
+      max-height: 14rem;
+      overflow-y: auto;
+      padding: 0.25rem;
+    }
+
+    .custom-combobox-item, .shadcn-dropdown-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      transition: background-color 0.1s ease;
+    }
+
+    .custom-combobox-item:hover, .custom-combobox-item.active,
+    .shadcn-dropdown-item:hover, .shadcn-dropdown-item.active {
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .shadcn-dropdown-item.selected {
+      background-color: #f8fafc;
+      color: #0284c7;
       font-weight: 600;
     }
 
-    .nav-link.active i {
-      color: rgb(56 189 248);
+    .custom-combobox-item .item-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: #0284c7;
+      background-color: #f0f9ff;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      border: 1px solid #bae6fd;
     }
 
+    /* Shadcn Trigger Button */
+    .shadcn-select-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #1e293b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+
+    .shadcn-select-trigger:focus, .shadcn-select-trigger.active {
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+      background-color: #ffffff;
+    }
+
+    .shadcn-select-trigger i {
+      color: #64748b;
+      font-size: 0.65rem;
+      transition: transform 0.2s ease;
+    }
+
+    .shadcn-select-trigger.active i {
+      transform: rotate(180deg);
+    }
+
+    /* Shadcn Table Styles */
+    .table-container {
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+    }
+
+    .shadcn-table {
+      width: 100%;
+      text-align: left;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+
+    .shadcn-table th {
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #64748b;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .shadcn-table td {
+      padding: 0.875rem 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      color: #0f172a;
+      vertical-align: middle;
+    }
+
+    .shadcn-table tbody tr {
+      transition: background-color 0.1s ease;
+    }
+
+    .shadcn-table tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    /* Shadcn Badges */
+    .badge-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+    }
+
+    .badge-success {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-warning {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: #fefce8;
+      color: #854d0e;
+      border: 1px solid #fef08a;
+    }
+
+    .badge-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+
+    .badge-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: #f0f9ff;
+      color: #0369a1;
+      border: 1px solid #bae6fd;
+    }
+
+    /* Column Visibility View Popover Dropdown */
+    .column-view-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 0.35rem;
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      z-index: 80;
+      min-width: 11rem;
+      padding: 0.35rem;
+    }
+
+    .column-view-header {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #0f172a;
+      padding: 0.4rem 0.6rem 0.25rem;
+      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 0.25rem;
+    }
+
+    .column-view-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #334155;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.1s ease;
+    }
+
+    .column-view-item:hover {
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .column-view-item .col-check {
+      width: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #0f172a;
+    }
+
+    .column-view-item.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Column visibility toggle rules: hiding columns by table class */
+    table.hide-col-m-shares .col-m-shares,
+    table.hide-col-m-taken .col-m-taken,
+    table.hide-col-m-balance .col-m-balance,
+    table.hide-col-m-guaranteed .col-m-guaranteed,
+    table.hide-col-m-loanstatus .col-m-loanstatus,
+    table.hide-col-m-accountstatus .col-m-accountstatus,
+    table.hide-col-c-type .col-c-type,
+    table.hide-col-c-mode .col-c-mode,
+    table.hide-col-l-reqdate .col-l-reqdate,
+    table.hide-col-l-appdate .col-l-appdate,
+    table.hide-col-l-requested .col-l-requested,
+    table.hide-col-l-repayment .col-l-repayment,
+    table.hide-col-l-paid .col-l-paid,
+    table.hide-col-inv-startdate .col-inv-startdate,
+    table.hide-col-inv-invested .col-inv-invested,
+    table.hide-col-inv-revenue .col-inv-revenue,
+    table.hide-col-inv-roiamt .col-inv-roiamt,
+    table.hide-col-inv-roipct .col-inv-roipct,
+    table.hide-col-r-email .col-r-email,
+    table.hide-col-r-status .col-r-status {
+      display: none !important;
+    }
+
+    /* Shadcn Sidebar Navigation Items */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #94a3b8;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+
+    .nav-item:hover {
+      background-color: rgba(255, 255, 255, 0.06);
+      color: #f1f5f9;
+    }
+
+    .nav-item.active {
+      background-color: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .nav-item.active i {
+      color: #38bdf8;
+    }
+
+    /* Shadcn Bottom Mobile Nav */
+    .mobile-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 0.375rem 0.25rem;
+      color: #64748b;
+      font-size: 0.65rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      border-radius: 0.5rem;
+    }
+
+    .mobile-tab.active {
+      color: #0284c7;
+    }
+
+    .mobile-tab i {
+      font-size: 1.125rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .mobile-tab.active i {
+      color: #0284c7;
+      transform: translateY(-1px);
+    }
+
+    /* Smooth Scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* Print Styles */
     @media print {
       body {
         background: white !important;
@@ -61,7 +522,7 @@
         color: #0f172a !important;
         overflow: visible !important;
       }
-      #sidebar, header, #app-loader, .no-print, nav, .page-wrapper {
+      #sidebar, #mobile-drawer, #mobile-bottom-bar, header, #app-loader, .no-print, nav, .page-wrapper {
         display: none !important;
       }
       #printReportModal {
@@ -88,139 +549,296 @@
   </style>
 </head>
 
-<body class="bg-slate-50 flex h-screen overflow-hidden">
-  <div id="app-loader" class="fixed top-0 left-0 right-0 z-50 h-1 bg-transparent opacity-0 transition-opacity duration-200">
+<body class="bg-slate-50/70 text-slate-900 antialiased h-full flex flex-col md:flex-row overflow-hidden selection:bg-sky-100 selection:text-sky-900">
+
+  <!-- Top Progress Bar -->
+  <div id="app-loader" class="fixed top-0 left-0 right-0 z-50 h-0.5 bg-transparent opacity-0 transition-opacity duration-200">
     <div id="app-loader-bar" class="h-full w-0 bg-sky-500 transition-[width] duration-200 ease-out"></div>
   </div>
 
-  <nav id="sidebar" class="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-10 shrink-0">
-    <div class="p-6 text-center border-b border-slate-800">
-      <h5 class="text-white font-bold tracking-tight text-lg">
-        <i class="fas fa-vault mr-2 text-sky-500"></i>Brightlife SHG
-      </h5>
-    </div>
+  <!-- Mobile Drawer Backdrop -->
+  <div id="mobile-drawer-backdrop" onclick="toggleMobileMenu(false)"
+    class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 hidden md:hidden transition-opacity duration-300 opacity-0"></div>
 
-    <div class="flex-1 py-4 min-h-0 overflow-y-auto">
-      <a data-page="home" href="javascript:void(0)" class="nav-link active flex items-center px-6 py-3 transition-colors cursor-pointer"
-        onclick="showPage('home')" aria-current="page">
-        <i class="fas fa-chart-pie w-6 text-center shrink-0"></i> <span>Home</span>
-      </a>
-      <a data-page="members" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
-        onclick="showPage('members')">
-        <i class="fas fa-users w-6 text-center shrink-0"></i> <span>Members</span>
-      </a>
-      <a data-page="contributions" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
-        onclick="showPage('contributions')">
-        <i class="fas fa-file-invoice-dollar w-6 text-center shrink-0"></i> <span>Contributions</span>
-      </a>
-      <a data-page="loans" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
-        onclick="showPage('loans')">
-        <i class="fas fa-hand-holding-dollar w-6 text-center shrink-0"></i> <span>Loans</span>
-      </a>
-      <a data-page="investments" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
-        onclick="showPage('investments')">
-        <i class="fas fa-seedling w-6 text-center shrink-0"></i> <span>Investments</span>
-      </a>
-      <a data-page="accounts" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer"
-        onclick="showPage('accounts')">
-        <i class="fas fa-building-columns w-6 text-center shrink-0"></i> <span>Accounts</span>
-      </a>
-      <a data-page="roles" data-require-perm="isAdmin" href="javascript:void(0)" class="nav-link flex items-center px-6 py-3 transition-colors cursor-pointer hidden"
-        onclick="showPage('roles')">
-        <i class="fas fa-user-shield w-6 text-center shrink-0"></i> <span>User Roles</span>
-      </a>
-    </div>
-
-    <div class="mt-auto border-t border-slate-800 px-4 py-3 shrink-0">
-      <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500">
-        <span id="sidebar-version" class="font-mono text-slate-400">v—</span>
-        <span class="inline-flex items-center gap-1.5 text-emerald-400/95 font-semibold uppercase tracking-wide">
-          <span class="relative flex h-2 w-2" aria-hidden="true">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
-          </span>
-          Active
-        </span>
-      </div>
-    </div>
-  </nav>
-
-  <div class="flex-1 flex flex-col min-w-0 min-h-0">
-    <header class="shrink-0 h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 gap-4 shadow-sm z-[5]">
-      <div class="min-w-0 flex items-baseline gap-2 sm:gap-3">
-        <span class="hidden sm:inline text-[10px] font-bold text-slate-400 uppercase tracking-widest">Current</span>
-        <h1 id="current-page-title" class="text-base font-bold text-slate-800 truncate">Home</h1>
-      </div>
-      <div class="flex items-center justify-end gap-3 shrink-0 min-w-0">
-        <div id="session-user-block" class="flex items-center gap-3 text-right hidden">
-          <div class="hidden sm:block relative h-9 w-9 shrink-0">
-            <img id="session-photo" src="" alt=""
-              class="absolute inset-0 h-9 w-9 rounded-full object-cover border border-slate-200 hidden"
-              width="36" height="36" decoding="async" />
-            <div id="session-photo-fallback"
-              class="h-9 w-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500">
-              <i class="fas fa-user text-sm"></i>
-            </div>
-          </div>
-          <div>
-            <div id="session-display-name" class="text-sm font-semibold text-slate-800 leading-tight">—</div>
-            <div id="session-email" class="text-xs text-slate-500 leading-tight">—</div>
-            <div>
-              <span id="session-role" class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mt-0.5 hidden"></span>
-            </div>
-          </div>
+  <!-- Sidebar (Desktop Fixed + Mobile Slide-over Drawer) -->
+  <aside id="sidebar"
+    class="fixed inset-y-0 left-0 z-50 w-72 bg-[#090d16] text-slate-300 flex flex-col border-r border-slate-800/80 shadow-2xl md:shadow-none transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 md:static md:w-64 shrink-0">
+    
+    <!-- Sidebar Header (Brand) -->
+    <div class="h-16 px-5 flex items-center justify-between border-b border-slate-800/60 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/20">
+          <i class="fas fa-vault text-sm"></i>
         </div>
-        <div id="session-loading" class="text-sm text-slate-500">Loading session…</div>
+        <div>
+          <h2 class="text-sm font-bold text-white tracking-tight leading-none">Brightlife SHG</h2>
+          <span class="text-[10px] text-slate-400 font-medium">Chama Financial OS</span>
+        </div>
       </div>
+      <!-- Mobile Close Button -->
+      <button onclick="toggleMobileMenu(false)" class="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg focus:outline-none">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <div class="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+      
+      <!-- Primary Core Apps -->
+      <div>
+        <div class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Overview & Portal
+        </div>
+        <div class="space-y-1">
+          <!-- Home -->
+          <a data-page="home" href="javascript:void(0)" onclick="showPage('home'); toggleMobileMenu(false);"
+            class="nav-item active" aria-current="page">
+            <i class="fas fa-chart-pie w-4 text-center shrink-0"></i>
+            <span>Group Overview</span>
+          </a>
+
+          <!-- My Financials (Personal Member Portal) -->
+          <a data-page="my-financials" href="javascript:void(0)" onclick="showPage('my-financials'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-user-shield w-4 text-center shrink-0 text-sky-400"></i>
+            <span class="font-medium text-slate-100">My Financials</span>
+            <span class="ml-auto px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/20 text-sky-300">You</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Management Section (Gated to Admin, Treasurer, Secretary) -->
+      <div id="sidebar-admin-section">
+        <div class="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Chama Management
+        </div>
+        <div class="space-y-1">
+          <a data-page="members" data-require-perm="membersWrite" href="javascript:void(0)" onclick="showPage('members'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-users w-4 text-center shrink-0"></i>
+            <span>Members</span>
+          </a>
+          <a data-page="contributions" data-require-perm="contributionsWrite" href="javascript:void(0)" onclick="showPage('contributions'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-file-invoice-dollar w-4 text-center shrink-0"></i>
+            <span>Contributions</span>
+          </a>
+          <a data-page="loans" data-require-perm="loanPayment" href="javascript:void(0)" onclick="showPage('loans'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-hand-holding-dollar w-4 text-center shrink-0"></i>
+            <span>Loans Portfolio</span>
+          </a>
+          <a data-page="investments" data-require-perm="investmentsWrite" href="javascript:void(0)" onclick="showPage('investments'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-seedling w-4 text-center shrink-0"></i>
+            <span>Investments</span>
+          </a>
+          <a data-page="accounts" data-require-perm="accountsWrite" href="javascript:void(0)" onclick="showPage('accounts'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-building-columns w-4 text-center shrink-0"></i>
+            <span>Bank Accounts</span>
+          </a>
+          <a data-page="roles" data-require-perm="isAdmin" href="javascript:void(0)" onclick="showPage('roles'); toggleMobileMenu(false);"
+            class="nav-item hidden">
+            <i class="fas fa-shield-halved w-4 text-center shrink-0"></i>
+            <span>User Roles</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Sidebar Footer (User Account Profile Card & Version) -->
+    <div class="p-3 border-t border-slate-800/60 shrink-0 bg-black/25 space-y-2">
+      <!-- User Profile Card (Shadcn style with initials, email & chevron) -->
+      <div id="sidebar-user-block" class="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-800/50 transition-colors cursor-pointer group">
+        <!-- Avatar / Initials Circle -->
+        <div class="relative h-8 w-8 rounded-lg bg-sky-950/80 border border-sky-500/30 text-sky-300 font-semibold text-xs flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+          <img id="sidebar-photo" src="" alt="" class="h-full w-full object-cover hidden" />
+          <span id="sidebar-initials">--</span>
+        </div>
+
+        <!-- Name & Email Info -->
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-1.5">
+            <span id="sidebar-display-name" class="text-xs font-semibold text-slate-200 truncate leading-tight group-hover:text-white transition-colors">Loading...</span>
+            <span id="sidebar-role-badge" class="px-1.5 py-0.2 rounded text-[8px] font-bold tracking-wider uppercase bg-sky-900/60 text-sky-300 border border-sky-700/50 hidden"></span>
+          </div>
+          <div id="sidebar-email" class="text-[10px] text-slate-400 font-mono truncate leading-none mt-1">--</div>
+        </div>
+
+        <!-- Unfold Chevron -->
+        <div class="text-slate-500 group-hover:text-slate-300 transition-colors shrink-0 text-xs">
+          <i class="fas fa-angles-up-down text-[10px]"></i>
+        </div>
+      </div>
+
+      <!-- Version & Sync Status -->
+      <div class="flex items-center justify-between px-2 pt-1 text-[10px] text-slate-500 border-t border-slate-800/40">
+        <span id="sidebar-version" class="font-mono text-slate-500">v—</span>
+        <div class="inline-flex items-center gap-1.5 text-emerald-400 font-medium tracking-wide uppercase text-[9px]">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Connected
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-0 relative">
+    
+    <!-- Top Header (Shadcn style with mobile hamburger, breadcrumb, and user avatar) -->
+    <header class="shrink-0 h-14 bg-white/80 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-4 sm:px-6 gap-3 z-30 sticky top-0">
+      
+      <!-- Left: Mobile Menu Trigger + Breadcrumb -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <!-- Mobile Drawer Hamburger -->
+        <button type="button" onclick="toggleMobileMenu(true)" aria-label="Open Navigation"
+          class="md:hidden p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg focus:outline-none transition-colors">
+          <i class="fas fa-bars-staggered text-base"></i>
+        </button>
+
+        <!-- Breadcrumb -->
+        <div class="flex items-center gap-1.5 text-xs text-slate-400 font-medium truncate">
+          <span class="hidden sm:inline">Brightlife</span>
+          <span class="hidden sm:inline text-slate-300">/</span>
+          <h1 id="current-page-title" class="text-xs sm:text-sm font-semibold text-slate-900 truncate">Group Overview</h1>
+        </div>
+      </div>
+
+      <!-- Right Header: Empty for now -->
+      <div class="flex items-center justify-end shrink-0"></div>
     </header>
 
-    <main id="main-content" class="flex-1 overflow-y-auto p-8 min-h-0">
-    <div id="home-container" class="page-wrapper active">
-      <?!= include('Home'); ?>
-    </div>
-    <div id="access-denied-container" class="page-wrapper">
-      <div class="max-w-lg mx-auto my-12 p-8 bg-white rounded-2xl border border-slate-200 shadow-sm text-center">
-        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center text-2xl">
-          <i class="fas fa-user-lock"></i>
-        </div>
-        <h3 class="text-xl font-bold text-slate-800 mb-2">Access Restricted</h3>
-        <p id="access-denied-msg" class="text-slate-600 text-sm mb-6 leading-relaxed">
-          Your Google account is not authorized to access the dashboard or is set to inactive.
-        </p>
-        <div class="p-4 bg-slate-50 rounded-xl text-left text-xs text-slate-600 space-y-2 mb-6">
-          <div class="font-semibold text-slate-800"><i class="fas fa-info-circle mr-1 text-sky-500"></i> How to get access:</div>
-          <div>1. Contact your group Administrator or Secretary.</div>
-          <div>2. Ask them to activate or grant access to your email address: <strong id="access-denied-email-display" class="text-slate-800 font-mono">()</strong> in the <strong>Roles</strong> tab.</div>
-        </div>
-        <button onclick="refreshSessionInfo(); showPage('home');" class="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white font-medium text-xs rounded-xl hover:bg-slate-800 transition-colors">
-          <i class="fas fa-arrows-rotate"></i> Refresh & Retry
-        </button>
+    <!-- Scrollable Canvas Area (Extra bottom padding on mobile for floating bottom nav) -->
+    <main id="main-content" class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 min-h-0">
+      
+      <!-- Group Overview Page -->
+      <div id="home-container" class="page-wrapper active">
+        <?!= include('Home'); ?>
       </div>
-    </div>
-    <div id="members-container" class="page-wrapper">
-      <?!= include('Members'); ?>
-    </div>
-    <div id="contributions-container" class="page-wrapper">
-      <?!= include('Contributions'); ?>
-    </div>
-    <div id="loans-container" class="page-wrapper">
-      <?!= include('Loans'); ?>
-    </div>
-    <div id="investments-container" class="page-wrapper">
-      <?!= include('Investments'); ?>
-    </div>
-    <div id="accounts-container" class="page-wrapper">
-      <?!= include('Accounts'); ?>
-    </div>
-    <div id="roles-container" class="page-wrapper">
-      <?!= include('Roles'); ?>
-    </div>
-    <?!= include('PrintReportModal'); ?>
+
+      <!-- My Financials Page (Personal Member Portal) -->
+      <div id="my-financials-container" class="page-wrapper">
+        <?!= include('MyFinancials'); ?>
+      </div>
+
+      <!-- Access Denied Card -->
+      <div id="access-denied-container" class="page-wrapper">
+        <div class="max-w-md mx-auto my-8 sm:my-16 p-6 sm:p-8 bg-white rounded-2xl border border-slate-200 shadow-sm text-center">
+          <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-50 text-amber-500 border border-amber-200/60 flex items-center justify-center text-xl">
+            <i class="fas fa-user-lock"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-1.5">Access Restricted</h3>
+          <p id="access-denied-msg" class="text-slate-600 text-xs sm:text-sm mb-6 leading-relaxed">
+            Your Google account is not recognized or active in the Roles sheet.
+          </p>
+          <div class="p-4 bg-slate-50/80 rounded-xl text-left text-xs text-slate-600 space-y-2 mb-6 border border-slate-100">
+            <div class="font-semibold text-slate-800 flex items-center gap-1.5">
+              <i class="fas fa-info-circle text-sky-500"></i> How to get access:
+            </div>
+            <div>1. Contact your group Administrator or Secretary.</div>
+            <div>2. Ask them to activate or grant access to your email: <strong id="access-denied-email-display" class="text-slate-900 font-mono">()</strong> in the <strong>Roles</strong> tab.</div>
+          </div>
+          <button onclick="refreshSessionInfo(); showPage('home');" class="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-all shadow-sm">
+            <i class="fas fa-arrows-rotate"></i> Refresh & Retry
+          </button>
+        </div>
+      </div>
+
+      <!-- Members Management -->
+      <div id="members-container" class="page-wrapper">
+        <?!= include('Members'); ?>
+      </div>
+
+      <!-- Contributions Ledger -->
+      <div id="contributions-container" class="page-wrapper">
+        <?!= include('Contributions'); ?>
+      </div>
+
+      <!-- Loans Portfolio -->
+      <div id="loans-container" class="page-wrapper">
+        <?!= include('Loans'); ?>
+      </div>
+
+      <!-- Investments -->
+      <div id="investments-container" class="page-wrapper">
+        <?!= include('Investments'); ?>
+      </div>
+
+      <!-- Bank Accounts -->
+      <div id="accounts-container" class="page-wrapper">
+        <?!= include('Accounts'); ?>
+      </div>
+
+      <!-- Roles Management -->
+      <div id="roles-container" class="page-wrapper">
+        <?!= include('Roles'); ?>
+      </div>
+
+      <!-- Print Report Modal Component -->
+      <?!= include('PrintReportModal'); ?>
     </main>
+
+    <!-- Mobile Bottom Navigation Bar (Fintech App Style) -->
+    <nav id="mobile-bottom-bar"
+      class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-1.5 flex items-center justify-around shadow-lg">
+      
+      <!-- Home Tab -->
+      <a data-mobile-page="home" href="javascript:void(0)" onclick="showPage('home')" class="mobile-tab active">
+        <i class="fas fa-chart-pie"></i>
+        <span>Overview</span>
+      </a>
+
+      <!-- My Financials Tab -->
+      <a data-mobile-page="my-financials" href="javascript:void(0)" onclick="showPage('my-financials')" class="mobile-tab">
+        <i class="fas fa-wallet"></i>
+        <span>My Fin</span>
+      </a>
+
+      <!-- Members Tab (Management) -->
+      <a data-mobile-page="members" data-require-perm="membersWrite" href="javascript:void(0)" onclick="showPage('members')" class="mobile-tab">
+        <i class="fas fa-users"></i>
+        <span>Members</span>
+      </a>
+
+      <!-- Contributions Tab (Management) -->
+      <a data-mobile-page="contributions" data-require-perm="contributionsWrite" href="javascript:void(0)" onclick="showPage('contributions')" class="mobile-tab">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <span>Ledger</span>
+      </a>
+
+      <!-- Menu Drawer Tab (Access all options) -->
+      <button type="button" onclick="toggleMobileMenu(true)" class="mobile-tab">
+        <i class="fas fa-bars"></i>
+        <span>More</span>
+      </button>
+    </nav>
+
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+  <script>
+    // Responsive Mobile Menu Drawer Helper
+    function toggleMobileMenu(open) {
+      const sidebar = document.getElementById("sidebar");
+      const backdrop = document.getElementById("mobile-drawer-backdrop");
+      if (!sidebar || !backdrop) return;
+      
+      if (open) {
+        backdrop.classList.remove("hidden");
+        setTimeout(() => backdrop.classList.remove("opacity-0"), 10);
+        sidebar.classList.remove("-translate-x-full");
+      } else {
+        sidebar.classList.add("-translate-x-full");
+        backdrop.classList.add("opacity-0");
+        setTimeout(() => backdrop.classList.add("hidden"), 300);
+      }
+    }
+  </script>
+
   <?!= include('app.ui.js'); ?>
+  <?!= include('myfinancials.ui.js'); ?>
   <?!= include('members.ui.js'); ?>
   <?!= include('contributions.ui.js'); ?>
   <?!= include('loans.ui.js'); ?>

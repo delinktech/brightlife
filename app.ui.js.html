@@ -28,40 +28,25 @@
     if (err && err.message) msg = String(err.message);
     else if (typeof err === "string") msg = err;
 
-    if (msg.indexOf("Access Denied") !== -1) {
-      showAccessDenied();
+    if (msg.indexOf("Access denied") !== -1 || msg.indexOf("Access Denied") !== -1) {
+      showAccessDenied(currentSessionEmail);
       return;
     }
     alert(msg);
   }
 
-  function showAccessDenied(email, info) {
+  function showAccessDenied(email) {
     const activeEmail = email || currentSessionEmail || (document.getElementById("session-email") ? document.getElementById("session-email").textContent : "");
     const cleanEmail = activeEmail && activeEmail !== "—" ? activeEmail.trim() : "";
     
     const msgEl = document.getElementById("access-denied-msg");
     if (msgEl) {
-      if (cleanEmail) {
-        msgEl.innerHTML = "Your Google account (<strong>" + cleanEmail + "</strong>) is not authorized to access the dashboard or is set to inactive.";
-      } else {
-        msgEl.innerHTML = "Your Google account is not authorized to access the dashboard or is set to inactive.";
-      }
+      msgEl.innerHTML = "Your Google account (<strong>" + (cleanEmail || "unknown") + "</strong>) is not recognized or active in the Roles sheet.";
     }
 
     const emailDisplayEl = document.getElementById("access-denied-email-display");
     if (emailDisplayEl) {
       emailDisplayEl.textContent = cleanEmail ? cleanEmail : "(your email)";
-    }
-
-    if (info && (info.spreadsheetName || info.spreadsheetId)) {
-      const debugBlock = document.getElementById("access-denied-debug");
-      const nameEl = document.getElementById("debug-ss-name");
-      const idEl = document.getElementById("debug-ss-id");
-      if (debugBlock && nameEl && idEl) {
-        nameEl.textContent = info.spreadsheetName || "Unknown";
-        idEl.textContent = info.spreadsheetId || "N/A";
-        debugBlock.classList.remove("hidden");
-      }
     }
 
     showPage("access-denied");
@@ -73,6 +58,14 @@
   function applyRolePermissions(perms) {
     if (!perms) return;
     window.APP_PERMS = perms;
+
+    // Check if user is member-only
+    const isMemberOnly = perms.isMemberOnly === true;
+    const adminSection = document.getElementById("sidebar-admin-section");
+    if (adminSection) {
+      adminSection.classList.toggle("hidden", isMemberOnly);
+    }
+
     document.querySelectorAll("[data-require-perm]").forEach(function (el) {
       var key = el.getAttribute("data-require-perm");
       var allowed = perms[key] === true;
@@ -92,9 +85,6 @@
     return sign + number.toFixed(1) + "%";
   }
 
-  /**
-   * Caret + % only (no absolute delta). Delta is used only to pick direction / color.
-   */
   function renderContributionMomIndicator(container, percent, delta) {
     if (!container) return;
     const d = Number(delta) || 0;
@@ -158,19 +148,19 @@
       bar.style.width = "12%";
       if (appLoaderTimer) clearInterval(appLoaderTimer);
       appLoaderTimer = setInterval(() => {
-        const currentWidth = parseFloat(bar.style.width || "12");
-        const nextWidth = Math.min(currentWidth + 8, 90);
-        bar.style.width = nextWidth + "%";
-      }, 180);
+        const cur = parseFloat(bar.style.width) || 0;
+        if (cur < 85) bar.style.width = cur + 8 + "%";
+      }, 120);
     }
   }
 
   function stopAppLoader() {
     appLoaderActiveRequests = Math.max(0, appLoaderActiveRequests - 1);
+    if (appLoaderActiveRequests > 0) return;
+
     const loader = document.getElementById("app-loader");
     const bar = document.getElementById("app-loader-bar");
     if (!loader || !bar) return;
-    if (appLoaderActiveRequests > 0) return;
 
     if (appLoaderTimer) {
       clearInterval(appLoaderTimer);
@@ -180,102 +170,117 @@
     setTimeout(() => {
       loader.classList.remove("opacity-100");
       loader.classList.add("opacity-0");
-      bar.style.width = "0%";
-    }, 220);
+      setTimeout(() => {
+        bar.style.width = "0%";
+      }, 200);
+    }, 150);
+  }
+
+  function showAppLoader(show) {
+    if (show) startAppLoader();
+    else stopAppLoader();
   }
 
   function toggleLoading(show) {
+    const main = document.getElementById("main-content");
     const sidebar = document.getElementById("sidebar");
+    if (!main || !sidebar) return;
+    main.style.pointerEvents = show ? "none" : "auto";
+    main.style.opacity = show ? "0.6" : "1";
     sidebar.style.pointerEvents = show ? "none" : "auto";
     sidebar.style.opacity = show ? "0.7" : "1";
   }
 
-  function refreshSessionInfo() {
-    const loadingEl = document.getElementById("session-loading");
-    const userBlock = document.getElementById("session-user-block");
-    const nameEl = document.getElementById("session-display-name");
-    const emailEl = document.getElementById("session-email");
-    const verEl = document.getElementById("sidebar-version");
+  function getInitialsFromName(name, email) {
+    const raw = String(name || "").trim();
+    if (raw) {
+      const parts = raw.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return raw.slice(0, 2).toUpperCase();
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
+    }
+    return "US";
+  }
 
-    const photoEl = document.getElementById("session-photo");
-    const photoFallbackEl = document.getElementById("session-photo-fallback");
+  function refreshSessionInfo(callback) {
+    const sNameEl = document.getElementById("sidebar-display-name");
+    const sEmailEl = document.getElementById("sidebar-email");
+    const sRoleBadge = document.getElementById("sidebar-role-badge");
+    const sPhoto = document.getElementById("sidebar-photo");
+    const sInitials = document.getElementById("sidebar-initials");
+    const verEl = document.getElementById("sidebar-version");
 
     google.script.run
       .withSuccessHandler((info) => {
-        if (loadingEl) loadingEl.classList.add("hidden");
         if (info && info.success) {
           currentSessionEmail = info.email || "";
-          if (userBlock) userBlock.classList.remove("hidden");
-          if (nameEl) {
-            nameEl.textContent = info.displayName || "User";
-          }
-          if (emailEl) {
-            emailEl.textContent =
-              info.email ||
-              "Sign in with Google";
-          }
-          if (verEl) {
-            verEl.textContent = "v" + String(info.version || "0.0.0");
-          }
-          if (photoEl && photoFallbackEl) {
-            var url = info.photoUrl && String(info.photoUrl).trim();
+          const name = info.displayName || "User";
+          const email = info.email || "";
+
+          if (sNameEl) sNameEl.textContent = name;
+          if (sEmailEl) sEmailEl.textContent = email || "—";
+          if (verEl) verEl.textContent = "v" + String(info.version || "0.0.0");
+          if (sInitials) sInitials.textContent = getInitialsFromName(name, email);
+
+          if (sPhoto) {
+            const url = info.photoUrl && String(info.photoUrl).trim();
             if (url) {
-              photoEl.onload = function () {
-                photoEl.classList.remove("hidden");
-                photoFallbackEl.classList.add("hidden");
+              sPhoto.onload = function() {
+                sPhoto.classList.remove("hidden");
+                if (sInitials) sInitials.classList.add("hidden");
               };
-              photoEl.onerror = function () {
-                photoEl.classList.add("hidden");
-                photoFallbackEl.classList.remove("hidden");
-                photoEl.removeAttribute("src");
+              sPhoto.onerror = function() {
+                sPhoto.classList.add("hidden");
+                if (sInitials) sInitials.classList.remove("hidden");
+                sPhoto.removeAttribute("src");
               };
-              photoEl.alt = info.displayName || "Profile";
-              photoEl.src = url;
+              sPhoto.src = url;
             } else {
-              photoEl.classList.add("hidden");
-              photoFallbackEl.classList.remove("hidden");
-              photoEl.removeAttribute("src");
+              sPhoto.classList.add("hidden");
+              if (sInitials) sInitials.classList.remove("hidden");
             }
           }
-          var roleEl = document.getElementById("session-role");
-          if (roleEl) {
-            roleEl.textContent = info.roleLabel || "";
-            var r = String(info.role || "").toLowerCase();
-            var badgeCls = "bg-slate-100 text-slate-700 border-slate-200";
-            if (r === "admin") badgeCls = "bg-sky-100 text-sky-700 border-sky-200";
-            else if (r === "treasurer") badgeCls = "bg-purple-100 text-purple-700 border-purple-200";
-            else if (r === "secretary") badgeCls = "bg-emerald-100 text-emerald-700 border-emerald-200";
-            else if (r === "member") badgeCls = "bg-slate-100 text-slate-600 border-slate-200";
-            roleEl.className = "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mt-0.5 border " + badgeCls;
-            roleEl.classList.toggle("hidden", !info.roleLabel);
+
+          if (sRoleBadge) {
+            sRoleBadge.textContent = info.roleLabel || "";
+            const r = String(info.role || "").toLowerCase();
+            let bCls = "bg-slate-800 text-slate-300 border-slate-700";
+            if (r === "admin") bCls = "bg-sky-950 text-sky-300 border-sky-800";
+            else if (r === "treasurer") bCls = "bg-purple-950 text-purple-300 border-purple-800";
+            else if (r === "secretary") bCls = "bg-emerald-950 text-emerald-300 border-emerald-800";
+            else if (r === "member") bCls = "bg-slate-800 text-slate-400 border-slate-700";
+            sRoleBadge.className = "px-1.5 py-0.2 rounded text-[8px] font-bold tracking-wider uppercase border " + bCls;
+            sRoleBadge.classList.toggle("hidden", !info.roleLabel);
           }
+
           if (info.hasAccess === false) {
             showAccessDenied(info.email, info);
             return;
           }
           applyRolePermissions(info.permissions || {});
-        } else if (loadingEl) {
-          loadingEl.textContent = "Session unavailable";
-          loadingEl.classList.remove("hidden");
+
+          if (callback) callback(info);
         }
       })
-      .withFailureHandler(() => {
-        if (loadingEl) {
-          loadingEl.textContent = "Could not load session";
-          loadingEl.classList.remove("hidden");
-        }
+      .withFailureHandler((err) => {
+        handleErr(err);
       })
       .getSessionInfo();
   }
 
   const PAGE_TITLE_LABELS = {
-    home: "Home",
-    members: "Members",
-    contributions: "Contributions",
-    loans: "Loans",
-    investments: "Investments",
-    accounts: "Accounts",
-    roles: "User Roles",
+    home: "Home (Group Overview)",
+    "my-financials": "My Financials (Personal)",
+    members: "Members Registry",
+    contributions: "Contributions Ledger",
+    loans: "Loan Portfolio",
+    investments: "Investments & Projects",
+    accounts: "Accounts & Balances",
+    roles: "User Role Administration",
     "access-denied": "Access Denied",
   };
 
@@ -292,17 +297,27 @@
       titleEl.textContent = PAGE_TITLE_LABELS[pageId] || pageId;
     }
 
-    document.querySelectorAll(".nav-link").forEach((link) => {
+    document.querySelectorAll(".nav-item").forEach((link) => {
       link.classList.remove("active");
       link.removeAttribute("aria-current");
     });
-    const activeLink = document.querySelector('[data-page="' + pageId + '"]');
+    const activeLink = document.querySelector('.nav-item[data-page="' + pageId + '"]');
     if (activeLink) {
       activeLink.classList.add("active");
       activeLink.setAttribute("aria-current", "page");
     }
 
+    // Synchronize Mobile Bottom Navigation
+    document.querySelectorAll(".mobile-tab").forEach((tab) => {
+      tab.classList.remove("active");
+    });
+    const activeMobileTab = document.querySelector('.mobile-tab[data-mobile-page="' + pageId + '"]');
+    if (activeMobileTab) {
+      activeMobileTab.classList.add("active");
+    }
+
     if (pageId === "home") refreshDashboard();
+    if (pageId === "my-financials") loadPersonalFinancials();
     if (pageId === "members") loadMembers();
     if (pageId === "contributions") {
       if (typeof currentMembers === "undefined" || currentMembers.length === 0) {
@@ -371,8 +386,233 @@
       .getHomeAnalytics(currentHomeRange);
   }
 
+  /**
+   * Initializes custom Shadcn-style dropdowns replacing native OS <select> popups.
+   * Scans elements with [data-shadcn-select] and wires them up.
+   */
+  function initShadcnSelects() {
+    document.querySelectorAll("[data-shadcn-select]").forEach(function (container) {
+      if (container.dataset.shadcnInitialized) return;
+      container.dataset.shadcnInitialized = "true";
+
+      const trigger = container.querySelector(".shadcn-select-trigger");
+      const menu = container.querySelector(".shadcn-dropdown-menu");
+      const label = container.querySelector(".shadcn-select-label");
+      const hiddenInput = container.querySelector("input[type='hidden']");
+      const items = container.querySelectorAll(".shadcn-dropdown-item");
+
+      if (!trigger || !menu || !hiddenInput) return;
+
+      trigger.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Close other open menus
+        document.querySelectorAll(".shadcn-dropdown-menu").forEach(function (m) {
+          if (m !== menu) m.classList.add("hidden");
+        });
+        document.querySelectorAll(".shadcn-select-trigger").forEach(function (t) {
+          if (t !== trigger) t.classList.remove("active");
+        });
+
+        const isHidden = menu.classList.contains("hidden");
+        menu.classList.toggle("hidden", !isHidden);
+        trigger.classList.toggle("active", isHidden);
+      });
+
+      items.forEach(function (item) {
+        item.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const val = item.getAttribute("data-value");
+          const text = item.querySelector(".item-text") ? item.querySelector(".item-text").innerText : item.innerText;
+
+          hiddenInput.value = val;
+          if (label) label.innerText = text;
+
+          items.forEach((it) => it.classList.remove("selected"));
+          item.classList.add("selected");
+
+          menu.classList.add("hidden");
+          trigger.classList.remove("active");
+
+          // Trigger change event for listeners
+          const event = new Event("change", { bubbles: true });
+          hiddenInput.dispatchEvent(event);
+        });
+      });
+    });
+
+    // Close on outside click
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("[data-shadcn-select]")) {
+        document.querySelectorAll(".shadcn-dropdown-menu").forEach(function (m) {
+          m.classList.add("hidden");
+        });
+        document.querySelectorAll(".shadcn-select-trigger").forEach(function (t) {
+          t.classList.remove("active");
+        });
+      }
+    });
+  }
+
+  function setShadcnSelectValue(containerId, value) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const hiddenInput = container.querySelector("input[type='hidden']");
+    const label = container.querySelector(".shadcn-select-label");
+    const items = container.querySelectorAll(".shadcn-dropdown-item");
+    if (!hiddenInput) return;
+
+    hiddenInput.value = value;
+    items.forEach(function (item) {
+      if (item.getAttribute("data-value") === String(value)) {
+        item.classList.add("selected");
+        if (label) {
+          const text = item.querySelector(".item-text") ? item.querySelector(".item-text").innerText : item.innerText;
+          label.innerText = text;
+        }
+      } else {
+        item.classList.remove("selected");
+      }
+    });
+  }
+
+  /**
+   * Column View Popover & Visibility Management
+   */
+  function toggleColumnMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+
+    // Close any other open view menus
+    document.querySelectorAll(".column-view-menu").forEach(function (m) {
+      if (m !== menu) m.classList.add("hidden");
+    });
+
+    menu.classList.toggle("hidden");
+  }
+
+  function toggleTableColumn(tableId, colClass, itemEl) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    const checkIcon = itemEl ? itemEl.querySelector(".col-check i") : null;
+    const isCurrentlyHidden = table.classList.contains("hide-" + colClass);
+
+    if (isCurrentlyHidden) {
+      table.classList.remove("hide-" + colClass);
+      if (checkIcon) checkIcon.classList.remove("hidden");
+    } else {
+      table.classList.add("hide-" + colClass);
+      if (checkIcon) checkIcon.classList.add("hidden");
+    }
+
+    // Save preferences in localStorage
+    try {
+      const storageKey = "bl_col_pref_" + tableId;
+      let hiddenCols = [];
+      const stored = localStorage.getItem(storageKey);
+      if (stored) hiddenCols = JSON.parse(stored);
+
+      if (isCurrentlyHidden) {
+        hiddenCols = hiddenCols.filter((c) => c !== colClass);
+      } else {
+        if (hiddenCols.indexOf(colClass) === -1) hiddenCols.push(colClass);
+      }
+      localStorage.setItem(storageKey, JSON.stringify(hiddenCols));
+    } catch (e) {
+      console.warn("Could not save column preferences:", e);
+    }
+  }
+
+  function applySavedColumnPreferences(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    try {
+      const storageKey = "bl_col_pref_" + tableId;
+      const stored = localStorage.getItem(storageKey);
+      if (!stored) return;
+      const hiddenCols = JSON.parse(stored) || [];
+
+      hiddenCols.forEach(function (colClass) {
+        table.classList.add("hide-" + colClass);
+
+        // Update corresponding check icon in the menu if present
+        const menu = document.querySelector('[onclick*="' + tableId + '"][onclick*="' + colClass + '"]');
+        if (menu) {
+          const checkIcon = menu.querySelector(".col-check i");
+          if (checkIcon) checkIcon.classList.add("hidden");
+        }
+      });
+    } catch (e) {
+      console.warn("Could not load column preferences:", e);
+    }
+  }
+
+  // Close menus when clicking outside
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".column-view-menu") && !e.target.closest("[onclick*='toggleColumnMenu']")) {
+      document.querySelectorAll(".column-view-menu").forEach(function (m) {
+        m.classList.add("hidden");
+      });
+    }
+  });
+
+  /**
+   * Initializes Flatpickr calendars with Shadcn theme
+   */
+  function initFlatpickrInputs() {
+    if (typeof flatpickr === "undefined") return;
+
+    // Transaction Date
+    const cDate = document.getElementById("c-date");
+    if (cDate && !cDate._flatpickr) {
+      flatpickr(cDate, {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d-M-Y",
+        defaultDate: new Date(),
+        disableMobile: "true"
+      });
+    }
+
+    // Joining Date
+    const mJoined = document.getElementById("m-joined");
+    if (mJoined && !mJoined._flatpickr) {
+      flatpickr(mJoined, {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d-M-Y",
+        defaultDate: new Date(),
+        disableMobile: "true"
+      });
+    }
+
+    // Birth Date (allows selecting past decades)
+    const mDob = document.getElementById("m-dob");
+    if (mDob && !mDob._flatpickr) {
+      flatpickr(mDob, {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d-M-Y",
+        maxDate: new Date(),
+        disableMobile: "true"
+      });
+    }
+  }
+
   window.onload = function () {
-    refreshSessionInfo();
-    showPage("home");
+    initShadcnSelects();
+    initFlatpickrInputs();
+    refreshSessionInfo(function (info) {
+      if (info.permissions && info.permissions.isMemberOnly) {
+        showPage("my-financials");
+      } else {
+        showPage("home");
+      }
+    });
   };
 </script>

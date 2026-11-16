@@ -1,16 +1,585 @@
-<section id="accounts" class="space-y-6">
-  <div class="flex justify-between items-end mb-6">
+<section id="accounts" class="space-y-4 sm:space-y-6">
+  <!-- Header & Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
-      <h2 class="text-3xl font-bold text-slate-900">Accounts</h2>
-      <p class="text-slate-500">Current balances and payment channels across all organization accounts.</p>
+      <div class="flex items-center gap-2">
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">Accounts & Treasury</h2>
+        <span id="reconcile-global-badge" class="hidden text-[10px] font-semibold px-2 py-0.5 rounded-full border"></span>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5" id="accounts-header-subtitle">
+        Official payment channels, cash tracking, bank reconciliation, and dividend distribution.
+      </p>
     </div>
-    <button type="button" onclick="openPrintAccountsReport()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm">
-      <i class="fas fa-print mr-2 text-slate-500"></i> Print Overview
-    </button>
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="loadAccounts()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm transition-colors">
+        <i class="fas fa-rotate text-slate-400"></i> <span>Refresh</span>
+      </button>
+      <button type="button" onclick="openPrintAccountsReport()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm transition-colors">
+        <i class="fas fa-print text-slate-400"></i> <span>Print Overview</span>
+      </button>
+    </div>
   </div>
 
-  <div>
-    <h6 class="font-bold text-slate-800 mb-4">Payment Guides by Account</h6>
-    <div id="accounts-card-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+  <!-- Role-Based Navigation Tabs (Admin & Treasurer only) -->
+  <div id="accounts-admin-tabs" class="hidden border-b border-slate-200">
+    <nav class="flex space-x-6" aria-label="Accounts Navigation">
+      <button type="button" id="tab-btn-reconciliation" onclick="switchAccountsTab('reconciliation')"
+        class="pb-3 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 flex items-center gap-2 transition-colors">
+        <i class="fas fa-scale-balanced"></i>
+        <span>Financial Auto-Reconciliation</span>
+      </button>
+      <button type="button" id="tab-btn-dividends" onclick="switchAccountsTab('dividends')"
+        class="pb-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 flex items-center gap-2 transition-colors">
+        <i class="fas fa-coins"></i>
+        <span>Dividends & Earnings</span>
+      </button>
+      <button type="button" id="tab-btn-guides" onclick="switchAccountsTab('guides')"
+        class="pb-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 flex items-center gap-2 transition-colors">
+        <i class="fas fa-mobile-screen"></i>
+        <span>Deposit & Payment Guides</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- PANE 1: Financial Auto-Reconciliation (Admin / Treasurer) -->
+  <div id="accounts-reconciliation-pane" class="space-y-4 sm:space-y-6">
+    <!-- Executive KPI Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <!-- Card 1: Total Bank Statement Cash -->
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Bank Total</span>
+          <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <i class="fas fa-building-columns"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="kpi-statement-cash">KES 0</p>
+        <p class="text-[11px] text-slate-500 mt-1">Verified physical bank balances</p>
+      </div>
+
+      <!-- Card 2: System Calculated Cash -->
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">System Book Balance</span>
+          <span class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs">
+            <i class="fas fa-calculator"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="kpi-system-cash">KES 0</p>
+        <div class="flex items-center gap-2 text-[10px] text-slate-500 mt-1 font-mono">
+          <span id="kpi-inflows-sub">In: KES 0</span>
+          <span>•</span>
+          <span id="kpi-outflows-sub">Out: KES 0</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Reconciliation Variance -->
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm relative overflow-hidden" id="card-variance-box">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Net Variance</span>
+          <span id="kpi-variance-icon" class="w-7 h-7 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center text-xs">
+            <i class="fas fa-scale-balanced"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="kpi-variance-amount">KES 0</p>
+        <div class="mt-1" id="kpi-variance-badge-container">
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block bg-slate-100 text-slate-600" id="kpi-variance-status">Checking...</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Non-Cash Refund / Expense Offsets -->
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expense Offsets</span>
+          <span class="w-7 h-7 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center text-xs">
+            <i class="fas fa-receipt"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-violet-900 mt-2" id="kpi-refund-offsets">KES 0</p>
+        <p class="text-[11px] text-slate-500 mt-1" title="Member expense reimbursements credited to savings/loans without physical bank cash transit">
+          Non-bank project reimbursements
+        </p>
+      </div>
+    </div>
+
+    <!-- Reconciliation Master Table -->
+    <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50">
+        <div>
+          <h3 class="text-xs sm:text-sm font-bold text-slate-900">Deposit Accounts Reconciliation Ledger</h3>
+          <p class="text-[11px] text-slate-500">Live comparison between system recorded transactions and official bank statements.</p>
+        </div>
+        <span class="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100 w-fit">
+          <i class="fas fa-bolt text-sky-500 mr-1"></i> Auto-Formulas Linked
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50/75 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <th class="py-3 px-4">Account Channel</th>
+              <th class="py-3 px-4">Deposit Channel / Paybill</th>
+              <th class="py-3 px-4 text-right">System Inflows</th>
+              <th class="py-3 px-4 text-right">System Outflows</th>
+              <th class="py-3 px-4 text-right">System Balance</th>
+              <th class="py-3 px-4 text-right">Bank Statement</th>
+              <th class="py-3 px-4 text-center">Statement Date</th>
+              <th class="py-3 px-4 text-right">Variance</th>
+              <th class="py-3 px-4 text-center">Status</th>
+              <th class="py-3 px-4 text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="reconciliation-table-body" class="divide-y divide-slate-100 font-mono text-[11px]">
+            <tr>
+              <td colspan="10" class="py-8 text-center text-slate-400 font-sans">
+                <i class="fas fa-spinner fa-spin mr-2"></i> Loading reconciliation data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Accounting Policy Info Callout -->
+    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 flex items-start gap-3">
+      <i class="fas fa-circle-info text-sky-600 mt-0.5 text-sm shrink-0"></i>
+      <div class="space-y-1">
+        <p class="font-bold text-slate-800">Chama Financial Reconciliation Principles</p>
+        <p class="text-[11px] leading-relaxed">
+          1. <strong>System Inflows:</strong> Dynamically computed from all member contributions and loan repayments with status <code>Approved</code> mapped to each account.
+        </p>
+        <p class="text-[11px] leading-relaxed">
+          2. <strong>Physical Bank Statement:</strong> The Treasurer updates the statement balance and date when downloading weekly/monthly e-statements from Equity Bank, CIC Group (MMF), or Mansa X.
+        </p>
+        <p class="text-[11px] leading-relaxed">
+          3. <strong>Expense Offsets / Refunds:</strong> When a member pays for a group project out-of-pocket and receives offset credit on savings or loans, the transaction is categorized as <code>Refund / Expense Offset</code>. It is tracked separately and excluded from physical bank inflows to keep bank reconciliations accurate.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANE 2: Dividends & Interest Distribution (Admin / Treasurer) -->
+  <div id="accounts-dividends-pane" class="space-y-4 sm:space-y-6 hidden">
+    <!-- Earnings Overview Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Distributable Earnings</span>
+          <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">
+            <i class="fas fa-coins"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-emerald-600 mt-2" id="div-kpi-total-earnings">KES 0</p>
+        <p class="text-[11px] text-slate-500 mt-1">Suggested pool (Loans + Investments)</p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Loan Interest Earned</span>
+          <span class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs">
+            <i class="fas fa-hand-holding-dollar"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="div-kpi-loan-interest">KES 0</p>
+        <p class="text-[11px] text-slate-500 mt-1">Realized borrower interest paid</p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Investment Fund Yields</span>
+          <span class="w-7 h-7 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center text-xs">
+            <i class="fas fa-chart-line"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="div-kpi-invest-gains">KES 0</p>
+        <p class="text-[11px] text-slate-500 mt-1">Returns from CIC MMF & Mansa X</p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Qualifying Savings Base</span>
+          <span class="w-7 h-7 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center text-xs">
+            <i class="fas fa-piggy-bank"></i>
+          </span>
+        </div>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="div-kpi-total-savings">KES 0</p>
+        <p class="text-[11px] text-slate-500 mt-1" id="div-kpi-member-count">Across 0 active members</p>
+      </div>
+    </div>
+
+    <!-- Simulator & Configuration Card -->
+    <div class="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div>
+          <h4 class="font-bold text-slate-900 text-sm">Dividend Allocation Engine (Method A - Proportional Savings)</h4>
+          <p class="text-[11px] text-slate-500">Simulate earnings allocation, configure optional reserve retention, and enforce smart loan offset routing.</p>
+        </div>
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 w-fit">
+          Smart Debt Settlement Active
+        </span>
+      </div>
+
+      <form id="dividend-sim-form" onsubmit="runDividendSimulation(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Financial Year</label>
+          <select id="div-sim-year" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+            <option value="2026" selected>Financial Year 2026</option>
+            <option value="2025">Financial Year 2025</option>
+            <option value="2024">Financial Year 2024</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">
+            Total Dividend Pool (KES) <span class="text-rose-500">*</span>
+          </label>
+          <input type="number" step="0.01" min="1" required id="div-sim-pool"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-900 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
+            placeholder="e.g. 50000" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">
+            Reserve Fund Retention (%)
+          </label>
+          <div class="relative">
+            <input type="number" step="1" min="0" max="50" id="div-sim-reserve" value="0"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none" />
+            <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400 text-xs font-bold">%</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="submit" id="div-btn-simulate"
+            class="w-full px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium shadow-sm transition-colors flex items-center justify-center gap-1.5">
+            <i class="fas fa-calculator text-xs"></i> <span>Calculate Preview</span>
+          </button>
+        </div>
+      </form>
+
+      <div class="pt-2 flex items-center gap-2 text-xs text-slate-600">
+        <input type="checkbox" id="div-sim-auto-offset" checked
+          class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300" />
+        <label for="div-sim-auto-offset" class="cursor-pointer font-medium text-slate-700">
+          <strong>Smart Priority:</strong> If a member has an active loan, automatically settle their loan balance first before crediting savings.
+        </label>
+      </div>
+    </div>
+
+    <!-- Live Preview Table Card (Shown after Simulation) -->
+    <div id="dividend-preview-wrapper" class="hidden bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden space-y-0">
+      <div class="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div>
+          <h3 class="text-xs sm:text-sm font-bold text-slate-900">Member Allocation Schedule Preview</h3>
+          <p class="text-[11px] text-slate-500" id="dividend-preview-subtitle">Proportional distribution based on qualifying savings.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="openConfirmDividendModal()" id="btn-open-confirm-div"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+            <i class="fas fa-check-double text-xs"></i> <span>Approve & Post Dividends</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Allocation Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-slate-50 border-b border-slate-200/70 text-xs">
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase">Gross Pool</span>
+          <p class="font-mono font-bold text-slate-900 text-xs" id="div-sum-pool">KES 0</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold text-slate-400 uppercase">Reserve Retained</span>
+          <p class="font-mono font-bold text-slate-600 text-xs" id="div-sum-reserve">KES 0</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold text-amber-600 uppercase">Loan Debt Settled</span>
+          <p class="font-mono font-bold text-amber-700 text-xs" id="div-sum-loans">KES 0</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold text-emerald-600 uppercase">Credited to Savings</span>
+          <p class="font-mono font-bold text-emerald-700 text-xs" id="div-sum-savings">KES 0</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50/75 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <th class="py-3 px-4">Member Name & ID</th>
+              <th class="py-3 px-4 text-right">Qualifying Savings</th>
+              <th class="py-3 px-4 text-center">Share %</th>
+              <th class="py-3 px-4 text-right">Gross Dividend</th>
+              <th class="py-3 px-4 text-right">Active Loan Debt</th>
+              <th class="py-3 px-4 text-right text-amber-700 bg-amber-50/40">Loan Settle Offset</th>
+              <th class="py-3 px-4 text-right text-emerald-700 bg-emerald-50/40">Savings Reinvestment</th>
+            </tr>
+          </thead>
+          <tbody id="dividend-preview-table-body" class="divide-y divide-slate-100 font-mono text-[11px]">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Verified Monthly Fund Statements Table (CIC MMF & Mansa X) -->
+    <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+        <div>
+          <h3 class="text-xs sm:text-sm font-bold text-slate-900">Verified Fund Statements (CIC MMF & Mansa X)</h3>
+          <p class="text-[11px] text-slate-500">Official monthly interest yield entries extracted directly from asset management statements.</p>
+        </div>
+        <button type="button" onclick="openFundStatementModal()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium shadow-sm transition-colors">
+          <i class="fas fa-plus text-xs"></i> <span>Record Monthly Statement</span>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="border-b border-slate-200 bg-slate-50/75 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <th class="py-3 px-4">Statement Date</th>
+              <th class="py-3 px-4">Fund Channel</th>
+              <th class="py-3 px-4 text-right">Opening Bal.</th>
+              <th class="py-3 px-4 text-right">Purchases / Deposits</th>
+              <th class="py-3 px-4 text-right">Gross Interest</th>
+              <th class="py-3 px-4 text-right">Withholding Tax (15%)</th>
+              <th class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/40">Net Yield (Profit)</th>
+              <th class="py-3 px-4 text-right">Closing Bal.</th>
+              <th class="py-3 px-4 text-center">Ref</th>
+            </tr>
+          </thead>
+          <tbody id="fund-statements-table-body" class="divide-y divide-slate-100 font-mono text-[11px]">
+            <tr>
+              <td colspan="9" class="py-6 text-center text-slate-400 font-sans">
+                <i class="fas fa-spinner fa-spin mr-2"></i> Loading fund statements...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANE 3: Deposit & Payment Instructions (Visible to everyone) -->
+  <div id="accounts-guides-pane" class="space-y-3 sm:space-y-4">
+    <div>
+      <h6 class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Official Deposit & Payment Channels</h6>
+      <div id="accounts-card-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </div>
+  </div>
+
+  <!-- Reconcile Account Statement Balance Modal -->
+  <div id="reconcile-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-sm">
+            <i class="fas fa-file-invoice-dollar"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Update Bank Statement Balance</h4>
+            <p class="text-[11px] text-slate-500" id="modal-account-name">Equity Bank</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeReconcileModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="reconcile-form" onsubmit="submitReconcileForm(event)" class="p-6 space-y-4">
+        <input type="hidden" id="modal-row-number" />
+
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-1.5 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Account Number:</span>
+            <span class="font-mono font-bold text-slate-800" id="modal-account-num">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">System Book Balance:</span>
+            <span class="font-mono font-bold text-sky-700" id="modal-system-bal">KES 0</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">
+            Physical Statement Balance (KES) <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs font-bold">KES</span>
+            <input type="number" step="0.01" min="0" required id="modal-statement-bal"
+              class="w-full pl-12 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+              placeholder="0.00" />
+          </div>
+          <p class="text-[10px] text-slate-400 mt-1">Enter exact closing balance from official bank/MMF statement.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">
+            Statement / Value Date
+          </label>
+          <input type="date" id="modal-statement-date"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all" />
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeReconcileModal()"
+            class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors">
+            Cancel
+          </button>
+          <button type="submit" id="modal-submit-btn"
+            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium shadow-sm transition-colors flex items-center gap-1.5">
+            <i class="fas fa-check text-xs"></i> <span>Save & Reconcile</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dividend Execution Confirmation Modal -->
+  <div id="dividend-confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+            <i class="fas fa-check-double"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Confirm Dividend Distribution</h4>
+            <p class="text-[11px] text-slate-500" id="confirm-modal-year">Financial Year 2026</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeConfirmDividendModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs">
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Gross Dividend Pool:</span>
+            <span class="font-mono font-bold text-slate-900" id="conf-pool-val">KES 0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Reserve Fund Retained:</span>
+            <span class="font-mono font-bold text-slate-600" id="conf-reserve-val">KES 0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Total Active Loans Settled:</span>
+            <span class="font-mono font-bold text-amber-600" id="conf-loans-val">KES 0</span>
+          </div>
+          <div class="flex justify-between pt-1 border-t border-slate-200">
+            <span class="text-slate-700 font-semibold">Total Capitalized to Savings:</span>
+            <span class="font-mono font-bold text-emerald-600" id="conf-savings-val">KES 0</span>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400">
+            <span>Members Qualifying:</span>
+            <span id="conf-count-val">0 members</span>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-500 leading-relaxed">
+          Posting this will automatically update member loan balances, credit member savings in the ledger, and generate an immutable audit log.
+        </p>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeConfirmDividendModal()"
+            class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors">
+            Cancel
+          </button>
+          <button type="button" onclick="executeDividendPost()" id="btn-execute-dividend-confirm"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1.5">
+            <i class="fas fa-check text-xs"></i> <span>Confirm & Post to Ledger</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Record Fund Statement Modal -->
+  <div id="fund-statement-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+            <i class="fas fa-file-invoice"></i>
+          </div>
+          <div>
+            <h4 class="font-bold text-slate-900 text-sm">Record Monthly Fund Statement</h4>
+            <p class="text-[11px] text-slate-500">Log monthly interest and closing balance from official statement</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeFundStatementModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="fund-statement-form" onsubmit="submitFundStatementForm(event)" class="p-6 space-y-3.5 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Statement Date <span class="text-rose-500">*</span></label>
+            <input type="date" required id="fstmt-date"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Fund Channel <span class="text-rose-500">*</span></label>
+            <select id="fstmt-fund" class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none font-medium">
+              <option value="CIC MMF" selected>CIC MMF</option>
+              <option value="Mansa X">Mansa X</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Opening Balance (KES)</label>
+            <input type="number" step="0.01" min="0" id="fstmt-opening" placeholder="0.00"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Deposits / Purchases (KES)</label>
+            <input type="number" step="0.01" min="0" id="fstmt-deposits" placeholder="0.00"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Gross Interest (KES) <span class="text-rose-500">*</span></label>
+            <input type="number" step="0.01" min="0" required id="fstmt-gross" oninput="autoCalculateFundWht()" placeholder="0.00"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-slate-900 outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Withholding Tax (15%)</label>
+            <input type="number" step="0.01" min="0" id="fstmt-wht" placeholder="0.00"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono text-slate-600 outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Closing Balance (KES) <span class="text-rose-500">*</span></label>
+            <input type="number" step="0.01" min="0" required id="fstmt-closing" placeholder="0.00"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono font-bold text-emerald-700 outline-none" />
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Statement Ref</label>
+            <input type="text" id="fstmt-ref" placeholder="e.g. CIC-MMF-NOV-2026"
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-mono outline-none" />
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" onclick="closeFundStatementModal()"
+            class="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg font-medium transition-colors">
+            Cancel
+          </button>
+          <button type="submit" id="btn-save-fund-stmt"
+            class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-medium shadow-sm transition-colors flex items-center gap-1.5">
+            <i class="fas fa-check text-xs"></i> <span>Save Statement Entry</span>
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </section>

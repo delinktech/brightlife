@@ -5,21 +5,21 @@
     const r = (roleKey || "").toLowerCase();
     switch (r) {
       case "admin":
-        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-700 border border-sky-200"><i class="fas fa-shield-alt mr-1"></i> Admin</span>';
+        return '<span class="badge-info"><i class="fas fa-shield-alt mr-1"></i> Admin</span>';
       case "treasurer":
-        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200"><i class="fas fa-wallet mr-1"></i> Treasurer</span>';
+        return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200"><i class="fas fa-wallet mr-1"></i> Treasurer</span>';
       case "secretary":
-        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200"><i class="fas fa-user-pen mr-1"></i> Secretary</span>';
+        return '<span class="badge-success"><i class="fas fa-user-pen mr-1"></i> Secretary</span>';
       default:
-        return '<span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200"><i class="fas fa-user mr-1"></i> Member</span>';
+        return '<span class="badge-secondary"><i class="fas fa-user mr-1"></i> Member</span>';
     }
   }
 
   function getActiveStatusBadge(active) {
     if (active) {
-      return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active</span>';
+      return '<span class="badge-success"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active</span>';
     }
-    return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inactive</span>';
+    return '<span class="badge-danger"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inactive</span>';
   }
 
   function loadUserRoles() {
@@ -44,27 +44,31 @@
         let html = "";
         currentRoles.forEach((item) => {
           html +=
-            '<tr class="hover:bg-slate-50/50 transition-colors">' +
-            '<td class="px-6 py-4"><div class="font-semibold text-slate-800">' +
+            '<tr class="hover:bg-slate-50/70 transition-colors">' +
+            '<td class="col-r-identity px-4 py-3"><div class="font-semibold text-xs text-slate-900">' +
             (item.name || "User") +
             "</div></td>" +
-            '<td class="px-6 py-4 text-slate-600 font-mono text-xs">' +
+            '<td class="col-r-email px-4 py-3 text-slate-500 font-mono text-xs">' +
             item.email +
             "</td>" +
-            '<td class="px-6 py-4 text-center">' +
+            '<td class="col-r-role px-4 py-3 text-center">' +
             getRoleBadge(item.roleKey) +
             "</td>" +
-            '<td class="px-6 py-4 text-center">' +
+            '<td class="col-r-status px-4 py-3 text-center">' +
             getActiveStatusBadge(item.active) +
             "</td>" +
-            '<td class="px-6 py-4 text-center" data-require-perm="isAdmin"><button type="button" onclick="openRoleModal(\'' +
+            '<td class="col-r-action px-4 py-3 text-center" data-require-perm="isAdmin"><button type="button" onclick="openRoleModal(\'' +
             item.email +
-            '\')" class="text-slate-400 hover:text-sky-600 transition-colors px-2 py-1"><i class="fas fa-edit"></i></button></td>' +
+            '\')" class="text-slate-400 hover:text-slate-900 transition-colors px-2 py-1"><i class="fas fa-edit"></i></button></td>' +
             "</tr>";
         });
 
         container.innerHTML =
           html || '<tr><td colspan="5" class="text-center py-6 text-slate-500">No user roles configured.</td></tr>';
+
+        if (typeof applySavedColumnPreferences === "function") {
+          applySavedColumnPreferences("roles-table");
+        }
 
         if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
           applyRolePermissions(window.APP_PERMS);
@@ -75,7 +79,98 @@
         stopAppLoader();
         handleErr(err);
       })
-      .getAllUserRoles();
+      .getRolesData();
+  }
+
+  function setupRoleMemberCombobox(selectedMemberValue, currentEditingEmail) {
+    const searchInput = document.getElementById("r-member-search");
+    const hiddenInput = document.getElementById("r-member");
+    const combobox = document.getElementById("r-member-combobox");
+    if (!searchInput || !hiddenInput || !combobox) return;
+
+    // Set of member IDs already assigned in the Roles sheet
+    const assignedMemberIds = new Set();
+    currentRoles.forEach((r) => {
+      if (currentEditingEmail && r.email && r.email.toLowerCase() === currentEditingEmail.toLowerCase()) {
+        return;
+      }
+      if (r.memberId) assignedMemberIds.add(String(r.memberId).trim().toUpperCase());
+      if (r.member) {
+        const parts = String(r.member).split("—");
+        if (parts.length > 0 && parts[0].trim()) {
+          assignedMemberIds.add(parts[0].trim().toUpperCase());
+        }
+      }
+    });
+
+    function renderList(filterText) {
+      const q = (filterText || "").toLowerCase().trim();
+      const list = (typeof currentMembers !== "undefined" && currentMembers) ? currentMembers : [];
+      const matches = list.filter((m) => {
+        const mIdUpper = String(m.id).trim().toUpperCase();
+        if (assignedMemberIds.has(mIdUpper)) return false;
+        if (!q) return true;
+        const nameMatch = (m.name || "").toLowerCase().indexOf(q) !== -1;
+        const idMatch = (m.id || "").toLowerCase().indexOf(q) !== -1;
+        return nameMatch || idMatch;
+      });
+
+      if (!matches.length) {
+        combobox.innerHTML = '<div class="px-3 py-2 text-xs text-slate-400 text-center">No available unlinked members</div>';
+        combobox.classList.remove("hidden");
+        return;
+      }
+
+      combobox.innerHTML = matches.map((m) => {
+        const val = m.id + " — " + m.name;
+        return (
+          '<div class="custom-combobox-item" onclick="selectRoleMember(\'' +
+          escapeHtmlAttr(val) +
+          '\', \'' +
+          escapeHtmlAttr(m.name) +
+          '\', \'' +
+          escapeHtmlAttr(m.id) +
+          '\')">' +
+          '<span>' + m.name + '</span>' +
+          '<span class="item-id">' + m.id + '</span>' +
+          '</div>'
+        );
+      }).join("");
+      combobox.classList.remove("hidden");
+    }
+
+    searchInput.addEventListener("focus", function() {
+      renderList(this.value);
+    });
+
+    searchInput.addEventListener("input", function() {
+      hiddenInput.value = this.value;
+      renderList(this.value);
+    });
+
+    document.addEventListener("click", function(e) {
+      if (!searchInput.contains(e.target) && !combobox.contains(e.target)) {
+        combobox.classList.add("hidden");
+      }
+    });
+
+    if (selectedMemberValue) {
+      searchInput.value = selectedMemberValue;
+      hiddenInput.value = selectedMemberValue;
+    }
+  }
+
+  function selectRoleMember(fullVal, name, id) {
+    const searchInput = document.getElementById("r-member-search");
+    const hiddenInput = document.getElementById("r-member");
+    const combobox = document.getElementById("r-member-combobox");
+    if (searchInput) searchInput.value = name + " (" + id + ")";
+    if (hiddenInput) hiddenInput.value = fullVal;
+    if (combobox) combobox.classList.add("hidden");
+  }
+
+  function escapeHtmlAttr(str) {
+    return String(str || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
   }
 
   function openRoleModal(email) {
@@ -87,26 +182,47 @@
     const form = document.getElementById("roleForm");
     const title = document.getElementById("roleModalTitle");
     const emailInput = document.getElementById("r-email");
+    const memberInput = document.getElementById("r-member-search");
+    const memberHidden = document.getElementById("r-member");
     form.reset();
+
+    let selectedMember = "";
 
     if (email) {
       title.innerText = "Edit User Role";
       emailInput.value = email;
       emailInput.readOnly = true;
-      emailInput.classList.add("bg-slate-50");
+      emailInput.classList.add("bg-slate-100", "cursor-not-allowed");
 
       const item = currentRoles.find((r) => r.email === email);
       if (item) {
-        document.getElementById("r-name").value = item.name || "";
-        document.getElementById("r-role").value = item.role || "Member";
-        document.getElementById("r-active").value = item.active ? "true" : "false";
+        selectedMember = item.member || (item.memberId ? item.memberId + " — " + item.name : "");
+        setShadcnSelectValue("select-role-wrapper", item.role || "Member");
+        setShadcnSelectValue("select-active-wrapper", item.active ? "true" : "false");
+        document.getElementById("r-notes").value = item.notes || "";
       }
     } else {
-      title.innerText = "Add System User Role";
+      title.innerText = "Add User Access Role";
       emailInput.readOnly = false;
-      emailInput.classList.remove("bg-slate-50");
-      document.getElementById("r-role").value = "Member";
-      document.getElementById("r-active").value = "true";
+      emailInput.classList.remove("bg-slate-100", "cursor-not-allowed");
+      setShadcnSelectValue("select-role-wrapper", "Member");
+      setShadcnSelectValue("select-active-wrapper", "true");
+      document.getElementById("r-notes").value = "";
+      if (memberInput) memberInput.value = "";
+      if (memberHidden) memberHidden.value = "";
+    }
+
+    if (!currentMembers || !currentMembers.length) {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.members) {
+            currentMembers = res.members;
+            setupRoleMemberCombobox(selectedMember, email);
+          }
+        })
+        .getMembersData();
+    } else {
+      setupRoleMemberCombobox(selectedMember, email);
     }
 
     modal.classList.remove("hidden");
@@ -123,10 +239,11 @@
     btn.innerText = "Saving...";
 
     const payload = {
-      name: document.getElementById("r-name").value,
       email: document.getElementById("r-email").value,
+      member: document.getElementById("r-member-search") ? document.getElementById("r-member-search").value : "",
       role: document.getElementById("r-role").value,
       active: document.getElementById("r-active").value === "true",
+      notes: document.getElementById("r-notes").value,
     };
 
     google.script.run

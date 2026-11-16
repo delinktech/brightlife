@@ -1,114 +1,235 @@
-<section id="contributions">
-  <div class="flex justify-between items-end mb-8">
+<section id="contributions" class="space-y-4 sm:space-y-6">
+  <!-- Top Header Controls & Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
-      <h2 class="text-3xl font-bold text-slate-900">Financial Ledger</h2>
-      <p class="text-slate-500">Record and track all member contributions and payments.</p>
+      <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">Contributions Ledger</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Record and track all member contributions, shares, and payments.</p>
     </div>
-    <div class="flex items-center space-x-3">
-      <button type="button" onclick="openPrintContributionsReport()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm">
-        <i class="fas fa-print mr-2 text-slate-500"></i> Print Report
+    <div class="flex items-center gap-2">
+      <!-- Column Visibility Toggle Dropdown -->
+      <div class="relative" id="contributions-col-view-wrapper">
+        <button type="button" onclick="toggleColumnMenu('contributions-col-view-menu')"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-2xs transition-colors">
+          <i class="fas fa-sliders text-slate-500 text-xs"></i> <span>View</span>
+        </button>
+        <div id="contributions-col-view-menu" class="column-view-menu hidden">
+          <div class="column-view-header">Toggle columns</div>
+          <div class="column-view-item" onclick="toggleTableColumn('contributions-table', 'col-c-type', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Type</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('contributions-table', 'col-c-mode', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Payment Mode</span>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" onclick="openPrintContributionsReport()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm transition-colors">
+        <i class="fas fa-print text-slate-400"></i> <span>Print Report</span>
       </button>
       <button type="button" onclick="openContributionModal()" data-require-perm="contributionsWrite"
-        class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-emerald-100">
-        <i class="fas fa-plus mr-2"></i> Post Transaction
+        class="hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+        <i class="fas fa-plus text-xs"></i> <span>Post Transaction</span>
       </button>
     </div>
   </div>
 
-  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-    <table class="w-full text-left border-collapse">
-      <thead class="bg-slate-50 border-b border-slate-100">
-        <tr>
-          <th class="px-6 py-4 text-xs text-slate-500 uppercase">Date</th>
-          <th class="px-6 py-4 text-xs text-slate-500 uppercase">Member</th>
-          <th class="px-6 py-4 text-xs text-slate-500 uppercase">Type</th>
-          <th class="px-6 py-4 text-xs text-slate-500 uppercase text-right">Amount</th>
-          <th class="px-6 py-4 text-xs text-slate-500 uppercase text-center">Mode</th>
-        </tr>
-      </thead>
-      <tbody id="contribution-table-body" class="divide-y divide-slate-50 text-sm">
-      </tbody>
-    </table>
-    <div class="flex items-center justify-between px-6 py-4 bg-white border-t border-slate-100 rounded-b-2xl">
-      <p class="text-sm text-slate-500">
-        Page <span id="current-page-num" class="font-bold text-slate-900">1</span> of <span id="total-pages-num"
-          class="font-bold text-slate-900">1</span>
+  <!-- Contributions Table Container -->
+  <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table id="contributions-table" class="shadcn-table">
+        <thead>
+          <tr>
+            <th class="col-c-date">Date</th>
+            <th class="col-c-member">Member</th>
+            <th class="col-c-type">Type</th>
+            <th class="col-c-amount text-right">Amount</th>
+            <th class="col-c-mode text-center">Payment Channel</th>
+            <th class="col-c-status text-center">Status</th>
+            <th class="col-c-actions text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody id="contribution-table-body" class="divide-y divide-slate-100">
+        </tbody>
+      </table>
+    </div>
+    <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-white border-t border-slate-100">
+      <p class="text-xs text-slate-500">
+        Page <span id="current-page-num" class="font-bold text-slate-900 font-mono">1</span> of <span id="total-pages-num"
+          class="font-bold text-slate-900 font-mono">1</span>
       </p>
-      <div class="flex space-x-2">
+      <div class="flex items-center gap-1.5">
         <button onclick="changePage(-1)" id="prev-btn"
-          class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
-          <i class="fas fa-chevron-left mr-1"></i> Previous
+          class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <i class="fas fa-chevron-left mr-1 text-[10px]"></i> Prev
         </button>
         <button onclick="changePage(1)" id="next-btn"
-          class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed">
-          Next <i class="fas fa-chevron-right ml-1"></i>
+          class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          Next <i class="fas fa-chevron-right ml-1 text-[10px]"></i>
         </button>
       </div>
     </div>
   </div>
 </section>
 
-<div id="contributionModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-  <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="relative bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-      <div class="bg-emerald-600 px-6 py-4 flex justify-between items-center text-white">
-        <h3 class="text-xl font-bold">New Transaction</h3>
-        <button onclick="closeContributionModal()" class="hover:text-emerald-200"><i class="fas fa-times"></i></button>
+<!-- New Contribution Modal (Unified Shadcn Theme) -->
+<div id="contributionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-100 transition-all transform my-auto">
+    
+    <!-- Modal Header (Identical to Roles Modal) -->
+    <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+      <div>
+        <h3 class="text-base font-bold text-slate-900">Record New Transaction</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Post a member contribution or loan repayment into the ledger</p>
+      </div>
+      <button type="button" onclick="closeContributionModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <form id="contributionForm" class="space-y-4">
+      
+      <!-- Member Search Field -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Member Name / ID</label>
+        <div class="relative">
+          <input type="text" id="c-member-search" placeholder="Type member name or ID (e.g. Mwangi or BL25)..."
+            class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none" required autocomplete="off" />
+          <input type="hidden" id="c-member" />
+          <input type="hidden" id="c-member-id" />
+          <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+            <i class="fas fa-search text-[10px]"></i>
+          </div>
+          <!-- Custom Styled Combobox Panel -->
+          <div id="c-member-combobox" class="custom-combobox-panel hidden"></div>
+        </div>
       </div>
 
-      <form id="contributionForm" class="p-6 space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Date</label>
-            <input type="date" id="c-date" required
-              class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500">
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Amount</label>
-            <input type="number" id="c-amount" required placeholder="0.00"
-              class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none focus:ring-2 focus:ring-emerald-500">
+      <!-- Transaction Type (Positioned directly after Member) -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1">Transaction Type</label>
+        <div id="select-ctype-wrapper" data-shadcn-select class="relative">
+          <input type="hidden" id="c-type" value="Monthly Contribution" />
+          <button type="button" class="shadcn-select-trigger">
+            <span class="shadcn-select-label">Monthly Contribution</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="shadcn-dropdown-menu hidden">
+            <div class="shadcn-dropdown-item selected" data-value="Monthly Contribution">
+              <span class="item-text">Monthly Contribution</span>
+              <span class="item-id">Savings</span>
+            </div>
+            <div class="shadcn-dropdown-item" data-value="Loan Payment">
+              <span class="item-text">Loan Payment</span>
+              <span class="item-id">Repayment</span>
+            </div>
+            <div class="shadcn-dropdown-item" data-value="Membership Fee">
+              <span class="item-text">Membership Fee</span>
+              <span class="item-id">Joining</span>
+            </div>
           </div>
         </div>
+      </div>
 
+      <!-- Dynamic Loan Selector Field (Appears only when Loan Payment is selected) -->
+      <div id="c-loan-select-wrapper" class="hidden">
+        <label class="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+          <span>Select Loan Facility</span>
+          <span id="c-loan-count-badge" class="text-[10px] text-sky-600 font-mono font-normal"></span>
+        </label>
+        <select id="c-loan-id"
+          class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+          <option value="">-- Choose Loan --</option>
+        </select>
+        <div id="c-loan-details-card" class="mt-2 p-2.5 bg-slate-50 border border-slate-200/80 rounded-lg text-xs text-slate-600 hidden">
+          <div class="flex justify-between items-center text-[11px] mb-1">
+            <span class="text-slate-500">Repayment Total:</span>
+            <span id="c-card-repayment" class="font-mono font-semibold text-slate-800">KSh 0.00</span>
+          </div>
+          <div class="flex justify-between items-center text-[11px] mb-1">
+            <span class="text-slate-500">Paid to Date:</span>
+            <span id="c-card-paid" class="font-mono text-emerald-700">KSh 0.00</span>
+          </div>
+          <div class="flex justify-between items-center text-[11px] pt-1 border-t border-slate-200">
+            <span class="font-medium text-slate-700">Outstanding Balance:</span>
+            <span id="c-card-balance" class="font-mono font-bold text-amber-600">KSh 0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1 tracking-wider">Member Name</label>
-          <select id="c-member" required
-            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 appearance-none transition-all">
-            <option value="" disabled selected>Loading members...</option>
-          </select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Payment Mode</label>
-            <select id="c-mode" class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
-              <option value="Cash">Cash</option>
-              <option value="M-Pesa">M-Pesa</option>
-              <option value="Bank Payment">Bank Payment</option>
-              <option value="Refund">Refund</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Transaction ID</label>
-            <input type="text" id="c-tid" placeholder="Ref No."
-              class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Transaction Date</label>
+          <div class="relative">
+            <input type="text" id="c-date" placeholder="Select date" required
+              class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
+            <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fas fa-calendar-alt text-xs"></i>
+            </div>
           </div>
         </div>
-
         <div>
-          <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Transaction Type</label>
-          <select id="c-type" class="w-full px-3 py-2 bg-slate-50 border rounded-lg outline-none">
-            <option value="Monthly Contribution">Monthly Contribution</option>
-            <option value="Loan Payment">Loan Payment</option>
-          </select>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Amount (KSh)</label>
+          <input type="number" id="c-amount" required placeholder="0.00"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
         </div>
+      </div>
 
-        <button type="submit"
-          class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-100 transition-all mt-4">
-          Record Transaction
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Deposit Channel</label>
+          <div id="select-cmode-wrapper" data-shadcn-select class="relative">
+            <input type="hidden" id="c-mode" value="Equity Bank" />
+            <button type="button" class="shadcn-select-trigger">
+              <span class="shadcn-select-label">Equity Bank</span>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="shadcn-dropdown-menu hidden">
+              <div class="shadcn-dropdown-item selected" data-value="Equity Bank">
+                <span class="item-text">Equity Bank</span>
+                <span class="item-id">Bank</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="CIC MMF">
+                <span class="item-text">CIC MMF</span>
+                <span class="item-id">MMF</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="Mansa X">
+                <span class="item-text">Mansa X</span>
+                <span class="item-id">SIB Fund</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="Cash">
+                <span class="item-text">Cash</span>
+                <span class="item-id">Hand</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="Refund / Expense Offset">
+                <span class="item-text">Refund / Expense Offset</span>
+                <span class="item-id">Journal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Reference / Receipt No.</label>
+          <input type="text" id="c-tid" placeholder="e.g. QX938472 or Receipt #"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+        </div>
+      </div>
+
+      <!-- Verification Info Box -->
+      <div class="p-2.5 bg-amber-50/70 border border-amber-200/60 rounded-lg text-[11px] text-amber-800 flex items-start gap-2">
+        <i class="fas fa-shield-alt text-amber-600 mt-0.5 text-xs"></i>
+        <span>Submitted transactions are marked <strong>Pending</strong> until verified and confirmed by the Treasurer against bank/M-Pesa records.</span>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 mt-5">
+        <button type="button" onclick="closeContributionModal()"
+          class="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors">
+          Cancel
         </button>
-      </form>
-    </div>
+        <button type="submit" id="c-submit-btn"
+          class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+          Submit Transaction
+        </button>
+      </div>
+    </form>
   </div>
 </div>

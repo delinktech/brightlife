@@ -1,54 +1,240 @@
 <script>
   let currentMembers = [];
 
-  function getStatusClasses(status) {
-    switch ((status || "").toLowerCase()) {
-      case "active":
-        return "bg-emerald-100 text-emerald-700";
-      case "suspended":
-      case "inactive":
-        return "bg-rose-100 text-rose-700";
-      default:
-        return "bg-slate-100 text-slate-600";
+  function getMemberInitialAvatar(name) {
+    const clean = String(name || "U").trim();
+    const parts = clean.split(/\s+/);
+    let initials = parts[0] ? parts[0].charAt(0).toUpperCase() : "U";
+    if (parts.length > 1) {
+      initials += parts[parts.length - 1].charAt(0).toUpperCase();
+    }
+    const colorClasses = [
+      "bg-blue-100 text-blue-700 border-blue-200",
+      "bg-indigo-100 text-indigo-700 border-indigo-200",
+      "bg-emerald-100 text-emerald-700 border-emerald-200",
+      "bg-purple-100 text-purple-700 border-purple-200",
+      "bg-slate-100 text-slate-700 border-slate-200"
+    ];
+    const charCode = clean.charCodeAt(0) || 0;
+    const colorClass = colorClasses[charCode % colorClasses.length];
+    
+    return '<div class="w-8 h-8 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 ' + colorClass + '">' +
+      initials +
+    '</div>';
+  }
+
+  function getMemberLoanStatusBadge(member) {
+    const bal = Number(member.loanBalance) || 0;
+    const taken = Number(member.totalLoanTaken) || 0;
+    const sysStatus = String(member.status || "").toLowerCase();
+
+    if (sysStatus === "pending") {
+      return '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">Pending</span>';
+    }
+    if (bal > 0) {
+      return '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Active Loan</span>';
+    }
+    if (taken > 0 && bal === 0) {
+      return '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Cleared</span>';
+    }
+    return '<span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">No Loans</span>';
+  }
+
+  function updateLoanStatusFilterOptions(list) {
+    let countAll = list.length;
+    let countActive = 0;
+    let countCleared = 0;
+    let countNone = 0;
+    let countPending = 0;
+
+    list.forEach((m) => {
+      const bal = Number(m.loanBalance) || 0;
+      const taken = Number(m.totalLoanTaken) || 0;
+      const sysStatus = String(m.status || "").toLowerCase();
+
+      if (sysStatus === "pending") countPending++;
+      else if (bal > 0) countActive++;
+      else if (taken > 0 && bal === 0) countCleared++;
+      else countNone++;
+    });
+
+    const elAll = document.getElementById("count-all");
+    const elActive = document.getElementById("count-active");
+    const elCleared = document.getElementById("count-cleared");
+    const elNone = document.getElementById("count-none");
+    const elPending = document.getElementById("count-pending");
+
+    if (elAll) elAll.innerText = countAll;
+    if (elActive) elActive.innerText = countActive;
+    if (elCleared) elCleared.innerText = countCleared;
+    if (elNone) elNone.innerText = countNone;
+    if (elPending) elPending.innerText = countPending;
+
+    const filterInput = document.getElementById("member-loan-status-filter");
+    const label = document.getElementById("member-loan-status-filter-label");
+    const currentVal = filterInput ? filterInput.value : "all";
+
+    if (label) {
+      if (currentVal === "active") label.innerText = "Active Loans (" + countActive + ")";
+      else if (currentVal === "cleared") label.innerText = "Cleared Loans (" + countCleared + ")";
+      else if (currentVal === "none") label.innerText = "No Loans Taken (" + countNone + ")";
+      else if (currentVal === "pending") label.innerText = "Pending Requests (" + countPending + ")";
+      else label.innerText = "All Members (" + countAll + ")";
     }
   }
 
-  function formatTimeAgoFromIso(isoValue) {
-    if (!isoValue) return "-";
-    const target = new Date(isoValue);
-    if (isNaN(target.getTime())) return "-";
-    const now = new Date();
-    const msDiff = now.getTime() - target.getTime();
-    if (msDiff < 0) return "just now";
-    const dayMs = 24 * 60 * 60 * 1000;
-    const totalDays = Math.floor(msDiff / dayMs);
-    if (totalDays < 30) return totalDays + " day" + (totalDays === 1 ? "" : "s");
-    if (totalDays < 365) {
-      const months = Math.floor(totalDays / 30);
-      return months + " mo" + (months === 1 ? "" : "s");
-    }
-    const years = Math.floor(totalDays / 365);
-    return years + " yr" + (years === 1 ? "" : "s");
+  function filterMembersTable() {
+    const searchVal = (document.getElementById("member-search-input") ? document.getElementById("member-search-input").value : "").toLowerCase().trim();
+    const statusVal = document.getElementById("member-loan-status-filter") ? document.getElementById("member-loan-status-filter").value : "all";
+
+    const filtered = currentMembers.filter((m) => {
+      const nameMatch = (m.name || "").toLowerCase().indexOf(searchVal) !== -1 ||
+        (m.id || "").toLowerCase().indexOf(searchVal) !== -1 ||
+        (m.nationalId || "").toLowerCase().indexOf(searchVal) !== -1;
+
+      if (!nameMatch) return false;
+      if (statusVal === "all") return true;
+
+      const bal = Number(m.loanBalance) || 0;
+      const taken = Number(m.totalLoanTaken) || 0;
+      const sysStatus = String(m.status || "").toLowerCase();
+
+      if (statusVal === "active") return bal > 0;
+      if (statusVal === "cleared") return taken > 0 && bal === 0;
+      if (statusVal === "none") return taken === 0 && bal === 0;
+      if (statusVal === "pending") return sysStatus === "pending";
+
+      return true;
+    });
+
+    renderMembersTable(filtered);
   }
 
-  function todayInputValue_() {
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    return yyyy + "-" + mm + "-" + dd;
+  function getGenderChip(gender) {
+    const g = String(gender || "").trim().toUpperCase();
+    if (g === "F" || g === "FEMALE") {
+      return '<span class="inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-black bg-pink-100 text-pink-700 border border-pink-200 shrink-0 ml-1.5 shadow-2xs" title="Female">F</span>';
+    }
+    if (g === "M" || g === "MALE") {
+      return '<span class="inline-flex items-center justify-center w-4 h-4 rounded text-[9px] font-black bg-blue-100 text-blue-700 border border-blue-200 shrink-0 ml-1.5 shadow-2xs" title="Male">M</span>';
+    }
+    return '';
+  }
+
+  function getMemberLoanStatusBadge(m) {
+    const bal = Number(m.loanBalance) || 0;
+    const taken = Number(m.totalLoanTaken) || 0;
+    const sysStatus = String(m.status || "").toLowerCase();
+
+    if (sysStatus === "pending") {
+      return '<span class="badge-warning">Pending</span>';
+    }
+    if (bal > 0) {
+      return '<span class="badge-danger">Active Loan</span>';
+    }
+    if (taken > 0 && bal === 0) {
+      return '<span class="badge-success">Cleared</span>';
+    }
+    return '<span class="badge-secondary">None</span>';
+  }
+
+  function getUserAccountStatusBadge(status) {
+    const s = String(status || "Active").toLowerCase().trim();
+    if (s === "active") {
+      return '<span class="badge-success">Active</span>';
+    }
+    if (s === "inactive" || s === "suspended" || s === "dormant" || s === "exited") {
+      return '<span class="badge-danger">' + (status || "Inactive") + '</span>';
+    }
+    return '<span class="badge-secondary">' + (status || "Pending") + '</span>';
+  }
+
+  function renderMembersTable(list) {
+    const container = document.getElementById("member-table-body");
+    if (!container) return;
+
+    if (!list || !list.length) {
+      container.innerHTML =
+        '<tr><td colspan="9" class="text-center py-8 text-slate-400">No members found matching your search or filter criteria.</td></tr>';
+      return;
+    }
+
+    let html = "";
+    list.forEach((m) => {
+      const bal = Number(m.loanBalance) || 0;
+      const taken = Number(m.totalLoanTaken) || 0;
+      const guaranteed = Number(m.guaranteed) || 0;
+      const availGuar = Number(m.availableToGuarantee) || 0;
+      const maxLoan = Number(m.maxLoanEligibility) || 0;
+      const balClass = bal > 0 ? "text-amber-600 font-bold" : "text-slate-400 font-normal";
+      const takenClass = taken > 0 ? "text-slate-800 font-bold" : "text-slate-400 font-normal";
+      const gtrClass = guaranteed > 0 ? "text-purple-600 font-bold" : "text-slate-400 font-normal";
+      const availClass = availGuar > 0 ? "text-emerald-600 font-bold" : "text-slate-400 font-normal";
+      const maxLoanClass = maxLoan > 0 ? "text-sky-700 font-bold" : "text-slate-400 font-normal";
+
+      const contactLine = [
+        m.phone ? '<span class="inline-flex items-center gap-1 text-slate-500"><i class="fas fa-phone text-[9px] text-slate-400"></i>' + m.phone + '</span>' : '',
+        m.email ? '<span class="inline-flex items-center gap-1 text-slate-500"><i class="fas fa-envelope text-[9px] text-slate-400"></i>' + m.email + '</span>' : ''
+      ].filter(Boolean).join(' • ');
+
+      html +=
+        '<tr class="hover:bg-slate-50/70 transition-colors">' +
+        '<td class="col-m-name px-4 py-3">' +
+        '<div class="flex items-center gap-3">' +
+        getMemberInitialAvatar(m.name) +
+        '<div>' +
+        '<div class="flex items-center">' +
+        '<span class="font-semibold text-slate-900 text-xs">' + (m.name || "Member") + '</span>' +
+        getGenderChip(m.gender) +
+        '</div>' +
+        '<div class="text-[10px] text-slate-400 font-mono mt-0.5">' + m.id + ' • NID: ' + (m.nationalId || "-") + '</div>' +
+        (contactLine ? '<div class="text-[10px] font-mono mt-0.5 text-slate-500">' + contactLine + '</div>' : '') +
+        '</div>' +
+        '</div>' +
+        '</td>' +
+        '<td class="col-m-savings px-4 py-3 text-right font-mono font-semibold text-slate-900">' + formatMoney(m.savings) + '</td>' +
+        '<td class="col-m-shares px-3 py-3 text-center">' +
+        '<span class="badge-info font-mono">' + (m.sharesPercent || "0.00") + '%</span>' +
+        '</td>' +
+        '<td class="col-m-taken px-4 py-3 text-right font-mono ' + takenClass + '">' + (taken > 0 ? formatMoney(taken) : '—') + '</td>' +
+        '<td class="col-m-balance px-4 py-3 text-right font-mono ' + balClass + '">' + (bal > 0 ? formatMoney(bal) : '—') + '</td>' +
+        '<td class="col-m-guaranteed px-4 py-3 text-right font-mono ' + gtrClass + '">' + (guaranteed > 0 ? formatMoney(guaranteed) : '—') + '</td>' +
+        '<td class="col-m-availguar px-4 py-3 text-right font-mono ' + availClass + '">' + (availGuar > 0 ? formatMoney(availGuar) : '0') + '</td>' +
+        '<td class="col-m-maxloan px-4 py-3 text-right font-mono ' + maxLoanClass + '">' + (maxLoan > 0 ? formatMoney(maxLoan) : '0') + '</td>' +
+        '<td class="col-m-loanstatus px-3 py-3 text-center">' + getMemberLoanStatusBadge(m) + '</td>' +
+        '<td class="col-m-accountstatus px-3 py-3 text-center">' + getUserAccountStatusBadge(m.status) + '</td>' +
+        '<td class="col-m-actions px-3 py-3 text-center">' +
+        '<div class="flex items-center justify-center gap-1.5">' +
+        '<button type="button" onclick="openPrintMemberStatement(\'' + m.id + '\')" title="Print Member Statement" class="text-slate-400 hover:text-slate-900 transition-colors p-1"><i class="fas fa-print"></i></button>' +
+        '<button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' + m.id + '\')" title="Edit Member Profile" class="text-slate-400 hover:text-slate-900 transition-colors p-1 hidden"><i class="fas fa-pen"></i></button>' +
+        '</div>' +
+        '</td>' +
+        '</tr>';
+    });
+
+    container.innerHTML = html;
+
+    // Reapply saved hidden column preferences if any
+    if (typeof applySavedColumnPreferences === "function") {
+      applySavedColumnPreferences("member-table");
+    }
+
+    if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
+      applyRolePermissions(window.APP_PERMS);
+    }
   }
 
   function loadMembers() {
     const container = document.getElementById("member-table-body");
     startAppLoader();
     container.innerHTML =
-      '<tr><td colspan="9" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
+      '<tr><td colspan="9" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-blue-600 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+
     google.script.run
       .withSuccessHandler((response) => {
         if (!response || !response.success) {
           container.innerHTML =
-            '<tr><td colspan="9" class="text-center py-6 text-rose-600">' +
+            '<tr><td colspan="8" class="text-center py-6 text-rose-600">' +
             ((response && response.error) || "Failed to load members.") +
             "</td></tr>";
           stopAppLoader();
@@ -56,54 +242,8 @@
         }
 
         currentMembers = response.members || [];
-        let html = "";
-        currentMembers.forEach((m) => {
-          html +=
-            '<tr class="hover:bg-slate-50/50 transition-colors">' +
-            '<td class="px-6 py-4"><div class="text-slate-800">' +
-            m.name +
-            '</div><div class="text-xs text-slate-400">' +
-            m.id +
-            " • " +
-            (m.nationalId || "-") +
-            "</div></td>" +
-            '<td class="px-6 py-4 text-center text-sm text-slate-700">' +
-            (m.gender || "-") +
-            "</td>" +
-            '<td class="px-6 py-4 text-center text-sm text-slate-700">' +
-            (m.dob || "-") +
-            "</td>" +
-            '<td class="px-6 py-4"><div class="text-slate-700 text-sm">' +
-            (m.registrationDate || "-") +
-            '</div><div class="text-xs text-slate-400">' +
-            formatTimeAgoFromIso(m.registrationDateIso) +
-            " ago</div></td>" +
-            '<td class="px-6 py-4 text-right font-mono text-slate-700">' +
-            formatMoney(m.savings) +
-            "</td>" +
-            '<td class="px-6 py-4 text-right font-mono text-rose-600">' +
-            formatMoney(m.loanBalance) +
-            "</td>" +
-            '<td class="px-6 py-4 text-right font-mono text-rose-600">' +
-            formatMoney(m.guaranteed) +
-            "</td>" +
-            '<td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ' +
-            getStatusClasses(m.status) +
-            '">' +
-            m.status +
-            "</span></td>" +
-            '<td class="px-6 py-4 text-center"><button type="button" onclick="openPrintMemberStatement(\'' +
-            m.id +
-            '\')" title="Print Member Statement" class="text-slate-400 hover:text-emerald-600 transition-colors mr-2.5"><i class="fas fa-print"></i></button><button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' +
-            m.id +
-            '\')" title="Edit Member Profile" class="text-slate-400 hover:text-sky-600 transition-colors hidden"><i class="fas fa-edit"></i></button></td>' +
-            "</tr>";
-        });
-        container.innerHTML =
-          html || '<tr><td colspan="9" class="text-center py-6 text-slate-500">No members found.</td></tr>';
-        if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
-          applyRolePermissions(window.APP_PERMS);
-        }
+        updateLoanStatusFilterOptions(currentMembers);
+        filterMembersTable();
         stopAppLoader();
       })
       .withFailureHandler((err) => {
@@ -124,9 +264,21 @@
     const statusWrap = document.getElementById("m-status-wrap");
     form.reset();
     document.getElementById("m-id").value = memberId || "";
-    document.getElementById("m-joined").value = todayInputValue_();
-    document.getElementById("m-status").value = "Pending";
-    document.getElementById("m-gender").value = "";
+    
+    const joinedPicker = document.getElementById("m-joined") ? document.getElementById("m-joined")._flatpickr : null;
+    if (joinedPicker) joinedPicker.setDate(new Date());
+    else document.getElementById("m-joined").value = todayInputValue_();
+
+    const dobPicker = document.getElementById("m-dob") ? document.getElementById("m-dob")._flatpickr : null;
+    if (dobPicker) dobPicker.clear();
+
+    const phoneInput = document.getElementById("m-phone");
+    if (phoneInput) phoneInput.value = "";
+    const emailInput = document.getElementById("m-email");
+    if (emailInput) emailInput.value = "";
+
+    setShadcnSelectValue("select-gender-wrapper", "");
+    setShadcnSelectValue("select-status-wrapper", "Pending");
     if (statusWrap) statusWrap.classList.add("hidden");
 
     if (memberId) {
@@ -139,10 +291,17 @@
         document.getElementById("m-middle").value = fullName.length > 2 ? fullName.slice(1, -1).join(" ") : "";
         document.getElementById("m-last").value = fullName.length > 1 ? fullName[fullName.length - 1] : "";
         document.getElementById("m-nid").value = member.nationalId || "";
-        document.getElementById("m-gender").value = member.gender || "";
-        document.getElementById("m-dob").value = member.dobIso || "";
-        document.getElementById("m-joined").value = member.registrationDateIso || todayInputValue_();
-        document.getElementById("m-status").value = member.status || "Active";
+        if (phoneInput) phoneInput.value = member.phone || "";
+        if (emailInput) emailInput.value = member.email || "";
+        setShadcnSelectValue("select-gender-wrapper", member.gender || "");
+        
+        if (dobPicker && member.dobIso) dobPicker.setDate(member.dobIso);
+        else document.getElementById("m-dob").value = member.dobIso || "";
+
+        if (joinedPicker && member.registrationDateIso) joinedPicker.setDate(member.registrationDateIso);
+        else document.getElementById("m-joined").value = member.registrationDateIso || todayInputValue_();
+
+        setShadcnSelectValue("select-status-wrapper", member.status || "Active");
       }
     } else {
       title.innerText = "New Member Registration";
@@ -155,6 +314,14 @@
     document.getElementById("memberModal").classList.add("hidden");
   }
 
+  function todayInputValue_() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return yyyy + "-" + mm + "-" + dd;
+  }
+
   document.getElementById("memberForm").addEventListener("submit", function (e) {
     e.preventDefault();
     const btn = e.submitter;
@@ -162,11 +329,14 @@
     btn.innerText = "Processing...";
 
     const payload = {
+      memberId: document.getElementById("m-id").value,
       id: document.getElementById("m-id").value,
       firstName: document.getElementById("m-first").value,
       middleName: document.getElementById("m-middle").value,
       lastName: document.getElementById("m-last").value,
       nationalId: document.getElementById("m-nid").value,
+      phone: document.getElementById("m-phone") ? document.getElementById("m-phone").value : "",
+      email: document.getElementById("m-email") ? document.getElementById("m-email").value : "",
       gender: document.getElementById("m-gender").value,
       dob: document.getElementById("m-dob").value,
       registrationDate: document.getElementById("m-joined").value,

@@ -1,0 +1,99 @@
+<script>
+  function loadPersonalFinancials() {
+    showAppLoader(true);
+    google.script.run
+      .withSuccessHandler(function (res) {
+        showAppLoader(false);
+        if (!res || !res.success) {
+          console.error("Personal financials error:", res ? res.error : "Unknown error");
+          return;
+        }
+        renderPersonalFinancials(res);
+      })
+      .withFailureHandler(function (err) {
+        showAppLoader(false);
+        console.error("Personal financials failure:", err);
+      })
+      .getPersonalFinancialsData();
+  }
+
+  function renderPersonalFinancials(data) {
+    if (!data) return;
+
+    // User Profile Header
+    if (data.user) {
+      document.getElementById("pf-user-name").textContent = data.user.name || "Member";
+      document.getElementById("pf-member-id").textContent = data.user.memberId || "Pending ID";
+      document.getElementById("pf-member-reg").textContent = data.user.registrationDate || "—";
+      document.getElementById("pf-member-status").textContent = data.user.status || "Active";
+    }
+
+    // Personal Summary KPI Cards
+    if (data.personalSummary) {
+      document.getElementById("pf-my-savings").textContent = data.personalSummary.savingsFormatted || "KSh 0";
+      document.getElementById("pf-my-shares").textContent = data.personalSummary.sharesPercentage || "0.00%";
+      document.getElementById("pf-my-loan-balance").textContent = data.personalSummary.activeLoanBalanceFormatted || "KSh 0";
+      document.getElementById("pf-my-profit-share").textContent = data.personalSummary.estimatedProfitShareFormatted || "KSh 0";
+    }
+
+    // Group Macro Overview
+    if (data.groupOverview) {
+      document.getElementById("pf-group-pool").textContent = data.groupOverview.totalSavingsPoolFormatted || "KSh 0";
+      document.getElementById("pf-group-invested").textContent = data.groupOverview.totalInvestmentsFormatted || "KSh 0";
+      document.getElementById("pf-group-profit").textContent = data.groupOverview.totalProfitFormatted || "KSh 0";
+      document.getElementById("pf-group-members").textContent = data.groupOverview.activeMembers || "0";
+    }
+
+    // Contributions List
+    const cTbody = document.getElementById("pf-contrib-tbody");
+    const contribs = data.contributions || [];
+    document.getElementById("pf-contrib-count").textContent = contribs.length + " entries";
+
+    if (contribs.length === 0) {
+      cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-400">No contribution records found.</td></tr>';
+    } else {
+      cTbody.innerHTML = contribs
+        .map(function (c) {
+          return (
+            '<tr class="hover:bg-slate-50/50">' +
+            '<td class="py-2.5 font-medium">' + (c.date || "—") + '</td>' +
+            '<td class="py-2.5 text-slate-500">' + (c.type || "Monthly Contribution") + '</td>' +
+            '<td class="py-2.5"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 font-semibold text-slate-600">' + (c.mode || "Cash") + '</span></td>' +
+            '<td class="py-2.5 text-right font-bold text-slate-900">' + (c.amountFormatted || "KSh 0") + '</td>' +
+            '</tr>'
+          );
+        })
+        .join("");
+    }
+
+    // Loans List
+    const lTbody = document.getElementById("pf-loans-tbody");
+    const loans = data.loans || [];
+    document.getElementById("pf-loan-count").textContent = loans.length + " records";
+
+    if (loans.length === 0) {
+      lTbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">No active or past loans.</td></tr>';
+    } else {
+      lTbody.innerHTML = loans
+        .map(function (l) {
+          const statusClass =
+            l.status === "Settled"
+              ? "bg-emerald-50 text-emerald-700"
+              : l.status === "Active"
+              ? "bg-amber-50 text-amber-700"
+              : "bg-slate-100 text-slate-700";
+
+          return (
+            '<tr class="hover:bg-slate-50/50">' +
+            '<td class="py-2.5 font-mono font-bold text-slate-800">' + (l.id || "—") + '</td>' +
+            '<td class="py-2.5 font-medium">' + (l.requestedAmountFormatted || "KSh 0") + '</td>' +
+            '<td class="py-2.5 text-emerald-600 font-medium">' + (l.paidFormatted || "KSh 0") + '</td>' +
+            '<td class="py-2.5 font-bold text-amber-600">' + (l.balanceFormatted || "KSh 0") + '</td>' +
+            '<td class="py-2.5 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold ' + statusClass + '">' + (l.status || "Pending") + '</span></td>' +
+            '</tr>'
+          );
+        })
+        .join("");
+    }
+  }
+</script>

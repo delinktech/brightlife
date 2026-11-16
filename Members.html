@@ -1,134 +1,306 @@
-<section id="members">
-  <div class="flex justify-between items-end mb-8">
+<section id="members" class="space-y-4 sm:space-y-6">
+
+  <!-- Top Header Controls & Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
-      <h2 class="text-3xl font-bold text-slate-900">Members Directory</h2>
-      <p class="text-slate-500">Manage contributions and guarantee eligibility.</p>
+      <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">Members Directory</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Manage contributions, loan status, shareholding, and guarantee eligibility.</p>
     </div>
-    <div class="flex items-center space-x-3">
-      <button type="button" onclick="openPrintContributionsReport()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all shadow-sm">
-        <i class="fas fa-print mr-2 text-slate-500"></i> Print Summary
+
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="openPrintContributionsReport()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm transition-colors">
+        <i class="fas fa-print text-slate-400"></i> <span>Print Summary</span>
       </button>
+
       <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
-        class="hidden bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-all shadow-lg shadow-sky-200">
-        <i class="fas fa-plus mr-2"></i> Register Member
+        class="hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+        <i class="fas fa-plus text-xs"></i> <span>Register Member</span>
       </button>
     </div>
   </div>
 
-  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-    <table class="w-full text-left border-collapse">
-      <thead class="bg-slate-50 border-b border-slate-100">
-        <tr>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500">Member</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Gender</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">DOB</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500">Member Since</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Savings</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Loan Bal</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-right">Guaranteed</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Status</th>
-          <th class="px-6 py-4 text-xs font-bold text-slate-500 text-center">Actions</th>
-        </tr>
-      </thead>
-      <tbody id="member-table-body" class="divide-y divide-slate-50">
-      </tbody>
-    </table>
+  <!-- Live Search, Loan Status Filter & Column View Bar -->
+  <div class="bg-white rounded-xl border border-slate-200/80 p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <!-- Live Search Box -->
+    <div class="relative flex-1 max-w-md">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+        <i class="fas fa-search text-xs"></i>
+      </div>
+      <input type="text" id="member-search-input" oninput="filterMembersTable()" placeholder="Search member by name, ID, or National ID..."
+        class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all placeholder:text-slate-400" />
+    </div>
+
+    <!-- Right Controls: Status Filter & View Column Toggle -->
+    <div class="flex items-center gap-2.5 shrink-0 flex-wrap">
+      <!-- Loan Status Filter Dropdown -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-medium text-slate-500 flex items-center gap-1">
+          <i class="fas fa-filter text-slate-400 text-[10px]"></i> Status:
+        </span>
+        <div id="select-loanfilter-wrapper" data-shadcn-select class="relative min-w-[160px]">
+          <input type="hidden" id="member-loan-status-filter" value="all" onchange="filterMembersTable()" />
+          <button type="button" class="shadcn-select-trigger !py-1.5 !px-2.5">
+            <span class="shadcn-select-label" id="member-loan-status-filter-label">All Members (0)</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="shadcn-dropdown-menu hidden" id="member-loan-status-filter-menu">
+            <div class="shadcn-dropdown-item selected" data-value="all">
+              <span class="item-text">All Members</span>
+              <span class="item-id" id="count-all">0</span>
+            </div>
+            <div class="shadcn-dropdown-item" data-value="active">
+              <span class="item-text">Active Loans</span>
+              <span class="item-id" id="count-active">0</span>
+            </div>
+            <div class="shadcn-dropdown-item" data-value="cleared">
+              <span class="item-text">Cleared Loans</span>
+              <span class="item-id" id="count-cleared">0</span>
+            </div>
+            <div class="shadcn-dropdown-item" data-value="none">
+              <span class="item-text">No Loans Taken</span>
+              <span class="item-id" id="count-none">0</span>
+            </div>
+            <div class="shadcn-dropdown-item" data-value="pending">
+              <span class="item-text">Pending Requests</span>
+              <span class="item-id" id="count-pending">0</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column Visibility Toggle Dropdown -->
+      <div class="relative" id="members-col-view-wrapper">
+        <button type="button" onclick="toggleColumnMenu('members-col-view-menu')"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-2xs transition-colors">
+          <i class="fas fa-sliders text-slate-500 text-xs"></i> <span>View</span>
+        </button>
+        <div id="members-col-view-menu" class="column-view-menu hidden">
+          <div class="column-view-header">Toggle columns</div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-shares', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Shares (%)</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-taken', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Loan Taken</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-balance', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Loan Balance</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-guaranteed', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Guaranteed</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-availguar', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Avail. to Guarantee</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-maxloan', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Max Loan Capacity</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-loanstatus', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Loan Status</span>
+          </div>
+          <div class="column-view-item" onclick="toggleTableColumn('member-table', 'col-m-accountstatus', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Account Status</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modern Members Table Container -->
+  <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table id="member-table" class="shadcn-table">
+        <thead>
+          <tr>
+            <th class="col-m-name">Member</th>
+            <th class="col-m-savings text-right">Amount Saved</th>
+            <th class="col-m-shares text-center">Shares (%)</th>
+            <th class="col-m-taken text-right">Loan Taken</th>
+            <th class="col-m-balance text-right">Loan Balance</th>
+            <th class="col-m-guaranteed text-right">Guaranteed</th>
+            <th class="col-m-availguar text-right">Avail. to Guarantee</th>
+            <th class="col-m-maxloan text-right">Max Eligible Loan</th>
+            <th class="col-m-loanstatus text-center">Loan Status</th>
+            <th class="col-m-accountstatus text-center">Status</th>
+            <th class="col-m-actions text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="member-table-body" class="divide-y divide-slate-100">
+          <tr>
+            <td colspan="9" class="px-4 py-8 text-center text-slate-400">
+              <i class="fas fa-spinner fa-spin mr-2"></i> Loading members...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </section>
 
-<div id="memberModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
-  <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-  <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="relative bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden">
+<!-- Member Registration & Edit Modal (Unified Shadcn Theme) -->
+<div id="memberModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 transition-all transform my-auto max-h-[92vh] overflow-y-auto">
 
-      <div class="bg-slate-900 px-6 py-4 flex justify-between items-center">
-        <h3 id="modalTitle" class="text-xl font-bold text-white">Member Profile</h3>
-        <button onclick="closeMemberModal()" class="text-slate-400 hover:text-white"><i
-            class="fas fa-times"></i></button>
+    <!-- Modal Header (Identical to Roles Modal) -->
+    <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
+      <div>
+        <h3 id="modalTitle" class="text-base font-bold text-slate-900">Register New Member</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Add or update member identity and membership configuration</p>
+      </div>
+      <button type="button" onclick="closeMemberModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <form id="memberForm" class="space-y-4">
+      <input type="hidden" id="m-id">
+
+      <div>
+        <h4 class="text-xs font-semibold text-slate-900 mb-2.5">Personal Information</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">First Name</label>
+            <input type="text" id="m-first" required placeholder="First name"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Middle Name</label>
+            <input type="text" id="m-middle" placeholder="Middle name"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Last Name</label>
+            <input type="text" id="m-last" required placeholder="Last name"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+          </div>
+        </div>
       </div>
 
-      <form id="memberForm" class="p-6 space-y-6">
-        <input type="hidden" id="m-id">
-
-        <div>
-          <h4 class="text-xs font-bold text-sky-600 uppercase tracking-widest mb-3">Personal Details</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">First Name</label>
-              <input type="text" id="m-first" required
-                class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Middle Name</label>
-              <input type="text" id="m-middle"
-                class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Last Name</label>
-              <input type="text" id="m-last" required
-                class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="pt-3 border-t border-slate-100">
+        <h4 class="text-xs font-semibold text-slate-900 mb-2.5">Identification & Contact Details</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-3">
           <div>
-            <h4 class="text-xs font-bold text-sky-600 uppercase tracking-widest mb-3">Identification</h4>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">National ID / Passport</label>
-            <input type="text" id="m-nid"
-              class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
+            <label class="block text-xs font-medium text-slate-600 mb-1">National ID / Passport</label>
+            <input type="text" id="m-nid" placeholder="e.g. 29482019"
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
           </div>
           <div>
-            <h4 class="text-xs font-bold text-sky-600 uppercase tracking-widest mb-3">Birth Date</h4>
-            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Date of Birth</label>
-            <input type="date" id="m-dob"
-              class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-          </div>
-        </div>
-
-        <div>
-          <h4 class="text-xs font-bold text-sky-600 uppercase tracking-widest mb-3">Account Configuration</h4>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Gender</label>
-              <select id="m-gender"
-                class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-                <option value="">Select</option>
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Joining Date</label>
-              <input type="date" id="m-joined"
-                class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-            </div>
-            <div id="m-status-wrap" class="hidden">
-              <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Membership Status</label>
-              <select id="m-status"
-                class="w-full px-3 py-2 bg-slate-50 border rounded-lg focus:ring-2 focus:ring-sky-500 outline-none">
-                <option value="Pending">Pending</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-                <option value="Suspended">Suspended</option>
-                <option value="Dormant">Dormant</option>
-                <option value="Exited">Exited</option>
-                <option value="Deceased">Deceased</option>
-
-              </select>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Date of Birth</label>
+            <div class="relative">
+              <input type="text" id="m-dob" placeholder="Select birth date"
+                class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
+              <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fas fa-calendar-alt text-xs"></i>
+              </div>
             </div>
           </div>
         </div>
-
-        <div class="pt-4 flex space-x-3">
-          <button type="button" onclick="closeMemberModal()"
-            class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3 rounded-xl transition-all">Cancel</button>
-          <button type="submit"
-            class="flex-[2] bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-sky-100 transition-all">Save
-            Member Profile</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Phone Number (M-Pesa)</label>
+            <div class="relative">
+              <input type="tel" id="m-phone" placeholder="e.g. +254 712 345 678"
+                class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+              <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fas fa-phone text-xs"></i>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Email Address</label>
+            <div class="relative">
+              <input type="email" id="m-email" placeholder="e.g. member@gmail.com"
+                class="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+              <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fas fa-envelope text-xs"></i>
+              </div>
+            </div>
+          </div>
         </div>
-      </form>
-    </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100">
+        <h4 class="text-xs font-semibold text-slate-900 mb-2.5">Membership Configuration</h4>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Gender</label>
+            <div id="select-gender-wrapper" data-shadcn-select class="relative">
+              <input type="hidden" id="m-gender" value="" />
+              <button type="button" class="shadcn-select-trigger">
+                <span class="shadcn-select-label">Select gender</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="shadcn-dropdown-menu hidden">
+                <div class="shadcn-dropdown-item selected" data-value="">
+                  <span class="item-text">Select gender</span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="M">
+                  <span class="item-text">Male</span>
+                  <span class="item-id">M</span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="F">
+                  <span class="item-text">Female</span>
+                  <span class="item-id">F</span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="Other">
+                  <span class="item-text">Other</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Joining Date</label>
+            <div class="relative">
+              <input type="text" id="m-joined" placeholder="Select joining date"
+                class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
+              <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fas fa-calendar-alt text-xs"></i>
+              </div>
+            </div>
+          </div>
+          <div id="m-status-wrap" class="hidden">
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Membership Status</label>
+            <div id="select-status-wrapper" data-shadcn-select class="relative">
+              <input type="hidden" id="m-status" value="Active" />
+              <button type="button" class="shadcn-select-trigger">
+                <span class="shadcn-select-label">Active</span>
+                <i class="fas fa-chevron-down"></i>
+              </button>
+              <div class="shadcn-dropdown-menu hidden">
+                <div class="shadcn-dropdown-item" data-value="Pending">
+                  <span class="item-text">Pending</span>
+                </div>
+                <div class="shadcn-dropdown-item selected" data-value="Active">
+                  <span class="item-text">Active</span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="Inactive">
+                  <span class="item-text">Inactive</span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="Suspended">
+                  <span class="item-text">Suspended</span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="Dormant">
+                  <span class="item-text">Dormant</span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="Exited">
+                  <span class="item-text">Exited</span>
+                </div>
+                <div class="shadcn-dropdown-item" data-value="Deceased">
+                  <span class="item-text">Deceased</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-4 flex items-center justify-end gap-2.5 border-t border-slate-100 mt-5">
+        <button type="button" onclick="closeMemberModal()"
+          class="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 font-medium rounded-lg text-xs border border-slate-200 transition-colors">Cancel</button>
+        <button type="submit"
+          class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg text-xs shadow-sm transition-colors">Save Member Profile</button>
+      </div>
+    </form>
   </div>
 </div>

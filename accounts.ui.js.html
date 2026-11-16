@@ -1,4 +1,18 @@
 <script>
+  let accountsState = {
+    accounts: [],
+    canReconcile: false,
+    summary: null,
+    currentTab: "reconciliation",
+    dividendOverview: null,
+    dividendSimulation: null
+  };
+
+  function formatKsh(val) {
+    const num = Number(val) || 0;
+    return "KES " + num.toLocaleString("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
   function maskAccountNumber(value) {
     const raw = String(value || "").replace(/\s+/g, "");
     if (!raw) return "-";
@@ -8,101 +22,678 @@
     return raw.slice(0, 4) + "****" + raw.slice(-3);
   }
 
+  function copyTextToClipboard(text, btnElement) {
+    if (!navigator.clipboard) {
+      prompt("Copy to clipboard: Ctrl+C, Enter", text);
+      return;
+    }
+    navigator.clipboard.writeText(text).then(function() {
+      if (btnElement) {
+        const originalHtml = btnElement.innerHTML;
+        btnElement.innerHTML = '<i class="fas fa-check text-emerald-500"></i>';
+        setTimeout(function() {
+          btnElement.innerHTML = originalHtml;
+        }, 1500);
+      }
+    }).catch(function() {
+      prompt("Copy to clipboard: Ctrl+C, Enter", text);
+    });
+  }
+
+  function switchAccountsTab(tabName) {
+    accountsState.currentTab = tabName;
+    const recPane = document.getElementById("accounts-reconciliation-pane");
+    const divPane = document.getElementById("accounts-dividends-pane");
+    const guidesPane = document.getElementById("accounts-guides-pane");
+    const recTabBtn = document.getElementById("tab-btn-reconciliation");
+    const divTabBtn = document.getElementById("tab-btn-dividends");
+    const guidesTabBtn = document.getElementById("tab-btn-guides");
+
+    const activeClass = "pb-3 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 flex items-center gap-2 transition-colors";
+    const inactiveClass = "pb-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 flex items-center gap-2 transition-colors";
+
+    if (recPane) recPane.classList.toggle("hidden", tabName !== "reconciliation");
+    if (divPane) divPane.classList.toggle("hidden", tabName !== "dividends");
+    if (guidesPane) guidesPane.classList.toggle("hidden", tabName !== "guides");
+
+    if (recTabBtn) recTabBtn.className = (tabName === "reconciliation" ? activeClass : inactiveClass);
+    if (divTabBtn) divTabBtn.className = (tabName === "dividends" ? activeClass : inactiveClass);
+    if (guidesTabBtn) guidesTabBtn.className = (tabName === "guides" ? activeClass : inactiveClass);
+
+    if (tabName === "dividends" && !accountsState.dividendOverview) {
+      loadDividendOverview();
+    }
+  }
+
   function paymentGuideHtml(account) {
     const mode = String(account.paymentMode || "").toLowerCase();
     const paybill = account.paybill || "N/A";
     const fullAcc = account.accountNumber || "N/A";
-    if (mode.indexOf("mpesa") >= 0 || mode.indexOf("m-pesa") >= 0) {
+    if (mode.indexOf("mpesa") >= 0 || mode.indexOf("m-pesa") >= 0 || paybill !== "N/A") {
       return (
-        '<ol class="mt-3 text-xs text-slate-600 space-y-1 list-decimal list-inside">' +
-        "<li>Go to M-PESA on your phone.</li>" +
-        "<li>Select <span class='font-semibold'>Lipa na M-PESA</span> then <span class='font-semibold'>Paybill</span>.</li>" +
-        "<li>Enter Business Number: <span class='font-semibold'>" +
+        '<ol class="mt-3 text-xs text-slate-600 space-y-1.5 list-decimal list-inside">' +
+        "<li>Go to <strong>M-PESA</strong> on your mobile device.</li>" +
+        "<li>Select <strong>Lipa na M-PESA</strong> then <strong>Paybill</strong>.</li>" +
+        "<li>Enter Business No: <strong class='font-mono text-slate-900 bg-slate-100 px-1 py-0.5 rounded'>" +
         paybill +
-        "</span>.</li>" +
-        "<li>Enter Account Number: <span class='font-semibold font-mono'>" +
+        "</strong></li>" +
+        "<li>Enter Account No: <strong class='font-mono text-slate-900 bg-slate-100 px-1 py-0.5 rounded'>" +
         fullAcc +
-        "</span>.</li>" +
-        "<li>Enter Amount and your PIN to confirm.</li>" +
+        "</strong></li>" +
+        "<li>Enter the contribution / repayment amount and your M-Pesa PIN.</li>" +
         "</ol>"
       );
     }
     return (
-      '<ol class="mt-3 text-xs text-slate-600 space-y-1 list-decimal list-inside">' +
-      "<li>Use payment method: <span class='font-semibold uppercase'>" +
-      (account.paymentMode || "N/A") +
-      "</span>.</li>" +
-      "<li>Reference account number: <span class='font-semibold font-mono'>" +
+      '<ol class="mt-3 text-xs text-slate-600 space-y-1.5 list-decimal list-inside">' +
+      "<li>Channel method: <strong class='uppercase text-slate-900'>" +
+      (account.paymentMode || "Bank Deposit") +
+      "</strong></li>" +
+      "<li>Reference account: <strong class='font-mono text-slate-900 bg-slate-100 px-1 py-0.5 rounded'>" +
       fullAcc +
-      "</span>.</li>" +
-      "<li>If paybill is required, use: <span class='font-semibold'>" +
-      paybill +
-      "</span>.</li>" +
-      "<li>Enter amount and complete authorization/PIN.</li>" +
+      "</strong></li>" +
+      "<li>Confirm depositor name reflects your registered Member Name.</li>" +
       "</ol>"
     );
   }
 
-  function loadAccounts() {
+  function renderPaymentGuideCards(rows) {
     const cardList = document.getElementById("accounts-card-list");
     if (!cardList) return;
+
+    if (!rows.length) {
+      cardList.innerHTML =
+        '<div class="md:col-span-2 xl:col-span-3 text-center py-6 text-slate-500 bg-white rounded-2xl border border-slate-100">No deposit account channels configured.</div>';
+      return;
+    }
+
+    cardList.innerHTML = rows
+      .map(function (a) {
+        return (
+          '<div class="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 sm:p-5 hover:border-slate-300 transition-colors flex flex-col justify-between">' +
+          '<div>' +
+          '  <div class="flex items-start justify-between gap-3">' +
+          '    <div class="min-w-0">' +
+          '      <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Deposit Channel</p>' +
+          '      <h4 class="font-bold text-slate-900 text-sm truncate mt-0.5">' +
+          (a.orgName || "-") +
+          '      </h4>' +
+          '    </div>' +
+          '    <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-semibold uppercase tracking-wider border border-slate-200/60">' +
+          (a.paymentMode || "N/A") +
+          '    </span>' +
+          '  </div>' +
+          '  <div class="mt-3.5 grid grid-cols-2 gap-2 text-xs p-3 bg-slate-50/75 rounded-lg border border-slate-100">' +
+          '    <div>' +
+          '      <p class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">A/C Number</p>' +
+          '      <div class="flex items-center gap-1 mt-0.5">' +
+          '        <span class="font-mono font-bold text-slate-800 text-xs truncate">' + a.accountNumber + '</span>' +
+          '        <button type="button" onclick="copyTextToClipboard(\'' + a.accountNumber + '\', this)" class="text-slate-400 hover:text-slate-700 p-0.5 text-[11px]" title="Copy Account Number">' +
+          '          <i class="far fa-copy"></i>' +
+          '        </button>' +
+          '      </div>' +
+          '    </div>' +
+          '    <div>' +
+          '      <p class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider">Paybill</p>' +
+          '      <div class="flex items-center gap-1 mt-0.5">' +
+          '        <span class="font-mono font-bold text-slate-800 text-xs">' + (a.paybill || "-") + '</span>' +
+          (a.paybill ? '        <button type="button" onclick="copyTextToClipboard(\'' + a.paybill + '\', this)" class="text-slate-400 hover:text-slate-700 p-0.5 text-[11px]" title="Copy Paybill">' +
+          '          <i class="far fa-copy"></i>' +
+          '        </button>' : '') +
+          '      </div>' +
+          '    </div>' +
+          '  </div>' +
+          paymentGuideHtml(a) +
+          '</div>' +
+          '</div>'
+        );
+      })
+      .join("");
+  }
+
+  function renderReconciliationDashboard(data) {
+    const summary = data.summary || {};
+    const accounts = data.accounts || [];
+
+    // KPI Cards
+    const kpiStatement = document.getElementById("kpi-statement-cash");
+    const kpiSystem = document.getElementById("kpi-system-cash");
+    const kpiInflowsSub = document.getElementById("kpi-inflows-sub");
+    const kpiOutflowsSub = document.getElementById("kpi-outflows-sub");
+    const kpiVarianceAmt = document.getElementById("kpi-variance-amount");
+    const kpiVarianceStatus = document.getElementById("kpi-variance-status");
+    const kpiRefundOffsets = document.getElementById("kpi-refund-offsets");
+    const globalBadge = document.getElementById("reconcile-global-badge");
+
+    if (kpiStatement) kpiStatement.textContent = formatKsh(summary.totalStatementCash);
+    if (kpiSystem) kpiSystem.textContent = formatKsh(summary.totalSystemCash);
+    if (kpiInflowsSub) kpiInflowsSub.textContent = "In: " + formatKsh(summary.totalInflows);
+    if (kpiOutflowsSub) kpiOutflowsSub.textContent = "Out: " + formatKsh(summary.totalOutflows);
+    if (kpiRefundOffsets) kpiRefundOffsets.textContent = formatKsh(summary.totalRefundOffsets);
+
+    const netVar = summary.netVariance || 0;
+    const isBalanced = Math.abs(netVar) < 0.01;
+
+    if (kpiVarianceAmt) {
+      if (isBalanced) {
+        kpiVarianceAmt.textContent = "KES 0";
+        kpiVarianceAmt.className = "text-lg sm:text-xl font-extrabold text-emerald-600 mt-2";
+      } else if (netVar > 0) {
+        kpiVarianceAmt.textContent = "+" + formatKsh(netVar);
+        kpiVarianceAmt.className = "text-lg sm:text-xl font-extrabold text-sky-600 mt-2";
+      } else {
+        kpiVarianceAmt.textContent = "-" + formatKsh(Math.abs(netVar));
+        kpiVarianceAmt.className = "text-lg sm:text-xl font-extrabold text-rose-600 mt-2";
+      }
+    }
+
+    if (kpiVarianceStatus) {
+      if (isBalanced) {
+        kpiVarianceStatus.textContent = "100% Reconciled";
+        kpiVarianceStatus.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block bg-emerald-50 text-emerald-700 border border-emerald-200";
+      } else if (netVar > 0) {
+        kpiVarianceStatus.textContent = "Bank Surplus (+KES " + Math.round(netVar).toLocaleString() + ")";
+        kpiVarianceStatus.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block bg-sky-50 text-sky-700 border border-sky-200";
+      } else {
+        kpiVarianceStatus.textContent = "Bank Deficit (-KES " + Math.round(Math.abs(netVar)).toLocaleString() + ")";
+        kpiVarianceStatus.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full inline-block bg-rose-50 text-rose-700 border border-rose-200";
+      }
+    }
+
+    if (globalBadge) {
+      globalBadge.classList.remove("hidden");
+      if (isBalanced) {
+        globalBadge.textContent = "Reconciled";
+        globalBadge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+      } else {
+        globalBadge.textContent = "Variance Alert";
+        globalBadge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200";
+      }
+    }
+
+    // Table rows
+    const tbody = document.getElementById("reconciliation-table-body");
+    if (!tbody) return;
+
+    if (!accounts.length) {
+      tbody.innerHTML = '<tr><td colspan="10" class="py-6 text-center text-slate-400 font-sans">No bank accounts found in register.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = accounts.map(function(acc) {
+      const v = acc.variance || 0;
+      const isAccBalanced = Math.abs(v) < 0.01;
+      let varDisplay = "KES 0";
+      let varClass = "text-slate-500 font-normal";
+      let statusBadge = '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">Reconciled</span>';
+
+      if (!isAccBalanced) {
+        if (v > 0) {
+          varDisplay = "+" + formatKsh(v);
+          varClass = "text-sky-600 font-bold";
+          statusBadge = '<span class="px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-semibold">Surplus</span>';
+        } else {
+          varDisplay = "-" + formatKsh(Math.abs(v));
+          varClass = "text-rose-600 font-bold";
+          statusBadge = '<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-semibold">Deficit</span>';
+        }
+      }
+
+      return (
+        '<tr class="hover:bg-slate-50/70 transition-colors">' +
+        '  <td class="py-3 px-4 font-sans">' +
+        '    <div class="font-bold text-slate-900 text-xs">' + (acc.orgName || "-") + '</div>' +
+        '    <div class="text-[10px] font-mono text-slate-400">A/C: ' + acc.accountNumber + '</div>' +
+        '  </td>' +
+        '  <td class="py-3 px-4 font-sans">' +
+        '    <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">' + (acc.paymentMode || "N/A") + '</span>' +
+        '    <div class="text-[10px] font-mono text-slate-500 mt-0.5">Paybill: ' + (acc.paybill || "-") + '</div>' +
+        '  </td>' +
+        '  <td class="py-3 px-4 text-right text-slate-700">' + formatKsh(acc.inflows) + '</td>' +
+        '  <td class="py-3 px-4 text-right text-slate-700">' + formatKsh(acc.outflows) + '</td>' +
+        '  <td class="py-3 px-4 text-right font-bold text-sky-800">' + formatKsh(acc.systemBalance) + '</td>' +
+        '  <td class="py-3 px-4 text-right font-bold text-emerald-800">' + formatKsh(acc.statementBalance) + '</td>' +
+        '  <td class="py-3 px-4 text-center font-sans text-[10px] text-slate-500">' + (acc.balanceDate || "Not Set") + '</td>' +
+        '  <td class="py-3 px-4 text-right ' + varClass + '">' + varDisplay + '</td>' +
+        '  <td class="py-3 px-4 text-center font-sans">' + statusBadge + '</td>' +
+        '  <td class="py-3 px-4 text-center font-sans">' +
+        '    <button type="button" onclick="openReconcileModal(' + JSON.stringify(acc).replace(/"/g, '&quot;') + ')" ' +
+        '      class="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-[10px] font-medium transition-colors shadow-xs">' +
+        '      <i class="fas fa-edit text-[9px]"></i> <span>Reconcile</span>' +
+        '    </button>' +
+        '  </td>' +
+        '</tr>'
+      );
+    }).join("");
+  }
+
+  function loadAccounts() {
     startAppLoader();
-    cardList.innerHTML =
-      '<div class="md:col-span-2 xl:col-span-3 px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 48%"></div></div></div>';
 
     google.script.run
       .withSuccessHandler(function (response) {
-        if (!response || !response.success) {
-          cardList.innerHTML =
-            '<div class="md:col-span-2 xl:col-span-3 text-center py-6 text-rose-600 bg-white rounded-2xl border border-slate-100">' +
-            ((response && response.error) || "Failed to load accounts.") +
-            "</div>";
-          stopAppLoader();
-          return;
-        }
-
-        const rows = response.accounts || [];
-        if (!rows.length) {
-          cardList.innerHTML =
-            '<div class="md:col-span-2 xl:col-span-3 text-center py-6 text-slate-500 bg-white rounded-2xl border border-slate-100">No account details available.</div>';
-          stopAppLoader();
-          return;
-        }
-
-        cardList.innerHTML = rows
-          .map(function (a) {
-            return (
-              '<div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">' +
-              '<div class="flex items-start justify-between gap-3">' +
-              '<div class="min-w-0">' +
-              '<p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">Organization</p>' +
-              '<h4 class="font-semibold text-slate-900 truncate">' +
-              (a.orgName || "-") +
-              "</h4>" +
-              "</div>" +
-              '<span class="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-600 font-semibold uppercase">' +
-              (a.paymentMode || "N/A") +
-              "</span>" +
-              "</div>" +
-              '<div class="mt-3 grid grid-cols-2 gap-3 text-sm">' +
-              '<div><p class="text-[10px] text-slate-400 uppercase">Account</p><p class="font-mono text-slate-700">' +
-              a.accountNumber +
-              "</p></div>" +
-              '<div><p class="text-[10px] text-slate-400 uppercase">Paybill</p><p class="text-slate-700">' +
-              (a.paybill || "-") +
-              "</p></div>" +
-              "</div>" +
-              paymentGuideHtml(a) +
-              "</div>"
-            );
-          })
-          .join("");
         stopAppLoader();
+        if (!response || !response.success) {
+          showNotification((response && response.error) || "Failed to load accounts.", "error");
+          return;
+        }
+
+        accountsState.accounts = response.accounts || [];
+        const isPermitted = Boolean(
+          response.canReconcile ||
+          (window.APP_PERMS && (window.APP_PERMS.accountsWrite === true || window.APP_PERMS.isAdmin === true))
+        );
+        accountsState.canReconcile = isPermitted;
+        accountsState.summary = response.summary || null;
+
+        const adminTabs = document.getElementById("accounts-admin-tabs");
+        const recPane = document.getElementById("accounts-reconciliation-pane");
+        const divPane = document.getElementById("accounts-dividends-pane");
+        const guidesPane = document.getElementById("accounts-guides-pane");
+        const headerSub = document.getElementById("accounts-header-subtitle");
+
+        if (accountsState.canReconcile) {
+          if (adminTabs) adminTabs.classList.remove("hidden");
+          if (headerSub) headerSub.textContent = "Live financial reconciliation, bank statement verification, and dividend distribution.";
+          renderReconciliationDashboard(response);
+          switchAccountsTab(accountsState.currentTab || "reconciliation");
+        } else {
+          if (adminTabs) adminTabs.classList.add("hidden");
+          if (recPane) recPane.classList.add("hidden");
+          if (divPane) divPane.classList.add("hidden");
+          if (guidesPane) guidesPane.classList.remove("hidden");
+          if (headerSub) headerSub.textContent = "Verified payment channels and deposit instructions for group contributions.";
+        }
+
+        renderPaymentGuideCards(accountsState.accounts);
       })
       .withFailureHandler(function (err) {
         stopAppLoader();
         handleErr(err);
       })
       .getAccountsData();
+  }
+
+  function openReconcileModal(acc) {
+    if (!acc) return;
+    const modal = document.getElementById("reconcile-modal");
+    if (!modal) return;
+
+    document.getElementById("modal-row-number").value = acc.rowNumber || "";
+    document.getElementById("modal-account-name").textContent = acc.orgName || "Bank Account";
+    document.getElementById("modal-account-num").textContent = acc.accountNumber || "-";
+    document.getElementById("modal-system-bal").textContent = formatKsh(acc.systemBalance);
+    document.getElementById("modal-statement-bal").value = acc.statementBalance || 0;
+
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("modal-statement-date").value = today;
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeReconcileModal() {
+    const modal = document.getElementById("reconcile-modal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function submitReconcileForm(event) {
+    if (event) event.preventDefault();
+
+    const rowNumber = document.getElementById("modal-row-number").value;
+    const stmtBal = document.getElementById("modal-statement-bal").value;
+    const stmtDate = document.getElementById("modal-statement-date").value;
+    const btn = document.getElementById("modal-submit-btn");
+
+    if (!rowNumber) {
+      alert("Invalid account target.");
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Save & Reconcile</span>';
+        }
+        closeReconcileModal();
+        if (res && res.success) {
+          showNotification("Statement balance successfully updated!", "success");
+          loadAccounts();
+        } else {
+          alert((res && res.error) || "Failed to update statement balance.");
+        }
+      })
+      .withFailureHandler(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Save & Reconcile</span>';
+        }
+        handleErr(err);
+      })
+      .updateAccountStatementBalance({
+        rowNumber: rowNumber,
+        statementBalance: Number(stmtBal) || 0,
+        statementDate: stmtDate
+      });
+  }
+
+  /* -------------------------------------------------------------
+   * DIVIDEND & INTEREST DISTRIBUTION LOGIC
+   * ----------------------------------------------------------- */
+
+  function loadDividendOverview() {
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (!res || !res.success) {
+          showNotification((res && res.error) || "Failed to load dividend overview.", "error");
+          return;
+        }
+
+        accountsState.dividendOverview = res;
+        const s = res.summary || {};
+
+        const kpiEarnings = document.getElementById("div-kpi-total-earnings");
+        const kpiLoanInt = document.getElementById("div-kpi-loan-interest");
+        const kpiInvestGains = document.getElementById("div-kpi-invest-gains");
+        const kpiSavings = document.getElementById("div-kpi-total-savings");
+        const kpiMemberCount = document.getElementById("div-kpi-member-count");
+        const simPoolInput = document.getElementById("div-sim-pool");
+
+        if (kpiEarnings) kpiEarnings.textContent = formatKsh(s.suggestedPool);
+        if (kpiLoanInt) kpiLoanInt.textContent = formatKsh(s.totalLoanInterest);
+        if (kpiInvestGains) kpiInvestGains.textContent = formatKsh(s.totalInvestmentGains);
+        if (kpiSavings) kpiSavings.textContent = formatKsh(s.totalGroupSavings);
+        if (kpiMemberCount) kpiMemberCount.textContent = "Across " + (s.qualifyingMemberCount || 0) + " qualifying members";
+
+        // Pre-fill pool amount if empty
+        if (simPoolInput && (!simPoolInput.value || Number(simPoolInput.value) === 0)) {
+          simPoolInput.value = s.suggestedPool || 0;
+        }
+
+        // Render Fund Statements table
+        renderFundStatementsTable(res.fundStatements || []);
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .getDividendOverviewData();
+  }
+
+  function renderFundStatementsTable(list) {
+    const tbody = document.getElementById("fund-statements-table-body");
+    if (!tbody) return;
+
+    if (!list.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">No fund statements recorded yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(function(item) {
+      return (
+        '<tr class="hover:bg-slate-50/70 transition-colors">' +
+        '  <td class="py-3 px-4 font-sans text-slate-700">' + (item.date || "—") + '</td>' +
+        '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">' + item.fund + '</span></td>' +
+        '  <td class="py-3 px-4 text-right text-slate-600">' + formatKsh(item.opening) + '</td>' +
+        '  <td class="py-3 px-4 text-right text-slate-600">' + formatKsh(item.deposits) + '</td>' +
+        '  <td class="py-3 px-4 text-right font-medium text-slate-800">' + formatKsh(item.grossInterest) + '</td>' +
+        '  <td class="py-3 px-4 text-right text-rose-600 font-medium">(' + formatKsh(item.wht) + ')</td>' +
+        '  <td class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/40">' + formatKsh(item.netYield) + '</td>' +
+        '  <td class="py-3 px-4 text-right font-bold text-slate-900">' + formatKsh(item.closing) + '</td>' +
+        '  <td class="py-3 px-4 text-center font-mono text-[10px] text-slate-400">' + (item.ref || "—") + '</td>' +
+        '</tr>'
+      );
+    }).join("");
+  }
+
+  function openFundStatementModal() {
+    const modal = document.getElementById("fund-statement-modal");
+    if (!modal) return;
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("fstmt-date").value = today;
+    document.getElementById("fstmt-opening").value = "";
+    document.getElementById("fstmt-deposits").value = "";
+    document.getElementById("fstmt-gross").value = "";
+    document.getElementById("fstmt-wht").value = "";
+    document.getElementById("fstmt-closing").value = "";
+    document.getElementById("fstmt-ref").value = "CIC-MMF-" + new Date().getFullYear();
+    modal.classList.remove("hidden");
+  }
+
+  function closeFundStatementModal() {
+    const modal = document.getElementById("fund-statement-modal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function autoCalculateFundWht() {
+    const gross = Number(document.getElementById("fstmt-gross").value) || 0;
+    const whtInput = document.getElementById("fstmt-wht");
+    if (whtInput && gross > 0) {
+      whtInput.value = (Math.round(gross * 0.15 * 100) / 100).toFixed(2);
+    }
+  }
+
+  function submitFundStatementForm(event) {
+    if (event) event.preventDefault();
+
+    const dateVal = document.getElementById("fstmt-date").value;
+    const fundVal = document.getElementById("fstmt-fund").value;
+    const openingVal = document.getElementById("fstmt-opening").value;
+    const depositsVal = document.getElementById("fstmt-deposits").value;
+    const grossVal = document.getElementById("fstmt-gross").value;
+    const whtVal = document.getElementById("fstmt-wht").value;
+    const closingVal = document.getElementById("fstmt-closing").value;
+    const refVal = document.getElementById("fstmt-ref").value;
+    const btn = document.getElementById("btn-save-fund-stmt");
+
+    if (!dateVal || !closingVal) {
+      alert("Please fill in required fields.");
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Save Statement Entry</span>';
+        }
+        closeFundStatementModal();
+        if (res && res.success) {
+          showNotification("Fund statement successfully logged!", "success");
+          loadDividendOverview();
+          loadAccounts();
+        } else {
+          alert((res && res.error) || "Failed to save fund statement.");
+        }
+      })
+      .withFailureHandler(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Save Statement Entry</span>';
+        }
+        handleErr(err);
+      })
+      .saveFundStatement({
+        date: dateVal,
+        fund: fundVal,
+        opening: Number(openingVal) || 0,
+        deposits: Number(depositsVal) || 0,
+        grossInterest: Number(grossVal) || 0,
+        wht: Number(whtVal) || 0,
+        closing: Number(closingVal) || 0,
+        ref: refVal
+      });
+  }
+
+  function runDividendSimulation(event) {
+    if (event) event.preventDefault();
+
+    const poolVal = Number(document.getElementById("div-sim-pool").value) || 0;
+    const reserveVal = Number(document.getElementById("div-sim-reserve").value) || 0;
+    const autoOffset = document.getElementById("div-sim-auto-offset").checked;
+    const btn = document.getElementById("div-btn-simulate");
+
+    if (poolVal <= 0) {
+      alert("Please enter a dividend pool amount greater than 0.");
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-calculator text-xs"></i> <span>Calculate Preview</span>';
+        }
+        if (!res || !res.success) {
+          alert((res && res.error) || "Failed to calculate simulation.");
+          return;
+        }
+
+        accountsState.dividendSimulation = res;
+        renderDividendPreview(res);
+      })
+      .withFailureHandler(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-calculator text-xs"></i> <span>Calculate Preview</span>';
+        }
+        handleErr(err);
+      })
+      .calculateDividendDistributionPreview({
+        poolAmount: poolVal,
+        reservePercent: reserveVal,
+        autoOffsetLoans: autoOffset
+      });
+  }
+
+  function renderDividendPreview(res) {
+    const wrapper = document.getElementById("dividend-preview-wrapper");
+    const tbody = document.getElementById("dividend-preview-table-body");
+    const s = res.summary || {};
+    const items = res.preview || [];
+
+    if (!wrapper || !tbody) return;
+
+    document.getElementById("div-sum-pool").textContent = formatKsh(s.poolAmount);
+    document.getElementById("div-sum-reserve").textContent = formatKsh(s.reserveAmount) + " (" + s.reservePercent + "%)";
+    document.getElementById("div-sum-loans").textContent = formatKsh(s.totalLoanOffset);
+    document.getElementById("div-sum-savings").textContent = formatKsh(s.totalSavingsCredited);
+
+    tbody.innerHTML = items.map(function(item) {
+      const hasOffset = item.loanOffset > 0;
+      return (
+        '<tr class="hover:bg-slate-50/70 transition-colors">' +
+        '  <td class="py-3 px-4 font-sans">' +
+        '    <div class="font-bold text-slate-900 text-xs">' + item.fullName + '</div>' +
+        '    <div class="text-[10px] font-mono text-slate-400">' + item.memberId + '</div>' +
+        '  </td>' +
+        '  <td class="py-3 px-4 text-right text-slate-700">' + formatKsh(item.savings) + '</td>' +
+        '  <td class="py-3 px-4 text-center font-sans font-semibold text-slate-600">' + item.sharePercent.toFixed(2) + '%</td>' +
+        '  <td class="py-3 px-4 text-right font-bold text-slate-900">' + formatKsh(item.grossDividend) + '</td>' +
+        '  <td class="py-3 px-4 text-right text-slate-600">' + (item.loanBalance > 0 ? formatKsh(item.loanBalance) : "—") + '</td>' +
+        '  <td class="py-3 px-4 text-right font-bold ' + (hasOffset ? "text-amber-700 bg-amber-50/50" : "text-slate-400") + '">' +
+        (hasOffset ? formatKsh(item.loanOffset) : "—") +
+        '  </td>' +
+        '  <td class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/50">' + formatKsh(item.savingsCredit) + '</td>' +
+        '</tr>'
+      );
+    }).join("");
+
+    wrapper.classList.remove("hidden");
+    wrapper.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function openConfirmDividendModal() {
+    const sim = accountsState.dividendSimulation;
+    if (!sim || !sim.summary || !sim.preview || !sim.preview.length) {
+      alert("Please calculate a dividend preview first.");
+      return;
+    }
+
+    const modal = document.getElementById("dividend-confirm-modal");
+    const year = document.getElementById("div-sim-year").value || "2026";
+    const s = sim.summary;
+
+    document.getElementById("confirm-modal-year").textContent = "Financial Year " + year;
+    document.getElementById("conf-pool-val").textContent = formatKsh(s.poolAmount);
+    document.getElementById("conf-reserve-val").textContent = formatKsh(s.reserveAmount) + " (" + s.reservePercent + "%)";
+    document.getElementById("conf-loans-val").textContent = formatKsh(s.totalLoanOffset);
+    document.getElementById("conf-savings-val").textContent = formatKsh(s.totalSavingsCredited);
+    document.getElementById("conf-count-val").textContent = sim.preview.length + " members";
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeConfirmDividendModal() {
+    const modal = document.getElementById("dividend-confirm-modal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function executeDividendPost() {
+    const sim = accountsState.dividendSimulation;
+    if (!sim || !sim.preview) return;
+
+    const btn = document.getElementById("btn-execute-dividend-confirm");
+    const year = document.getElementById("div-sim-year").value || "2026";
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Ledger...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Confirm & Post to Ledger</span>';
+        }
+        closeConfirmDividendModal();
+
+        if (res && res.success) {
+          showNotification(
+            "Dividends successfully posted! Settled KES " +
+            Math.round(res.totalOffsetAmount).toLocaleString() + " loans & credited KES " +
+            Math.round(res.totalSavingsAmount).toLocaleString() + " to savings.",
+            "success"
+          );
+          // Refresh accounts and dividend state
+          accountsState.dividendOverview = null;
+          accountsState.dividendSimulation = null;
+          const wrapper = document.getElementById("dividend-preview-wrapper");
+          if (wrapper) wrapper.classList.add("hidden");
+          loadAccounts();
+          loadDividendOverview();
+        } else {
+          alert((res && res.error) || "Failed to execute dividend distribution.");
+        }
+      })
+      .withFailureHandler(function (err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Confirm & Post to Ledger</span>';
+        }
+        handleErr(err);
+      })
+      .executeDividendDistribution({
+        year: year,
+        allocations: sim.preview
+      });
   }
 </script>

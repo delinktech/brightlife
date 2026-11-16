@@ -1,5 +1,5 @@
 /**
- * Role-based access from spreadsheet tab "Roles" (Email, Name, Role, Active).
+ * Role-based access from spreadsheet tab "Roles" (Email, Member, Role, Active, Notes).
  */
 
 function getCurrentUserEmail_() {
@@ -40,11 +40,11 @@ function getOrCreateRolesSheet_() {
   if (sheet) return sheet;
 
   sheet = ss.insertSheet(SHEETS.ROLES);
-  sheet.appendRow(["Email", "Name", "Role", "Active"]);
+  sheet.appendRow(["Email", "Member", "Role", "Active", "Notes"]);
   sheet.setFrozenRows(1);
   var ownerEmail = String(Session.getEffectiveUser().getEmail() || "").trim();
   if (ownerEmail) {
-    sheet.appendRow([ownerEmail, "Owner Admin", "Admin", true]);
+    sheet.appendRow([ownerEmail, "", "Admin", true, "Owner Admin"]);
   }
   return sheet;
 }
@@ -65,6 +65,32 @@ function extractEmailFromString_(val) {
   return str.replace(/[\s\u00A0]+/g, "").toLowerCase();
 }
 
+/**
+ * Parses a Member string like "BL25-0016 — Derick Mwangi Wanjiru" or pure "BL25-0016".
+ */
+function parseMemberField_(rawMember) {
+  var s = String(rawMember || "").trim();
+  if (!s) return { memberId: "", memberName: "" };
+  if (s.indexOf(" — ") !== -1) {
+    var parts = s.split(" — ");
+    return {
+      memberId: String(parts[0] || "").trim(),
+      memberName: String(parts[1] || "").trim(),
+    };
+  }
+  if (s.indexOf(" - ") !== -1) {
+    var parts = s.split(" - ");
+    return {
+      memberId: String(parts[0] || "").trim(),
+      memberName: String(parts[1] || "").trim(),
+    };
+  }
+  return {
+    memberId: s,
+    memberName: "",
+  };
+}
+
 function lookupRoleRowForEmail_(email) {
   var targetEmail = extractEmailFromString_(email);
   if (!targetEmail) return null;
@@ -80,15 +106,22 @@ function lookupRoleRowForEmail_(email) {
     var range = sheet.getDataRange();
     var values = range.getValues();
     var displayValues = range.getDisplayValues();
-    if (!values || values.length < 2) return null;
+    if (!values || values.length <= 1) return null;
 
     var headerRowIndex = -1;
     var colMap = {};
-    for (var h = 0; h < Math.min(values.length, 5); h++) {
-      var testMap = getHeaderMap_(values[h]);
-      if (testMap["email"] !== undefined) {
-        headerRowIndex = h;
-        colMap = testMap;
+    for (var r = 0; r < Math.min(values.length, 5); r++) {
+      var rowH = values[r];
+      var tempMap = {};
+      var foundEmail = false;
+      for (var c = 0; c < rowH.length; c++) {
+        var key = String(rowH[c] || "").trim().toLowerCase();
+        if (key) tempMap[key] = c;
+        if (key === "email") foundEmail = true;
+      }
+      if (foundEmail) {
+        headerRowIndex = r;
+        colMap = tempMap;
         break;
       }
     }
@@ -98,8 +131,10 @@ function lookupRoleRowForEmail_(email) {
     }
 
     var emailCol = colMap["email"];
+    var memberCol = colMap["member"] !== undefined ? colMap["member"] : colMap["member id"];
     var roleCol = colMap["role"];
     var activeCol = colMap["active"];
+    var notesCol = colMap["notes"];
     var nameCol = colMap["name"];
 
     for (var i = headerRowIndex + 1; i < values.length; i++) {
@@ -122,15 +157,65 @@ function lookupRoleRowForEmail_(email) {
       var dispRole = displayRow && roleCol !== undefined ? displayRow[roleCol] : "";
       var roleVal = String(rawRole || dispRole || "").trim();
 
-      var rawName = nameCol !== undefined ? row[nameCol] : "";
-      var dispName = displayRow && nameCol !== undefined ? displayRow[nameCol] : "";
-      var nameVal = String(rawName || dispName || "").trim();
+      var rawMember = memberCol !== undefined ? (displayRow[memberCol] || row[memberCol]) : "";
+      var parsedMember = parseMemberField_(rawMember);
+
+      var rawNotes = notesCol !== undefined ? (displayRow[notesCol] || row[notesCol]) : "";
+      var rawName = nameCol !== undefined ? (displayRow[nameCol] || row[nameCol]) : "";
+
+      var resolvedName = parsedMember.memberName || String(rawName || "").trim();
+      if (!resolvedName && String(rawNotes || "").trim()) {
+        resolvedName = String(rawNotes).trim();
+      }
 
       return {
         email: targetEmail,
-        name: nameVal,
+        memberId: parsedMember.memberId,
+        memberName: resolvedName,
+        name: resolvedName,
         roleRaw: roleVal,
+        notes: String(rawNotes || "").trim(),
       };
+    }
+
+    // Secondary fallback: Check if email exists in Members sheet
+    try {
+      var memSheet = getSheetByNameInsensitive_(ss, SHEETS.MEMBERS);
+      if (memSheet && memSheet.getLastRow() > 1) {
+        var memVals = memSheet.getDataRange().getValues();
+        var memCol = getHeaderMap_(memVals[0]);
+        var memEmailIdx = memCol["Email"] !== undefined ? memCol["Email"] : memCol["email"];
+        var memIdIdx = memCol["Member ID"];
+        var memStatusIdx = memCol["Status"];
+
+        if (memEmailIdx !== undefined && memIdIdx !== undefined) {
+          for (var m = 1; m < memVals.length; m++) {
+            var mRow = memVals[m];
+            var mEmail = extractEmailFromString_(mRow[memEmailIdx]);
+            if (mEmail === targetEmail) {
+              var mStatus = memStatusIdx !== undefined ? String(mRow[memStatusIdx] || "").trim().toLowerCase() : "active";
+              if (mStatus === "active" || mStatus === "") {
+                var first = memCol["First Name"] !== undefined ? String(mRow[memCol["First Name"]] || "").trim() : "";
+                var middle = memCol["Middle Name"] !== undefined ? String(mRow[memCol["Middle Name"]] || "").trim() : "";
+                var last = memCol["Last Name"] !== undefined ? String(mRow[memCol["Last Name"]] || "").trim() : "";
+                var initial = middle ? middle.charAt(0) + "." : "";
+                var mName = (first + " " + initial + " " + last).replace(/\s+/g, " ").trim();
+
+                return {
+                  email: targetEmail,
+                  memberId: String(mRow[memIdIdx] || "").trim(),
+                  memberName: mName,
+                  name: mName,
+                  roleRaw: "Member",
+                  notes: "Auto-matched from Members Email",
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (memLookupErr) {
+      console.error("Members sheet fallback email lookup error: " + memLookupErr.message);
     }
   } catch (err) {
     console.error("lookupRoleRowForEmail_ error: " + err.message);
@@ -149,6 +234,7 @@ function getPermissionsForRoleKey_(roleKey) {
       accountsWrite: true,
       investmentsWrite: true,
       isAdmin: true,
+      isMemberOnly: false,
     };
   }
   if (roleKey === ROLE_KEY.TREASURER) {
@@ -160,6 +246,7 @@ function getPermissionsForRoleKey_(roleKey) {
       accountsWrite: true,
       investmentsWrite: true,
       isAdmin: false,
+      isMemberOnly: false,
     };
   }
   if (roleKey === ROLE_KEY.SECRETARY) {
@@ -171,6 +258,7 @@ function getPermissionsForRoleKey_(roleKey) {
       accountsWrite: false,
       investmentsWrite: false,
       isAdmin: false,
+      isMemberOnly: false,
     };
   }
   if (roleKey === ROLE_KEY.MEMBER) {
@@ -182,6 +270,7 @@ function getPermissionsForRoleKey_(roleKey) {
       accountsWrite: false,
       investmentsWrite: false,
       isAdmin: false,
+      isMemberOnly: true,
     };
   }
   return {
@@ -192,6 +281,7 @@ function getPermissionsForRoleKey_(roleKey) {
     accountsWrite: false,
     investmentsWrite: false,
     isAdmin: false,
+    isMemberOnly: true,
   };
 }
 
@@ -208,44 +298,65 @@ function getSessionRoleContext_(email) {
   labels[ROLE_KEY.SECRETARY] = "Secretary";
   labels[ROLE_KEY.MEMBER] = "Member";
   labels[ROLE_KEY.NONE] = "No role";
+
+  var resolvedName = row ? (row.name || row.memberName || "") : "";
+  if (!resolvedName && email) {
+    if (email.toLowerCase().indexOf("brightlyfe") !== -1) {
+      resolvedName = "Bright Life";
+    }
+  }
+
   return {
     roleKey: roleKey,
     roleLabel: labels[roleKey] || roleKey,
     permissions: perms,
-    roleSheetName: row ? row.name || "" : "",
+    roleSheetName: resolvedName,
+    memberId: row ? row.memberId : "",
+    memberName: row ? row.memberName : "",
     hasAccess: roleKey !== ROLE_KEY.NONE,
   };
 }
 
-/**
- * Ensures current user is listed in the Roles table with an active role (Admin, Treasurer, Secretary, or Member).
- */
 function requireAccess_() {
   var email = getCurrentUserEmail_();
   var ctx = getSessionRoleContext_(email);
   if (!ctx.hasAccess) {
-    var identifier = email ? ("email '" + email + "'") : "account";
     throw new Error(
-      "Access Denied: Your Google " + identifier + " is not authorized. Please ask an Administrator to add your email to the Roles sheet."
+      "Access denied: " + (email || "user") + " does not have an active role in the group. Please contact the administrator."
     );
   }
   return ctx;
 }
 
-/**
- * @param {string} permKey — "membersWrite" | "contributionsWrite" | "loanPayment" | "loanRequest" | "accountsWrite" | "investmentsWrite"
- */
 function requirePermission_(permKey) {
-  var ctx = requireAccess_();
-  if (!ctx.permissions[permKey]) {
-    throw new Error("You do not have permission to perform this action.");
+  var email = getCurrentUserEmail_();
+  var ctx = getSessionRoleContext_(email);
+  if (!ctx.hasAccess) {
+    throw new Error("Access denied: You must be an active group member.");
   }
+  if (!ctx.permissions || !ctx.permissions[permKey]) {
+    throw new Error("Permission denied: Your role (" + ctx.roleLabel + ") does not allow this action.");
+  }
+  return ctx;
+}
+
+function friendlyNameFromEmail_(email) {
+  if (!email) return "Member";
+  var local = String(email).split("@")[0] || "";
+  local = local.replace(/[._+-]+/g, " ").trim();
+  if (!local) return "Member";
+  return local
+    .split(/\s+/)
+    .map(function (w) {
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    })
+    .join(" ");
 }
 
 /**
- * Fetch all user roles for the Admin User Roles management UI.
+ * Get all configured roles for the Admin UI panel.
  */
-function getAllUserRoles() {
+function getRolesData() {
   try {
     requirePermission_("isAdmin");
     var ss = getSpreadsheet_();
@@ -265,9 +376,10 @@ function getAllUserRoles() {
     requireHeaders_(colMap, ["Email", "Role"], SHEETS.ROLES);
 
     var emailCol = colMap["Email"];
-    var nameCol = colMap["Name"];
+    var memberCol = colMap["Member"] !== undefined ? colMap["Member"] : colMap["Member ID"];
     var roleCol = colMap["Role"];
     var activeCol = colMap["Active"];
+    var notesCol = colMap["Notes"];
 
     var roles = [];
     for (var i = 1; i < values.length; i++) {
@@ -279,9 +391,10 @@ function getAllUserRoles() {
       var email = extractEmailFromString_(rawEmail) || extractEmailFromString_(dispEmail);
       if (!email) continue;
 
-      var rawName = nameCol !== undefined ? row[nameCol] : "";
-      var dispName = dispRow && nameCol !== undefined ? dispRow[nameCol] : "";
-      var name = String(rawName || dispName || "").trim();
+      var rawMember = memberCol !== undefined ? (dispRow[memberCol] || row[memberCol]) : "";
+      var parsedMember = parseMemberField_(rawMember);
+
+      var rawNotes = notesCol !== undefined ? (dispRow[notesCol] || row[notesCol]) : "";
 
       var rawRole = roleCol !== undefined ? row[roleCol] : "";
       var dispRole = dispRow && roleCol !== undefined ? dispRow[roleCol] : "";
@@ -298,12 +411,17 @@ function getAllUserRoles() {
       else if (roleKey === ROLE_KEY.SECRETARY) roleLabel = "Secretary";
       else if (roleKey === ROLE_KEY.MEMBER) roleLabel = "Member";
 
+      var displayName = parsedMember.memberName || String(rawNotes || "").trim() || friendlyNameFromEmail_(email);
+
       roles.push({
         email: email,
-        name: name || friendlyNameFromEmail_(email),
+        member: rawMember,
+        memberId: parsedMember.memberId,
+        name: displayName,
         role: roleLabel,
         roleKey: roleKey,
         active: isActive,
+        notes: String(rawNotes || "").trim(),
       });
     }
 
@@ -313,11 +431,17 @@ function getAllUserRoles() {
   }
 }
 
+/** Alias for frontend compatibility */
+function getAllUserRoles() {
+  return getRolesData();
+}
+
 /**
  * Add or update a user's role and active status in the Roles sheet.
  */
 function saveUserRole(data) {
   requirePermission_("isAdmin");
+
   if (!data || !data.email) {
     throw new Error("Email address is required.");
   }
@@ -340,7 +464,8 @@ function saveUserRole(data) {
   else if (normKey === ROLE_KEY.MEMBER) roleLabel = "Member";
 
   var activeVal = data.active !== undefined ? (data.active === true || data.active === "true" || data.active === 1 || data.active === "Active") : true;
-  var userName = String(data.name || "").trim();
+  var memberVal = String(data.member || "").trim();
+  var notesVal = String(data.notes || "").trim();
 
   var ss = getSpreadsheet_();
   var sheet = getSheetByNameInsensitive_(ss, SHEETS.ROLES);
@@ -354,9 +479,10 @@ function saveUserRole(data) {
   requireHeaders_(colMap, ["Email", "Role"], SHEETS.ROLES);
 
   var emailCol = colMap["Email"];
-  var nameCol = colMap["Name"];
+  var memberCol = colMap["Member"] !== undefined ? colMap["Member"] : colMap["Member ID"];
   var roleCol = colMap["Role"];
   var activeCol = colMap["Active"];
+  var notesCol = colMap["Notes"];
 
   var updated = false;
 
@@ -366,9 +492,10 @@ function saveUserRole(data) {
       var rowEmail = extractEmailFromString_(row[emailCol]);
       if (rowEmail === targetEmail) {
         var rowIndex = i + 1;
+        if (memberCol !== undefined && memberVal) sheet.getRange(rowIndex, memberCol + 1).setValue(memberVal);
         if (roleCol !== undefined) sheet.getRange(rowIndex, roleCol + 1).setValue(roleLabel);
-        if (nameCol !== undefined && userName) sheet.getRange(rowIndex, nameCol + 1).setValue(userName);
         if (activeCol !== undefined) sheet.getRange(rowIndex, activeCol + 1).setValue(activeVal);
+        if (notesCol !== undefined && notesVal) sheet.getRange(rowIndex, notesCol + 1).setValue(notesVal);
         updated = true;
         break;
       }
@@ -378,9 +505,10 @@ function saveUserRole(data) {
   if (!updated) {
     var newRow = new Array(headers.length).fill("");
     if (emailCol !== undefined) newRow[emailCol] = targetEmail;
-    if (nameCol !== undefined) newRow[nameCol] = userName || friendlyNameFromEmail_(targetEmail);
+    if (memberCol !== undefined) newRow[memberCol] = memberVal;
     if (roleCol !== undefined) newRow[roleCol] = roleLabel;
     if (activeCol !== undefined) newRow[activeCol] = activeVal;
+    if (notesCol !== undefined) newRow[notesCol] = notesVal;
     sheet.appendRow(newRow);
   }
 
@@ -391,9 +519,10 @@ function saveUserRole(data) {
     (updated ? "Updated" : "Added") + " user role for " + targetEmail + " to " + roleLabel + " (" + (activeVal ? "Active" : "Inactive") + ")",
     JSON.stringify({
       email: targetEmail,
-      name: userName,
+      member: memberVal,
       role: roleLabel,
       active: activeVal,
+      notes: notesVal,
     })
   );
 
