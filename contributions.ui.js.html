@@ -2,6 +2,8 @@
   let currentPage = 1;
   const rowsPerPage = 15;
   let totalPages = 1;
+  let loadedContributions = [];
+  let currentReceiptData = null;
 
   function renderStatusBadge(status) {
     const s = String(status || "").toLowerCase().trim();
@@ -35,6 +37,15 @@
         '</div>'
       );
     }
+    if (s === "approved") {
+      return (
+        '<div class="flex items-center justify-center gap-1.5">' +
+        '<button type="button" onclick="shareContributionWhatsApp(' + c.rowNumber + ')" title="Open WhatsApp Receipt" class="p-1 px-1.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-medium transition-colors inline-flex items-center gap-1">' +
+        '<i class="fab fa-whatsapp text-emerald-600"></i> Receipt' +
+        '</button>' +
+        '</div>'
+      );
+    }
     return '<span class="text-slate-400 text-[10px] font-mono"><i class="fas fa-shield-alt text-emerald-600 text-[9px]"></i> Verified</span>';
   }
 
@@ -50,12 +61,105 @@
         }
         loadContributions(currentPage);
         if (typeof refreshDashboard === "function") refreshDashboard();
+
+        if (res.receipt) {
+          if (res.receipt.emailSent) {
+            showNotification("Transaction Approved! Receipt emailed to " + (res.receipt.recipientEmail || "member") + ".", "success");
+          } else {
+            showNotification("Transaction marked as " + status + ".", "success");
+          }
+          if (res.receipt.whatsAppUrl) {
+            openReceiptWhatsAppModal(res.receipt);
+          }
+        } else {
+          showNotification("Transaction marked as " + status + ".", "success");
+        }
       })
       .withFailureHandler(function (err) {
         stopAppLoader();
         handleErr(err);
       })
       .updateContributionStatus({ tid: tid, rowNumber: rowNumber, status: status });
+  }
+
+  function shareContributionWhatsApp(rowNumber) {
+    const c = (loadedContributions || []).find(function (item) { return item.rowNumber === rowNumber; });
+    if (!c) return;
+
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (res && res.success) {
+          openReceiptWhatsAppModal(res);
+        } else {
+          alert("Could not generate receipt: " + ((res && res.error) || "Check member phone number."));
+        }
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .triggerTransactionReceipt({
+        receiptNo: "BL-RCP-" + (c.tid || c.rowNumber),
+        date: c.date,
+        memberId: c.memberId,
+        memberName: c.name,
+        amount: c.amountRaw || c.amount,
+        type: c.type,
+        channel: c.mode,
+        tid: c.tid,
+        isLoanRepayment: c.type === "Loan Repayment"
+      });
+  }
+
+  function openReceiptWhatsAppModal(receiptData) {
+    currentReceiptData = receiptData;
+    const modal = document.getElementById("receiptShareModal");
+    const preview = document.getElementById("receipt-text-preview");
+    const phoneVal = document.getElementById("receipt-phone-val");
+    const emailBanner = document.getElementById("receipt-email-status-banner");
+    const emailText = document.getElementById("receipt-email-status-text");
+    const openWaBtn = document.getElementById("btn-open-wa");
+
+    if (preview) preview.innerText = receiptData.whatsAppText || "";
+    if (phoneVal) phoneVal.innerText = receiptData.recipientPhone || "No phone recorded";
+
+    if (emailBanner && emailText) {
+      if (receiptData.emailSent) {
+        emailBanner.className = "p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs flex items-center gap-2";
+        emailText.innerText = "Receipt emailed to " + receiptData.recipientEmail;
+        emailBanner.classList.remove("hidden");
+      } else if (receiptData.emailError) {
+        emailBanner.className = "p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-800 text-xs flex items-center gap-2";
+        emailText.innerText = "Email delivery note: " + receiptData.emailError;
+        emailBanner.classList.remove("hidden");
+      } else {
+        emailBanner.classList.add("hidden");
+      }
+    }
+
+    if (openWaBtn) {
+      if (receiptData.whatsAppUrl) {
+        openWaBtn.href = receiptData.whatsAppUrl;
+        openWaBtn.classList.remove("opacity-50", "pointer-events-none");
+      } else {
+        openWaBtn.href = "#";
+        openWaBtn.classList.add("opacity-50", "pointer-events-none");
+      }
+    }
+
+    if (modal) modal.classList.remove("hidden");
+  }
+
+  function closeReceiptShareModal() {
+    const modal = document.getElementById("receiptShareModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function copyReceiptText() {
+    if (!currentReceiptData || !currentReceiptData.whatsAppText) return;
+    copyTextToClipboard(currentReceiptData.whatsAppText, document.getElementById("btn-copy-receipt"));
   }
 
   function getPaymentModeStyle(mode) {
@@ -130,6 +234,7 @@
           return;
         }
         totalPages = response.totalPages || 1;
+        loadedContributions = response.contributions || [];
         renderContributionTable(response.contributions);
         updatePaginationUI(response.currentPage, response.totalPages);
         stopAppLoader();

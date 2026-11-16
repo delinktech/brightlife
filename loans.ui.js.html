@@ -36,6 +36,15 @@
         '</div>'
       );
     }
+    if (s === "approved") {
+      return (
+        '<div class="flex items-center justify-center gap-1.5">' +
+        '<button type="button" onclick="shareLoanPaymentWhatsApp(\'' + escapeHtmlAttr(r.paymentId) + '\')" title="Send WhatsApp Receipt" class="p-1 px-1.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-medium transition-colors inline-flex items-center gap-1">' +
+        '<i class="fab fa-whatsapp text-emerald-600"></i> Receipt' +
+        '</button>' +
+        '</div>'
+      );
+    }
     return '<span class="text-slate-400 text-[10px] font-mono"><i class="fas fa-shield-alt text-emerald-600 text-[9px]"></i> Verified</span>';
   }
 
@@ -52,12 +61,47 @@
         loadLoans(loanPage);
         loadLoanRepayments(repPage);
         if (typeof refreshDashboard === "function") refreshDashboard();
+
+        if (res.receipt) {
+          if (res.receipt.emailSent) {
+            showNotification("Loan Repayment Approved! Receipt emailed to " + (res.receipt.recipientEmail || "member") + ".", "success");
+          } else {
+            showNotification("Repayment marked as " + status + ".", "success");
+          }
+          if (res.receipt.whatsAppUrl) {
+            window.open(res.receipt.whatsAppUrl, "_blank");
+          }
+        } else {
+          showNotification("Repayment marked as " + status + ".", "success");
+        }
       })
       .withFailureHandler(function (err) {
         stopAppLoader();
         handleErr(err);
       })
       .updateLoanRepaymentStatus({ paymentId: paymentId, status: status });
+  }
+
+  function shareLoanPaymentWhatsApp(paymentId) {
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (res && res.whatsAppUrl) {
+          window.open(res.whatsAppUrl, "_blank");
+        } else {
+          alert("Could not generate WhatsApp receipt: " + ((res && res.error) || "Check member phone number."));
+        }
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .triggerTransactionReceipt({
+        receiptNo: paymentId,
+        tid: paymentId,
+        isLoanRepayment: true
+      });
   }
 
   function renderLoanRepaymentsTable(repayments) {

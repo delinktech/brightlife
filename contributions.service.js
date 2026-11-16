@@ -83,7 +83,27 @@ function saveContribution(data) {
     })
   );
   clearDashboardCache_();
-  return { success: true };
+
+  let receiptResult = null;
+  if (initialStatus === "Approved") {
+    try {
+      receiptResult = triggerTransactionReceipt({
+        receiptNo: "BL-RCP-" + (data.tid || ("ROW" + (sheet.getLastRow()))),
+        date: new Date(),
+        memberId: memberId,
+        memberName: memberName,
+        amount: Number(data.amount) || 0,
+        type: data.type || "Monthly Contribution",
+        channel: data.mode || data.channel || "Direct Deposit",
+        tid: data.tid || "",
+        isLoanRepayment: data.type === "Loan Repayment",
+      });
+    } catch (rcpErr) {
+      console.error("Auto receipt error: " + rcpErr.message);
+    }
+  }
+
+  return { success: true, receipt: receiptResult };
 }
 
 function getContributionsData(page, limit) {
@@ -139,13 +159,38 @@ function getContributionsData(page, limit) {
     const pageItems = allRowsWithIndex.slice(start, start + pageLimit);
     const tz = ss.getSpreadsheetTimeZone();
 
+    // Fast memory map of member contact info
+    const memSheet = ss.getSheetByName(SHEETS.MEMBERS);
+    const memMap = {};
+    if (memSheet && memSheet.getLastRow() > 1) {
+      const mVals = memSheet.getDataRange().getValues();
+      const mCol = getHeaderMap_(mVals[0]);
+      for (let m = 1; m < mVals.length; m++) {
+        const mid = mCol["Member ID"] !== undefined ? String(mVals[m][mCol["Member ID"]] || "").trim().toLowerCase() : "";
+        const mname = mCol["Full Name"] !== undefined ? String(mVals[m][mCol["Full Name"]] || "").trim().toLowerCase() : (mCol["Member Name"] !== undefined ? String(mVals[m][mCol["Member Name"]] || "").trim().toLowerCase() : "");
+        const rawPhone = mCol["Phone Number"] !== undefined ? String(mVals[m][mCol["Phone Number"]] || "").trim() : "";
+        const cleanPh = typeof normalizeKenyanPhone_ === "function" ? normalizeKenyanPhone_(rawPhone) : rawPhone;
+        const email = mCol["Email"] !== undefined ? String(mVals[m][mCol["Email"]] || "").trim() : "";
+        const info = { phone: rawPhone, cleanPhone: cleanPh, email: email };
+        if (mid) memMap[mid] = info;
+        if (mname) memMap[mname] = info;
+      }
+    }
+
     const contributions = pageItems.map(function (item) {
       const row = item.data;
+      const mIdVal = memberIdCol !== undefined ? String(row[memberIdCol] || "").trim() : "";
+      const mNameVal = String(row[col["Member Name"]] || "").trim();
+      const memInfo = (mIdVal && memMap[mIdVal.toLowerCase()]) || (mNameVal && memMap[mNameVal.toLowerCase()]) || {};
+
       return {
         rowNumber: item.rowNumber,
         date: formatDateValue_(row[col["Date"]], tz),
-        name: row[col["Member Name"]],
-        memberId: memberIdCol !== undefined ? String(row[memberIdCol] || "").trim() : "",
+        name: mNameVal,
+        memberId: mIdVal,
+        phone: memInfo.phone || "",
+        cleanPhone: memInfo.cleanPhone || "",
+        email: memInfo.email || "",
         amount: formatCurrency_(row[col["Amount"]]),
         amountRaw: Number(row[col["Amount"]]) || 0,
         mode: modeCol !== undefined ? row[modeCol] : "",
@@ -237,7 +282,7 @@ function updateContributionStatus(params) {
             if (newStatus === "Approved") {
               const pId = repCol["Payment ID"] !== undefined ? String(repVals[rr][repCol["Payment ID"]] || "").trim() : "";
               if (pId) {
-                updateLoanRepaymentStatus({ paymentId: pId, status: "Approved" });
+                updateLoanRepaymentStatus({ paymentId: pId, status: "Approved", skipReceipt: true });
               }
             }
             break;
@@ -262,5 +307,34 @@ function updateContributionStatus(params) {
   );
 
   clearDashboardCache_();
-  return { success: true };
+
+  let receiptResult = null;
+  if (newStatus === "Approved") {
+    try {
+      const rowVals = sheet.getRange(targetRow, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const rowMid = col["Member ID"] !== undefined ? String(rowVals[col["Member ID"]] || "").trim() : "";
+      const rowMName = col["Member Name"] !== undefined ? String(rowVals[col["Member Name"]] || "").trim() : "";
+      const rowAmt = Number(rowVals[col["Amount"]]) || 0;
+      const rowTid = col["Transaction ID"] !== undefined ? String(rowVals[col["Transaction ID"]] || "").trim() : tid;
+      const rowType = col["Transaction Type"] !== undefined ? String(rowVals[col["Transaction Type"]] || "") : (col["Type"] !== undefined ? String(rowVals[col["Type"]] || "") : "Monthly Contribution");
+      const rowChannel = col["Deposit Channel"] !== undefined ? String(rowVals[col["Deposit Channel"]] || "") : (col["Payment Mode"] !== undefined ? String(rowVals[col["Payment Mode"]] || "") : "Equity Bank");
+      const rowDate = col["Date"] !== undefined ? rowVals[col["Date"]] : new Date();
+
+      receiptResult = triggerTransactionReceipt({
+        receiptNo: "BL-RCP-" + (rowTid || ("ROW" + targetRow)),
+        date: rowDate,
+        memberId: rowMid,
+        memberName: rowMName,
+        amount: rowAmt,
+        type: rowType,
+        channel: rowChannel,
+        tid: rowTid,
+        isLoanRepayment: rowType === "Loan Repayment",
+      });
+    } catch (rErr) {
+      console.error("Auto-receipt error in updateContributionStatus: " + rErr.message);
+    }
+  }
+
+  return { success: true, receipt: receiptResult };
 }

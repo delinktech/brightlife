@@ -206,6 +206,8 @@
         '<td class="col-m-actions px-3 py-3 text-center">' +
         '<div class="flex items-center justify-center gap-1.5">' +
         '<button type="button" onclick="openPrintMemberStatement(\'' + m.id + '\')" title="Print Member Statement" class="text-slate-400 hover:text-slate-900 transition-colors p-1"><i class="fas fa-print"></i></button>' +
+        '<button type="button" onclick="openMemberEmailStatement(\'' + m.id + '\')" title="Email Monthly Statement" class="text-slate-400 hover:text-emerald-700 transition-colors p-1"><i class="fas fa-envelope"></i></button>' +
+        '<button type="button" onclick="openMemberWhatsAppStatement(\'' + m.id + '\')" title="Send WhatsApp Statement" class="text-slate-400 hover:text-green-600 transition-colors p-1"><i class="fab fa-whatsapp"></i></button>' +
         '<button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' + m.id + '\')" title="Edit Member Profile" class="text-slate-400 hover:text-slate-900 transition-colors p-1 hidden"><i class="fas fa-pen"></i></button>' +
         '</div>' +
         '</td>' +
@@ -357,4 +359,43 @@
       })
       .saveMember(payload);
   });
+
+  function openMemberEmailStatement(memberId) {
+    if (!confirm("Email certified monthly statement to this member?")) return;
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (res && res.success && res.emailSent) {
+          showNotification("Statement successfully emailed to " + (res.recipientEmail || memberId), "success");
+        } else if (res && res.emailError) {
+          alert("Email could not be delivered: " + res.emailError);
+        } else {
+          alert((res && res.error) || "Failed to send email statement.");
+        }
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .sendMemberMonthlyStatement({ memberId: memberId, sendEmail: true });
+  }
+
+  function openMemberWhatsAppStatement(memberId) {
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (res && res.whatsAppUrl) {
+          window.open(res.whatsAppUrl, "_blank");
+        } else {
+          alert("Member does not have a valid phone number. Please update their phone in profile.");
+        }
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .sendMemberMonthlyStatement({ memberId: memberId, sendEmail: false });
+  }
 </script>

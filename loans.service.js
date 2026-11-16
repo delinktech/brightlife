@@ -639,5 +639,25 @@ function updateLoanRepaymentStatus(params) {
   );
 
   clearDashboardCache_();
-  return { success: true };
+
+  let receiptResult = null;
+  if (newStatus === "Approved" && !params.skipReceipt) {
+    try {
+      receiptResult = triggerTransactionReceipt({
+        receiptNo: paymentId,
+        date: new Date(),
+        memberId: repCol["Member ID"] !== undefined ? String(repVals[repRow - 1][repCol["Member ID"]] || "").trim() : "",
+        memberName: repCol["Borrower Name"] !== undefined ? String(repVals[repRow - 1][repCol["Borrower Name"]] || "").trim() : "",
+        amount: paymentAmount,
+        type: "Loan Repayment",
+        channel: repCol["Payment Mode"] !== undefined ? String(repVals[repRow - 1][repCol["Payment Mode"]] || "") : "Equity Bank",
+        tid: paymentId,
+        isLoanRepayment: true,
+      });
+    } catch (rErr) {
+      console.error("Auto-receipt error in updateLoanRepaymentStatus: " + rErr.message);
+    }
+  }
+
+  return { success: true, receipt: receiptResult };
 }
