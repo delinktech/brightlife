@@ -280,6 +280,8 @@
     loans: "Loan Portfolio",
     investments: "Investments & Projects",
     accounts: "Accounts & Balances",
+    dividends: "Dividends & Fund Earnings",
+    statements: "Member Statements & Receipts",
     roles: "User Role Administration",
     "access-denied": "Access Denied",
   };
@@ -328,6 +330,8 @@
     if (pageId === "loans") loadLoans();
     if (pageId === "investments") loadInvestments();
     if (pageId === "accounts") loadAccounts();
+    if (pageId === "dividends") loadDividendOverview();
+    if (pageId === "statements") loadMonthlyStatementsView();
     if (pageId === "roles") loadUserRoles();
   }
 

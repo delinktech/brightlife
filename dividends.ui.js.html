@@ -1,0 +1,325 @@
+<script>
+/**
+ * Dividends & Yields UI Controller
+ * Brightlife Dashboard
+ */
+
+const dividendsState = {
+  overview: null,
+  simulation: null
+};
+
+function formatKshDiv(val) {
+  const num = Number(val) || 0;
+  return "KES " + Math.round(num).toLocaleString();
+}
+
+function loadDividendOverview() {
+  startAppLoader();
+  google.script.run
+    .withSuccessHandler(function (res) {
+      stopAppLoader();
+      if (!res || !res.success) {
+        showNotification((res && res.error) || "Failed to load dividend overview.", "error");
+        return;
+      }
+
+      dividendsState.overview = res;
+      const s = res.summary || {};
+
+      const kpiEarnings = document.getElementById("div-kpi-total-earnings");
+      const kpiLoanInt = document.getElementById("div-kpi-loan-interest");
+      const kpiInvestGains = document.getElementById("div-kpi-invest-gains");
+      const kpiSavings = document.getElementById("div-kpi-total-savings");
+      const kpiMemberCount = document.getElementById("div-kpi-member-count");
+      const simPoolInput = document.getElementById("div-sim-pool");
+
+      if (kpiEarnings) kpiEarnings.textContent = formatKshDiv(s.suggestedPool);
+      if (kpiLoanInt) kpiLoanInt.textContent = formatKshDiv(s.totalLoanInterest);
+      if (kpiInvestGains) kpiInvestGains.textContent = formatKshDiv(s.totalInvestmentGains);
+      if (kpiSavings) kpiSavings.textContent = formatKshDiv(s.totalGroupSavings);
+      if (kpiMemberCount) kpiMemberCount.textContent = "Across " + (s.qualifyingMemberCount || 0) + " qualifying members";
+
+      // Pre-fill pool amount if empty
+      if (simPoolInput && (!simPoolInput.value || Number(simPoolInput.value) === 0)) {
+        simPoolInput.value = s.suggestedPool || 0;
+      }
+
+      // Render Fund Statements table
+      renderFundStatementsTable(res.fundStatements || []);
+    })
+    .withFailureHandler(function (err) {
+      stopAppLoader();
+      handleErr(err);
+    })
+    .getDividendOverviewData();
+}
+
+function renderFundStatementsTable(list) {
+  const tbody = document.getElementById("fund-statements-table-body");
+  if (!tbody) return;
+
+  if (!list || !list.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">No fund statements recorded yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(function(item) {
+    return (
+      '<tr class="hover:bg-slate-50/70 transition-colors">' +
+      '  <td class="py-3 px-4 font-sans text-slate-700">' + (item.date || "—") + '</td>' +
+      '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">' + item.fund + '</span></td>' +
+      '  <td class="py-3 px-4 text-right text-slate-600">' + formatKshDiv(item.opening) + '</td>' +
+      '  <td class="py-3 px-4 text-right text-slate-600">' + formatKshDiv(item.deposits) + '</td>' +
+      '  <td class="py-3 px-4 text-right font-medium text-slate-800">' + formatKshDiv(item.grossInterest) + '</td>' +
+      '  <td class="py-3 px-4 text-right text-rose-600 font-medium">(' + formatKshDiv(item.wht) + ')</td>' +
+      '  <td class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/40">' + formatKshDiv(item.netYield) + '</td>' +
+      '  <td class="py-3 px-4 text-right font-bold text-slate-900">' + formatKshDiv(item.closing) + '</td>' +
+      '  <td class="py-3 px-4 text-center font-mono text-[10px] text-slate-400">' + (item.ref || "—") + '</td>' +
+      '</tr>'
+    );
+  }).join("");
+}
+
+function openFundStatementModal() {
+  const modal = document.getElementById("fund-statement-modal");
+  if (!modal) return;
+  const today = new Date().toISOString().split("T")[0];
+  document.getElementById("fstmt-date").value = today;
+  document.getElementById("fstmt-opening").value = "";
+  document.getElementById("fstmt-deposits").value = "";
+  document.getElementById("fstmt-gross").value = "";
+  document.getElementById("fstmt-wht").value = "";
+  document.getElementById("fstmt-closing").value = "";
+  document.getElementById("fstmt-ref").value = "CIC-MMF-" + new Date().getFullYear();
+  modal.classList.remove("hidden");
+}
+
+function closeFundStatementModal() {
+  const modal = document.getElementById("fund-statement-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function autoCalculateFundWht() {
+  const gross = Number(document.getElementById("fstmt-gross").value) || 0;
+  const whtInput = document.getElementById("fstmt-wht");
+  if (whtInput && gross > 0) {
+    whtInput.value = (Math.round(gross * 0.15 * 100) / 100).toFixed(2);
+  }
+}
+
+function submitFundStatementForm(event) {
+  if (event) event.preventDefault();
+
+  const dateVal = document.getElementById("fstmt-date").value;
+  const fundVal = document.getElementById("fstmt-fund").value;
+  const openingVal = document.getElementById("fstmt-opening").value;
+  const depositsVal = document.getElementById("fstmt-deposits").value;
+  const grossVal = document.getElementById("fstmt-gross").value;
+  const whtVal = document.getElementById("fstmt-wht").value;
+  const closingVal = document.getElementById("fstmt-closing").value;
+  const refVal = document.getElementById("fstmt-ref").value;
+
+  if (!dateVal || !grossVal || !closingVal) {
+    alert("Please provide the statement date, gross interest, and closing balance.");
+    return;
+  }
+
+  const btn = document.getElementById("btn-save-fund-stmt");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Save Statement Entry</span>';
+      }
+      closeFundStatementModal();
+
+      if (res && res.success) {
+        showNotification("Fund statement recorded successfully! Net yield: " + formatKshDiv(res.entry ? res.entry.netYield : 0), "success");
+        loadDividendOverview();
+      } else {
+        alert((res && res.error) || "Failed to record fund statement.");
+      }
+    })
+    .withFailureHandler(function (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Save Statement Entry</span>';
+      }
+      handleErr(err);
+    })
+    .saveFundStatementEntry({
+      date: dateVal,
+      fund: fundVal,
+      opening: openingVal,
+      deposits: depositsVal,
+      grossInterest: grossVal,
+      wht: whtVal,
+      closing: closingVal,
+      ref: refVal
+    });
+}
+
+function runDividendSimulation(event) {
+  if (event) event.preventDefault();
+
+  const year = document.getElementById("div-sim-year").value || "2026";
+  const pool = Number(document.getElementById("div-sim-pool").value) || 0;
+  const reservePct = Number(document.getElementById("div-sim-reserve-pct").value) || 0;
+
+  if (pool <= 0) {
+    alert("Please enter a valid dividend pool amount greater than zero.");
+    return;
+  }
+
+  const btn = document.getElementById("btn-run-sim");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator text-xs"></i> <span>Calculate Allocation</span>';
+      }
+
+      if (!res || !res.success) {
+        alert((res && res.error) || "Failed to calculate dividend simulation.");
+        return;
+      }
+
+      dividendsState.simulation = res;
+      renderDividendPreview(res);
+    })
+    .withFailureHandler(function (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-calculator text-xs"></i> <span>Calculate Allocation</span>';
+      }
+      handleErr(err);
+    })
+    .simulateDividendDistribution({
+      year: year,
+      poolAmount: pool,
+      reservePercent: reservePct
+    });
+}
+
+function renderDividendPreview(res) {
+  const s = res.summary || {};
+  const items = res.preview || [];
+  const card = document.getElementById("dividend-preview-card");
+  const tbody = document.getElementById("dividend-preview-table-body");
+  if (!card || !tbody) return;
+
+  document.getElementById("div-sum-pool").textContent = formatKshDiv(s.poolAmount);
+  document.getElementById("div-sum-reserve").textContent = formatKshDiv(s.reserveAmount) + " (" + s.reservePercent + "%)";
+  document.getElementById("div-sum-loans").textContent = formatKshDiv(s.totalLoanOffset);
+  document.getElementById("div-sum-savings").textContent = formatKshDiv(s.totalSavingsCredited);
+
+  tbody.innerHTML = items.map(function(item) {
+    const hasOffset = item.loanOffset > 0;
+    return (
+      '<tr class="hover:bg-slate-50/70 transition-colors">' +
+      '  <td class="py-3 px-4 font-sans">' +
+      '    <div class="font-bold text-slate-900 text-xs">' + item.fullName + '</div>' +
+      '    <div class="text-[10px] font-mono text-slate-400">' + item.memberId + '</div>' +
+      '  </td>' +
+      '  <td class="py-3 px-4 text-right text-slate-700">' + formatKshDiv(item.savings) + '</td>' +
+      '  <td class="py-3 px-4 text-center font-sans font-semibold text-slate-600">' + item.sharePercent.toFixed(2) + '%</td>' +
+      '  <td class="py-3 px-4 text-right font-bold text-slate-900">' + formatKshDiv(item.grossDividend) + '</td>' +
+      '  <td class="py-3 px-4 text-right text-slate-600">' + (item.loanBalance > 0 ? formatKshDiv(item.loanBalance) : "—") + '</td>' +
+      '  <td class="py-3 px-4 text-right font-bold ' + (hasOffset ? "text-amber-700 bg-amber-50/50" : "text-slate-400") + '">' +
+      (hasOffset ? formatKshDiv(item.loanOffset) : "—") +
+      '  </td>' +
+      '  <td class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/50">' + formatKshDiv(item.savingsCredit) + '</td>' +
+      '</tr>'
+    );
+  }).join("");
+
+  card.classList.remove("hidden");
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function openConfirmDividendModal() {
+  const sim = dividendsState.simulation;
+  if (!sim || !sim.summary || !sim.preview || !sim.preview.length) {
+    alert("Please calculate a dividend preview first.");
+    return;
+  }
+
+  const modal = document.getElementById("dividend-confirm-modal");
+  const year = document.getElementById("div-sim-year").value || "2026";
+  const s = sim.summary;
+
+  document.getElementById("confirm-modal-year").textContent = "Financial Year " + year;
+  document.getElementById("conf-pool-val").textContent = formatKshDiv(s.poolAmount);
+  document.getElementById("conf-reserve-val").textContent = formatKshDiv(s.reserveAmount) + " (" + s.reservePercent + "%)";
+  document.getElementById("conf-loans-val").textContent = formatKshDiv(s.totalLoanOffset);
+  document.getElementById("conf-savings-val").textContent = formatKshDiv(s.totalSavingsCredited);
+  document.getElementById("conf-count-val").textContent = sim.preview.length + " members";
+
+  modal.classList.remove("hidden");
+}
+
+function closeConfirmDividendModal() {
+  const modal = document.getElementById("dividend-confirm-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function executeDividendPost() {
+  const sim = dividendsState.simulation;
+  if (!sim || !sim.preview) return;
+
+  const btn = document.getElementById("btn-execute-dividend-confirm");
+  const year = document.getElementById("div-sim-year").value || "2026";
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Ledger...';
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Confirm & Post to Ledger</span>';
+      }
+      closeConfirmDividendModal();
+
+      if (res && res.success) {
+        showNotification(
+          "Dividends successfully posted! Settled KES " +
+          Math.round(res.totalOffsetAmount).toLocaleString() + " loans & credited KES " +
+          Math.round(res.totalSavingsAmount).toLocaleString() + " to savings.",
+          "success"
+        );
+        dividendsState.overview = null;
+        dividendsState.simulation = null;
+        const card = document.getElementById("dividend-preview-card");
+        if (card) card.classList.add("hidden");
+        loadDividendOverview();
+      } else {
+        alert((res && res.error) || "Failed to execute dividend distribution.");
+      }
+    })
+    .withFailureHandler(function (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check text-xs"></i> <span>Confirm & Post to Ledger</span>';
+      }
+      handleErr(err);
+    })
+    .executeDividendDistribution({
+      year: year,
+      allocations: sim.preview
+    });
+}
+</script>

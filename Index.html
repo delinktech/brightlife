@@ -638,6 +638,16 @@
             <i class="fas fa-building-columns w-4 text-center shrink-0"></i>
             <span>Bank Accounts</span>
           </a>
+          <a data-page="dividends" data-require-perm="accountsWrite" href="javascript:void(0)" onclick="showPage('dividends'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-coins w-4 text-center shrink-0"></i>
+            <span>Dividends & Yields</span>
+          </a>
+          <a data-page="statements" data-require-perm="accountsWrite" href="javascript:void(0)" onclick="showPage('statements'); toggleMobileMenu(false);"
+            class="nav-item">
+            <i class="fas fa-paper-plane w-4 text-center shrink-0"></i>
+            <span>Member Statements</span>
+          </a>
           <a data-page="roles" data-require-perm="isAdmin" href="javascript:void(0)" onclick="showPage('roles'); toggleMobileMenu(false);"
             class="nav-item hidden">
             <i class="fas fa-shield-halved w-4 text-center shrink-0"></i>
@@ -770,6 +780,16 @@
         <?!= include('Accounts'); ?>
       </div>
 
+      <!-- Dividends & Fund Earnings -->
+      <div id="dividends-container" class="page-wrapper">
+        <?!= include('Dividends'); ?>
+      </div>
+
+      <!-- Member Statements & Receipts -->
+      <div id="statements-container" class="page-wrapper">
+        <?!= include('Statements'); ?>
+      </div>
+
       <!-- Roles Management -->
       <div id="roles-container" class="page-wrapper">
         <?!= include('Roles'); ?>
@@ -844,6 +864,8 @@
   <?!= include('loans.ui.js'); ?>
   <?!= include('investments.ui.js'); ?>
   <?!= include('accounts.ui.js'); ?>
+  <?!= include('dividends.ui.js'); ?>
+  <?!= include('statements.ui.js'); ?>
   <?!= include('roles.ui.js'); ?>
   <?!= include('print.ui.js'); ?>
 
