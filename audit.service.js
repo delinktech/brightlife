@@ -1321,9 +1321,9 @@ function setupMembersSavingsFormula_(ss) {
     if (gs !== undefined) gStatLetter = getColLetter_(gs + 1);
   }
 
-  const cMax = cSheet ? Math.max(cSheet.getMaxRows(), 1000) : 1000;
-  const lMax = loanSheet ? Math.max(loanSheet.getMaxRows(), 1000) : 1000;
-  const gMax = guarSheet ? Math.max(guarSheet.getMaxRows(), 1000) : 1000;
+  const cMax = cSheet ? cSheet.getMaxRows() : 100;
+  const lMax = loanSheet ? loanSheet.getMaxRows() : 100;
+  const gMax = guarSheet ? guarSheet.getMaxRows() : 100;
 
   const memIdLetter = getColLetter_(memIdColIdx + 1);
   const savColLetter = savColIdx !== undefined ? getColLetter_(savColIdx + 1) : "K";
@@ -1338,6 +1338,7 @@ function setupMembersSavingsFormula_(ss) {
     if (savColIdx !== undefined) {
       const savCell = memSheet.getRange(r, savColIdx + 1);
       const savFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Contributions!$' + cAmtLetter + '$2:$' + cAmtLetter + '$' + cMax + ', Contributions!$' + cMidLetter + '$2:$' + cMidLetter + '$' + cMax + ', ' + memIdLetter + r + ', Contributions!$' + cStatLetter + '$2:$' + cStatLetter + '$' + cMax + ', "Approved"))';
+      savCell.clearContent();
       savCell.setFormula(savFormula);
     }
 
@@ -1345,6 +1346,7 @@ function setupMembersSavingsFormula_(ss) {
     if (loanBalColIdx !== undefined) {
       const loanCell = memSheet.getRange(r, loanBalColIdx + 1);
       const loanFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Loans!$' + lBalLetter + '$2:$' + lBalLetter + '$' + lMax + ', Loans!$' + lMidLetter + '$2:$' + lMidLetter + '$' + lMax + ', ' + memIdLetter + r + ', Loans!$' + lStatLetter + '$2:$' + lStatLetter + '$' + lMax + ', "Active") + SUMIFS(Loans!$' + lBalLetter + '$2:$' + lBalLetter + '$' + lMax + ', Loans!$' + lMidLetter + '$2:$' + lMidLetter + '$' + lMax + ', ' + memIdLetter + r + ', Loans!$' + lStatLetter + '$2:$' + lStatLetter + '$' + lMax + ', "Approved"))';
+      loanCell.clearContent();
       loanCell.setFormula(loanFormula);
     }
 
@@ -1352,6 +1354,7 @@ function setupMembersSavingsFormula_(ss) {
     if (guarColIdx !== undefined) {
       const guarCell = memSheet.getRange(r, guarColIdx + 1);
       const guarFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Guarantors!$' + gAmtLetter + '$2:$' + gAmtLetter + '$' + gMax + ', Guarantors!$' + gMidLetter + '$2:$' + gMidLetter + '$' + gMax + ', ' + memIdLetter + r + ', Guarantors!$' + gStatLetter + '$2:$' + gStatLetter + '$' + gMax + ', "Active") + SUMIFS(Guarantors!$' + gAmtLetter + '$2:$' + gAmtLetter + '$' + gMax + ', Guarantors!$' + gMidLetter + '$2:$' + gMidLetter + '$' + gMax + ', ' + memIdLetter + r + ', Guarantors!$' + gStatLetter + '$2:$' + gStatLetter + '$' + gMax + ', "Approved"))';
+      guarCell.clearContent();
       guarCell.setFormula(guarFormula);
     }
 
@@ -1359,6 +1362,7 @@ function setupMembersSavingsFormula_(ss) {
     if (maxLoanColIdx !== undefined) {
       const maxLoanCell = memSheet.getRange(r, maxLoanColIdx + 1);
       const maxLoanFormula = '=IF(' + memIdLetter + r + '="", 0, MAX(0, 2 * (' + savColLetter + r + ' - ' + guarColLetter + r + ') - ' + mLoanBalLetter + r + '))';
+      maxLoanCell.clearContent();
       maxLoanCell.setFormula(maxLoanFormula);
     }
 
@@ -1366,22 +1370,28 @@ function setupMembersSavingsFormula_(ss) {
     if (availGuarColIdx !== undefined) {
       const availCell = memSheet.getRange(r, availGuarColIdx + 1);
       const availFormula = '=IF(OR(' + memStatLetter + r + ' <> "Active", ' + memIdLetter + r + ' = ""), 0, MAX(0, ' + savColLetter + r + ' - ' + mLoanBalLetter + r + ' - ' + guarColLetter + r + '))';
+      availCell.clearContent();
       availCell.setFormula(availFormula);
     }
 
     // 6. Full Name formula: First Name + Middle Name + Last Name
     if (fnColIdx !== undefined) {
       const fnCell = memSheet.getRange(r, fnColIdx + 1);
+      fnCell.clearContent();
       fnCell.setFormula('=IF(B' + r + '="", "", TRIM(B' + r + ' & " " & C' + r + ' & " " & D' + r + '))');
     }
   }
 
-  // Format currency columns
-  if (savColIdx !== undefined) memSheet.getRange(2, savColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-  if (loanBalColIdx !== undefined) memSheet.getRange(2, loanBalColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-  if (guarColIdx !== undefined) memSheet.getRange(2, guarColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-  if (maxLoanColIdx !== undefined) memSheet.getRange(2, maxLoanColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-  if (availGuarColIdx !== undefined) memSheet.getRange(2, availGuarColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+  // Format currency columns safely without failing on typed table columns
+  try {
+    if (savColIdx !== undefined) memSheet.getRange(2, savColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+    if (loanBalColIdx !== undefined) memSheet.getRange(2, loanBalColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+    if (guarColIdx !== undefined) memSheet.getRange(2, guarColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+    if (maxLoanColIdx !== undefined) memSheet.getRange(2, maxLoanColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+    if (availGuarColIdx !== undefined) memSheet.getRange(2, availGuarColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+  } catch (errFmt) {
+    console.warn("setNumberFormat ignored for typed columns: " + errFmt.message);
+  }
 }
 
 /**
@@ -1477,8 +1487,10 @@ function setupGuarantorsSchemaAndFormulas_(ss) {
     }
   }
 
-  if (savColIdx !== undefined) gSheet.getRange(2, savColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-  if (col["Guaranteed Amount"] !== undefined) gSheet.getRange(2, col["Guaranteed Amount"] + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+  try {
+    if (savColIdx !== undefined) gSheet.getRange(2, savColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+    if (col["Guaranteed Amount"] !== undefined) gSheet.getRange(2, col["Guaranteed Amount"] + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+  } catch (errGFmt) {}
 }
 
 function testDiagnoseSheetHeaders_() {
