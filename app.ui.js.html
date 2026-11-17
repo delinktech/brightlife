@@ -52,6 +52,62 @@
     showPage("access-denied");
   }
 
+  /**
+   * Floating Toast Notification component (Shadcn / Tailwind style)
+   * Types: 'success' | 'error' | 'warning' | 'info'
+   */
+  function showNotification(message, type, durationMs) {
+    if (!message) return;
+    const toastType = (type || "info").toLowerCase();
+    const duration = durationMs || 3500;
+
+    let container = document.getElementById("toast-notification-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "toast-notification-container";
+      container.className = "fixed bottom-5 right-5 z-50 flex flex-col space-y-2.5 pointer-events-none max-w-sm w-full px-4 sm:px-0";
+      document.body.appendChild(container);
+    }
+
+    let borderClass = "border-slate-200 bg-white text-slate-900";
+    let iconHtml = '<i class="fas fa-circle-info text-sky-500 text-sm shrink-0"></i>';
+
+    if (toastType === "success") {
+      borderClass = "border-emerald-200 bg-emerald-50/95 text-emerald-950";
+      iconHtml = '<i class="fas fa-check-circle text-emerald-600 text-sm shrink-0"></i>';
+    } else if (toastType === "error") {
+      borderClass = "border-rose-200 bg-rose-50/95 text-rose-950";
+      iconHtml = '<i class="fas fa-circle-exclamation text-rose-600 text-sm shrink-0"></i>';
+    } else if (toastType === "warning") {
+      borderClass = "border-amber-200 bg-amber-50/95 text-amber-950";
+      iconHtml = '<i class="fas fa-triangle-exclamation text-amber-600 text-sm shrink-0"></i>';
+    }
+
+    const toast = document.createElement("div");
+    toast.className = "pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-lg backdrop-blur-sm transition-all duration-300 transform translate-y-2 opacity-0 text-xs font-medium " + borderClass;
+    toast.innerHTML = iconHtml +
+      '<div class="flex-1 leading-snug break-words">' + message + '</div>' +
+      '<button type="button" class="text-slate-400 hover:text-slate-600 text-xs p-0.5 ml-1 transition-colors" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+
+    container.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(function () {
+      toast.classList.remove("translate-y-2", "opacity-0");
+      toast.classList.add("translate-y-0", "opacity-100");
+    });
+
+    // Auto dismiss
+    setTimeout(function () {
+      toast.classList.remove("translate-y-0", "opacity-100");
+      toast.classList.add("translate-y-2", "opacity-0");
+      setTimeout(function () {
+        if (toast.parentElement) toast.remove();
+      }, 300);
+    }, duration);
+  }
+  window.showNotification = showNotification;
+
   /** Set from getSessionInfo(); used for UI gating (server still enforces). */
   window.APP_PERMS = null;
 
