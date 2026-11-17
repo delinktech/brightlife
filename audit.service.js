@@ -425,6 +425,18 @@ function runSchemaMigrationAddMemberIds_() {
 
   // Setup formula-driven dynamic Total Savings on Members sheet
   try {
+    setupLoanRepaymentsFormulas_(ss);
+  } catch (errRepF) {
+    console.error("setupLoanRepaymentsFormulas_ error: " + errRepF.message);
+  }
+
+  try {
+    setupGuarantorsSchemaAndFormulas_(ss);
+  } catch (errGuarF) {
+    console.error("setupGuarantorsSchemaAndFormulas_ error: " + errGuarF.message);
+  }
+
+  try {
     setupMembersSavingsFormula_(ss);
   } catch (errSav) {
     console.error("setupMembersSavingsFormula_ error: " + errSav.message);
@@ -710,12 +722,15 @@ function setupFundStatementsSchema_(ss) {
 function setOrUpdateNamedRange_(ss, name, range) {
   if (!ss || !name || !range) return;
   try {
-    const existing = ss.getRangeByName(name);
-    if (existing) {
-      ss.removeNamedRange(name);
+    const namedRanges = ss.getNamedRanges();
+    for (let i = 0; i < namedRanges.length; i++) {
+      if (namedRanges[i].getName() === name) {
+        namedRanges[i].remove();
+        break;
+      }
     }
   } catch (e) {
-    // ignore
+    console.warn("remove named range notice: " + e.message);
   }
   try {
     ss.setNamedRange(name, range);
@@ -1300,9 +1315,102 @@ function getColLetter_(colNumber) {
   return letter;
 }
 
+/**
+ * Populates Borrower Name formulas on Loan Repayments using Named Ranges
+ */
+function setupLoanRepaymentsFormulas_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  const repSheet = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
+  if (!repSheet || repSheet.getLastRow() < 1) return;
+
+  const vals = repSheet.getDataRange().getValues();
+  const col = getHeaderMap_(vals[0]);
+  const totalRows = Math.max(repSheet.getLastRow(), 2);
+
+  const memIdColIdx = col["Member ID"] !== undefined ? col["Member ID"] : col["Member id"];
+  const nameColIdx = col["Borrower Name"];
+
+  if (memIdColIdx !== undefined && nameColIdx !== undefined) {
+    const midLetter = getColLetter_(memIdColIdx + 1);
+    for (let r = 2; r <= totalRows; r++) {
+      repSheet.getRange(r, nameColIdx + 1).setFormula(
+        '=IF(' + midLetter + r + '="", "", IFERROR(XLOOKUP(' + midLetter + r + ', Members_MemberID, Members_FullName, "—"), ""))'
+      );
+    }
+  }
+}
+
+/**
+ * Ensures Guarantors sheet has dynamic, error-free formulas using Named Ranges
+ */
+function setupGuarantorsSchemaAndFormulas_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  const gSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+  if (!gSheet || gSheet.getLastRow() < 1) return;
+
+  const vals = gSheet.getDataRange().getValues();
+  const col = getHeaderMap_(vals[0]);
+  const totalRows = Math.max(gSheet.getLastRow(), 2);
+
+  const loanIdColIdx = col["Loan ID"];
+  const memIdColIdx = col["Member ID"] !== undefined ? col["Member ID"] : col["Member id"];
+  const nameColIdx = col["Guarantor Name"];
+  const loanStatColIdx = col["Loan Status"];
+  const savColIdx = col["Guarantor’s Savings Balance"] !== undefined ? col["Guarantor’s Savings Balance"] : col["Guarantor's Savings Balance"];
+  const eligColIdx = col["Guarantor Eligibility"];
+
+  for (let r = 2; r <= totalRows; r++) {
+    const midLetter = memIdColIdx !== undefined ? getColLetter_(memIdColIdx + 1) : "B";
+    const loanIdLetter = loanIdColIdx !== undefined ? getColLetter_(loanIdColIdx + 1) : "A";
+
+    // Guarantor Name
+    if (nameColIdx !== undefined) {
+      gSheet.getRange(r, nameColIdx + 1).setFormula(
+        '=IF(' + midLetter + r + '="", "", IFERROR(XLOOKUP(' + midLetter + r + ', Members_MemberID, Members_FullName, "—"), ""))'
+      );
+    }
+
+    // Loan Status
+    if (loanStatColIdx !== undefined) {
+      gSheet.getRange(r, loanStatColIdx + 1).setFormula(
+        '=IF(' + loanIdLetter + r + '="", "", IFERROR(XLOOKUP(' + loanIdLetter + r + ', Loans_LoanID, Loans_Status, "—"), ""))'
+      );
+    }
+
+    // Guarantor’s Savings Balance
+    if (savColIdx !== undefined) {
+      gSheet.getRange(r, savColIdx + 1).setFormula(
+        '=IF(' + midLetter + r + '="", 0, IFERROR(XLOOKUP(' + midLetter + r + ', Members_MemberID, Members_TotalSavings, 0), 0))'
+      );
+    }
+
+    // Guarantor Eligibility: VALID if Savings Balance >= Guaranteed Amount
+    if (eligColIdx !== undefined && savColIdx !== undefined && col["Guaranteed Amount"] !== undefined) {
+      const savLetter = getColLetter_(savColIdx + 1);
+      const amtLetter = getColLetter_(col["Guaranteed Amount"] + 1);
+      gSheet.getRange(r, eligColIdx + 1).setFormula(
+        '=IF(' + midLetter + r + '="", "", IF(' + savLetter + r + ' >= ' + amtLetter + r + ', "VALID", "INSUFFICIENT_SAVINGS"))'
+      );
+    }
+  }
+
+  if (savColIdx !== undefined) gSheet.getRange(2, savColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+  if (col["Guaranteed Amount"] !== undefined) gSheet.getRange(2, col["Guaranteed Amount"] + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
+}
+
 function testDiagnoseSheetHeaders_() {
   const ss = getSpreadsheet_();
   const res = {};
+
+  const namedRanges = ss.getNamedRanges();
+  res["_namedRanges"] = namedRanges.map(function(nr) {
+    try {
+      return { name: nr.getName(), range: nr.getRange().getA1Notation(), sheet: nr.getRange().getSheet().getName() };
+    } catch (e) {
+      return { name: nr.getName(), error: e.message };
+    }
+  });
+
   [SHEETS.MEMBERS, SHEETS.CONTRIBUTIONS, SHEETS.LOANS, SHEETS.GUARANTORS, SHEETS.LOAN_REPAYMENTS, SHEETS.ACCOUNTS, SHEETS.INVESTMENTS, SHEETS.CONSTANTS, SHEETS.FUND_STATEMENTS].forEach(function(sName) {
     const s = ss.getSheetByName(sName);
     if (!s) {
@@ -1310,7 +1418,8 @@ function testDiagnoseSheetHeaders_() {
     } else {
       const headers = s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getValues()[0];
       const dataRows = s.getLastRow() > 1 ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getValues() : [];
-      res[sName] = { headers: headers, preview: dataRows };
+      const formulaRows = s.getLastRow() > 1 ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getFormulas() : [];
+      res[sName] = { headers: headers, preview: dataRows, formulas: formulaRows };
     }
   });
   return res;
