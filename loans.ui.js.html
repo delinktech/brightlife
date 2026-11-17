@@ -453,6 +453,12 @@
     activeBorrowerLoans = [];
     document.getElementById("payLoanForm").reset();
 
+    const plDatePicker = document.getElementById("pl-date") ? document.getElementById("pl-date")._flatpickr : null;
+    if (plDatePicker) plDatePicker.setDate(new Date());
+    else if (document.getElementById("pl-date")) document.getElementById("pl-date").value = new Date().toISOString().split("T")[0];
+    const plTidInput = document.getElementById("pl-tid");
+    if (plTidInput) plTidInput.value = "";
+
     setupLoanBorrowerCombobox();
     document.getElementById("payLoanModal").classList.remove("hidden");
   }
@@ -499,9 +505,10 @@
         borrower: document.getElementById("pl-member") ? document.getElementById("pl-member").value : "",
         memberId: document.getElementById("pl-member-id") ? document.getElementById("pl-member-id").value : "",
         loanId: document.getElementById("pl-loan-id") ? document.getElementById("pl-loan-id").value : "",
+        date: document.getElementById("pl-date") ? document.getElementById("pl-date").value : "",
         amount: document.getElementById("pl-amount").value,
         mode: document.getElementById("pl-mode").value,
-        tid: "",
+        tid: document.getElementById("pl-tid") ? document.getElementById("pl-tid").value.trim() : "",
       });
   });
 </script>

@@ -8,6 +8,22 @@
  */
 
 /**
+ * Test function to verify and authorize MailApp email sending in Apps Script editor
+ */
+function testSendEmail() {
+  const userEmail = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
+  if (!userEmail) throw new Error("No active email detected. Please run from Apps Script editor.");
+  MailApp.sendEmail({
+    to: userEmail,
+    subject: "Brightlife SHG - Email System Test",
+    body: "This is a test email confirming that email permissions are successfully authorized for Brightlife SHG.",
+    name: "Brightlife SHG Treasury"
+  });
+  console.log("Test email sent successfully to " + userEmail);
+  return "Test email successfully sent to " + userEmail;
+}
+
+/**
  * Normalizes Kenyan phone numbers to E.164 without '+' (e.g. 254712345678)
  */
 function normalizeKenyanPhone_(phone) {

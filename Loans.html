@@ -183,42 +183,61 @@
         </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Repayment Amount (KSh)</label>
-        <input type="number" id="pl-amount" placeholder="0.00" required
-          class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Deposit Channel</label>
-        <div id="select-plmode-wrapper" data-shadcn-select class="relative">
-          <input type="hidden" id="pl-mode" value="Equity Bank" />
-          <button type="button" class="shadcn-select-trigger">
-            <span class="shadcn-select-label">Equity Bank</span>
-            <i class="fas fa-chevron-down"></i>
-          </button>
-          <div class="shadcn-dropdown-menu hidden">
-            <div class="shadcn-dropdown-item selected" data-value="Equity Bank">
-              <span class="item-text">Equity Bank</span>
-              <span class="item-id">Bank</span>
-            </div>
-            <div class="shadcn-dropdown-item" data-value="CIC MMF">
-              <span class="item-text">CIC MMF</span>
-              <span class="item-id">MMF</span>
-            </div>
-            <div class="shadcn-dropdown-item" data-value="Mansa X">
-              <span class="item-text">Mansa X</span>
-              <span class="item-id">SIB Fund</span>
-            </div>
-            <div class="shadcn-dropdown-item" data-value="Cash">
-              <span class="item-text">Cash</span>
-              <span class="item-id">Hand</span>
-            </div>
-            <div class="shadcn-dropdown-item" data-value="Refund / Expense Offset">
-              <span class="item-text">Refund / Expense Offset</span>
-              <span class="item-id">Journal</span>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Transaction Date</label>
+          <div class="relative">
+            <input type="text" id="pl-date" placeholder="Select date" required
+              class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
+            <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
+              <i class="fas fa-calendar-alt text-xs"></i>
             </div>
           </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Repayment Amount (KSh)</label>
+          <input type="number" id="pl-amount" placeholder="0.00" required
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Deposit Channel</label>
+          <div id="select-plmode-wrapper" data-shadcn-select class="relative">
+            <input type="hidden" id="pl-mode" value="Equity Bank" />
+            <button type="button" class="shadcn-select-trigger">
+              <span class="shadcn-select-label">Equity Bank</span>
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="shadcn-dropdown-menu hidden">
+              <div class="shadcn-dropdown-item selected" data-value="Equity Bank">
+                <span class="item-text">Equity Bank</span>
+                <span class="item-id">Bank</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="CIC MMF">
+                <span class="item-text">CIC MMF</span>
+                <span class="item-id">MMF</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="Mansa X">
+                <span class="item-text">Mansa X</span>
+                <span class="item-id">SIB Fund</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="Cash">
+                <span class="item-text">Cash</span>
+                <span class="item-id">Hand</span>
+              </div>
+              <div class="shadcn-dropdown-item" data-value="Refund / Expense Offset">
+                <span class="item-text">Refund / Expense Offset</span>
+                <span class="item-id">Journal</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Reference / Receipt No.</label>
+          <input type="text" id="pl-tid" placeholder="e.g. QX938472 or Receipt #"
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
         </div>
       </div>
 

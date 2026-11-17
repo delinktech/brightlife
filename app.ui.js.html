@@ -567,10 +567,22 @@
   function initFlatpickrInputs() {
     if (typeof flatpickr === "undefined") return;
 
-    // Transaction Date
+    // Transaction Date (Contributions)
     const cDate = document.getElementById("c-date");
     if (cDate && !cDate._flatpickr) {
       flatpickr(cDate, {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d-M-Y",
+        defaultDate: new Date(),
+        disableMobile: "true"
+      });
+    }
+
+    // Repayment Date (Loans)
+    const plDate = document.getElementById("pl-date");
+    if (plDate && !plDate._flatpickr) {
+      flatpickr(plDate, {
         dateFormat: "Y-m-d",
         altInput: true,
         altFormat: "d-M-Y",

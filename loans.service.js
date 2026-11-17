@@ -325,13 +325,14 @@ function processLoanPayment(data) {
       repSheet.setFrozenRows(1);
     }
     const paymentId = "PAY-" + Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone(), "yyyyMMdd-HHmmss");
+    const paymentDate = (data.date ? parseDateInput_(data.date) : null) || new Date();
     const repHeaders = repSheet.getRange(1, 1, 1, repSheet.getLastColumn()).getValues()[0];
     const repCol = getHeaderMap_(repHeaders);
     const repRow = new Array(repHeaders.length).fill("");
 
     if (repCol["Payment ID"] !== undefined) repRow[repCol["Payment ID"]] = paymentId;
     if (repCol["Loan ID"] !== undefined) repRow[repCol["Loan ID"]] = loanId;
-    if (repCol["Payment Date"] !== undefined) repRow[repCol["Payment Date"]] = new Date();
+    if (repCol["Payment Date"] !== undefined) repRow[repCol["Payment Date"]] = paymentDate;
     if (repCol["Member ID"] !== undefined) repRow[repCol["Member ID"]] = rowLoanMid;
     if (repCol["Borrower Name"] !== undefined) repRow[repCol["Borrower Name"]] = rowLoanBorrower;
     if (repCol["Total Paid"] !== undefined) repRow[repCol["Total Paid"]] = paymentAmount;
@@ -358,7 +359,8 @@ function processLoanPayment(data) {
       const cCol = getHeaderMap_(cVals[0]);
       const nextRow = new Array(cVals[0].length).fill("");
 
-      if (cCol["Date"] !== undefined) nextRow[cCol["Date"]] = new Date();
+      const paymentDate = (data.date ? parseDateInput_(data.date) : null) || new Date();
+      if (cCol["Date"] !== undefined) nextRow[cCol["Date"]] = paymentDate;
       if (cCol["Member ID"] !== undefined) nextRow[cCol["Member ID"]] = rowLoanMid;
       if (cCol["Member Name"] !== undefined) nextRow[cCol["Member Name"]] = rowLoanBorrower;
       if (cCol["Amount"] !== undefined) nextRow[cCol["Amount"]] = paymentAmount;
@@ -399,7 +401,31 @@ function processLoanPayment(data) {
   );
 
   clearDashboardCache_();
-  return { success: true };
+
+  let receiptResult = null;
+  if (isApproved) {
+    try {
+      receiptResult = triggerTransactionReceipt({
+        receiptNo: "BL-RCP-" + (data.tid || paymentId),
+        date: paymentDate,
+        memberId: rowLoanMid,
+        memberName: rowLoanBorrower,
+        amount: paymentAmount,
+        type: "Loan Repayment",
+        channel: data.mode || data.channel || "Equity Bank",
+        tid: data.tid || paymentId,
+        isLoanRepayment: true,
+        principalPaid: deltaPrincipal,
+        interestPaid: deltaInterest,
+        feePaid: deltaFee,
+        loanBalance: newBalance
+      });
+    } catch (rErr) {
+      console.error("Auto receipt error: " + rErr.message);
+    }
+  }
+
+  return { success: true, receipt: receiptResult };
 }
 
 /**
