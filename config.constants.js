@@ -47,6 +47,29 @@ const DEPOSIT_CHANNELS = Object.freeze({
   REFUND_OFFSET: "Refund / Expense Offset",
 });
 
+/**
+ * Normalizes deposit channels strictly to the 5 approved channels
+ */
+function normalizeDepositChannel_(channel) {
+  if (!channel) return DEPOSIT_CHANNELS.EQUITY_BANK;
+  const c = String(channel).trim();
+  const lower = c.toLowerCase();
+  if (lower === "m-pesa" || lower === "mpesa" || lower.indexOf("mpesa") !== -1 || lower.indexOf("paybill") !== -1) {
+    return DEPOSIT_CHANNELS.EQUITY_BANK;
+  }
+  const VALID = [
+    DEPOSIT_CHANNELS.CASH,
+    DEPOSIT_CHANNELS.EQUITY_BANK,
+    DEPOSIT_CHANNELS.CIC_MMF,
+    DEPOSIT_CHANNELS.MANSA_X,
+    DEPOSIT_CHANNELS.REFUND_OFFSET,
+  ];
+  for (let i = 0; i < VALID.length; i++) {
+    if (VALID[i].toLowerCase() === lower) return VALID[i];
+  }
+  return c;
+}
+
 const TRANSACTION_TYPES = Object.freeze({
   MONTHLY_CONTRIBUTION: "Monthly Contribution",
   LOAN_REPAYMENT: "Loan Repayment",

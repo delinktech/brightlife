@@ -124,7 +124,13 @@ function saveNotificationSettings(data) {
  */
 function getMemberContactAndFinancials_(memberIdOrName) {
   if (!memberIdOrName) return null;
-  const searchKey = String(memberIdOrName).trim().toLowerCase();
+  const rawKey = String(memberIdOrName).trim();
+  const searchKey = rawKey.toLowerCase();
+
+  // Extract Member ID if passed in format "Name (BL25-XXXX)" or "(BL25-XXXX)"
+  let extractedId = "";
+  const idMatch = rawKey.match(/\((BL\d{2}-\d+)\)/i) || rawKey.match(/(BL\d{2}-\d+)/i);
+  if (idMatch) extractedId = idMatch[1].trim().toLowerCase();
 
   const ss = getSpreadsheet_();
   const memSheet = getRequiredSheet_(SHEETS.MEMBERS);
@@ -133,14 +139,31 @@ function getMemberContactAndFinancials_(memberIdOrName) {
   const col = getHeaderMap_(headers);
 
   let targetRow = null;
+  // 1. Exact match on Member ID, Full Name, or Member Name
   for (let i = 1; i < values.length; i++) {
     const rowId = col["Member ID"] !== undefined ? String(values[i][col["Member ID"]] || "").trim().toLowerCase() : "";
     const rowName = col["Full Name"] !== undefined ? String(values[i][col["Full Name"]] || "").trim().toLowerCase() : "";
     const altName = col["Member Name"] !== undefined ? String(values[i][col["Member Name"]] || "").trim().toLowerCase() : "";
 
-    if (rowId === searchKey || rowName === searchKey || altName === searchKey) {
+    if ((extractedId && rowId === extractedId) || rowId === searchKey || rowName === searchKey || altName === searchKey) {
       targetRow = values[i];
       break;
+    }
+  }
+
+  // 2. Substring fallback match
+  if (!targetRow) {
+    for (let i = 1; i < values.length; i++) {
+      const rowId = col["Member ID"] !== undefined ? String(values[i][col["Member ID"]] || "").trim().toLowerCase() : "";
+      const rowName = col["Full Name"] !== undefined ? String(values[i][col["Full Name"]] || "").trim().toLowerCase() : "";
+      if (rowId && searchKey.indexOf(rowId) !== -1) {
+        targetRow = values[i];
+        break;
+      }
+      if (rowName && (searchKey.indexOf(rowName) !== -1 || rowName.indexOf(searchKey) !== -1)) {
+        targetRow = values[i];
+        break;
+      }
     }
   }
 
@@ -186,9 +209,10 @@ function getMemberContactAndFinancials_(memberIdOrName) {
 function buildReceiptWhatsAppMessage_(data) {
   const receiptNo = data.receiptNo || "BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm");
   const dateStr = formatFriendlyDate_(data.date || new Date());
-  const memberNameUpper = String(data.memberName || "Member").trim().toUpperCase();
+  let cleanName = String(data.memberName || "Member").trim();
+  cleanName = cleanName.replace(/\s*\([A-Z0-9-]+\)\s*$/i, "").trim().toUpperCase();
   const memberIdClean = String(data.memberId || "").trim().toUpperCase();
-  const memberLine = memberIdClean ? (memberNameUpper + " (" + memberIdClean + ")") : memberNameUpper;
+  const memberLine = memberIdClean ? (cleanName + " (" + memberIdClean + ")") : cleanName;
   const channel = normalizeDepositChannel_(data.channel || data.mode);
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
@@ -229,9 +253,10 @@ function buildReceiptWhatsAppMessage_(data) {
 function buildReceiptHtmlEmail_(data) {
   const receiptNo = data.receiptNo || "BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm");
   const dateStr = formatFriendlyDate_(data.date || new Date());
-  const memberNameUpper = String(data.memberName || "Member").trim().toUpperCase();
+  let cleanName = String(data.memberName || "Member").trim();
+  cleanName = cleanName.replace(/\s*\([A-Z0-9-]+\)\s*$/i, "").trim().toUpperCase();
   const memberIdClean = String(data.memberId || "").trim().toUpperCase();
-  const memberLine = memberIdClean ? (memberNameUpper + " (" + memberIdClean + ")") : memberNameUpper;
+  const memberLine = memberIdClean ? (cleanName + " (" + memberIdClean + ")") : cleanName;
   const channel = normalizeDepositChannel_(data.channel || data.mode);
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
