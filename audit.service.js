@@ -1340,24 +1340,24 @@ function setupMembersSavingsFormula_(ss) {
   const memStatLetter = statusColIdx !== undefined ? getColLetter_(statusColIdx + 1) : "P";
 
   for (let r = 2; r <= totalRows; r++) {
-    // 1. Total Savings: sum approved contributions matching Member ID using Named Ranges
+    // 1. Total Savings: sum approved contributions matching Member ID
     if (savColIdx !== undefined) {
       memSheet.getRange(r, savColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Contributions_Amount, Contributions_MemberID, ' + memIdLetter + r + ', Contributions_Status, "Approved"))'
+        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Contributions!$D:$D, Contributions!$B:$B, ' + memIdLetter + r + ', Contributions!$H:$H, "Approved"))'
       );
     }
 
     // 2. Current Loan Balance: sum Balance from Loans matching Member ID and Status Active or Approved
     if (loanBalColIdx !== undefined) {
       memSheet.getRange(r, loanBalColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + r + ', Loans_Status, "Active") + SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + r + ', Loans_Status, "Approved"))'
+        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Loans!$N:$N, Loans!$D:$D, ' + memIdLetter + r + ', Loans!$O:$O, "Active") + SUMIFS(Loans!$N:$N, Loans!$D:$D, ' + memIdLetter + r + ', Loans!$O:$O, "Approved"))'
       );
     }
 
     // 3. Guaranteed Amount: sum Guaranteed Amount from Guarantors matching Member ID and Status Active or Approved
     if (guarColIdx !== undefined) {
       memSheet.getRange(r, guarColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + r + ', Guarantors_Status, "Active") + SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + r + ', Guarantors_Status, "Approved"))'
+        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Guarantors!$F:$F, Guarantors!$B:$B, ' + memIdLetter + r + ', Guarantors!$D:$D, "Active") + SUMIFS(Guarantors!$F:$F, Guarantors!$B:$B, ' + memIdLetter + r + ', Guarantors!$D:$D, "Approved"))'
       );
     }
 
