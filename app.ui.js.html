@@ -261,6 +261,9 @@
             showAccessDenied(info.email, info);
             return;
           }
+          window.currentUser = info;
+          window.currentUser.roleKey = String(info.role || "").toLowerCase();
+          window.session = window.currentUser;
           applyRolePermissions(info.permissions || {});
 
           if (callback) callback(info);

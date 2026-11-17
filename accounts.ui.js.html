@@ -225,8 +225,14 @@ function loadAccounts() {
       accountsState.accounts = rows;
       renderPaymentGuideCards(rows);
 
-      const roleKey = (window.currentUser && window.currentUser.roleKey) || (typeof session !== "undefined" && session.roleKey) || "";
-      const isAdminOrTreasurer = roleKey === "admin" || roleKey === "treasurer";
+      const perms = window.APP_PERMS || (window.currentUser && window.currentUser.permissions) || {};
+      const roleKey = (window.currentUser && (window.currentUser.roleKey || window.currentUser.role)) || (typeof session !== "undefined" && (session.roleKey || session.role)) || "";
+      const isAdminOrTreasurer =
+        response.canReconcile === true ||
+        perms.accountsWrite === true ||
+        perms.isAdmin === true ||
+        roleKey === "admin" ||
+        roleKey === "treasurer";
       const tabs = document.getElementById("accounts-admin-tabs");
 
       if (isAdminOrTreasurer) {
