@@ -127,7 +127,6 @@ function getLoansData(page, limit) {
  */
 function getMemberActiveLoans(memberId, memberName) {
   try {
-    requireAccess_();
     const ss = getSpreadsheet_();
     const sheet = getRequiredSheet_(SHEETS.LOANS);
     const values = sheet.getDataRange().getValues();
@@ -282,18 +281,26 @@ function processLoanPayment(data) {
   // Only apply waterfall balance updates if Approved immediately; if Pending, hold until Treasurer approves
   const isApproved = initialStatus === "Approved";
   if (isApproved) {
-    sheet.getRange(targetRowIndex, col["Total Paid"] + 1).setValue(newTotalPaid);
-    sheet.getRange(targetRowIndex, col["Balance"] + 1).setValue(newBalance);
-    sheet.getRange(targetRowIndex, col["Status"] + 1).setValue(newStatus);
+    const totCell = sheet.getRange(targetRowIndex, col["Total Paid"] + 1);
+    if (!totCell.getFormula()) totCell.setValue(newTotalPaid);
+
+    const balCell = sheet.getRange(targetRowIndex, col["Balance"] + 1);
+    if (!balCell.getFormula()) balCell.setValue(newBalance);
+
+    const statCell = sheet.getRange(targetRowIndex, col["Status"] + 1);
+    if (!statCell.getFormula()) statCell.setValue(newStatus);
 
     if (col["Principal Paid"] !== undefined) {
-      sheet.getRange(targetRowIndex, col["Principal Paid"] + 1).setValue(allocPrincipal);
+      const pCell = sheet.getRange(targetRowIndex, col["Principal Paid"] + 1);
+      if (!pCell.getFormula()) pCell.setValue(allocPrincipal);
     }
     if (col["Interest Paid"] !== undefined) {
-      sheet.getRange(targetRowIndex, col["Interest Paid"] + 1).setValue(allocInterest);
+      const iCell = sheet.getRange(targetRowIndex, col["Interest Paid"] + 1);
+      if (!iCell.getFormula()) iCell.setValue(allocInterest);
     }
     if (col["Fee Paid"] !== undefined) {
-      sheet.getRange(targetRowIndex, col["Fee Paid"] + 1).setValue(allocFee);
+      const fCell = sheet.getRange(targetRowIndex, col["Fee Paid"] + 1);
+      if (!fCell.getFormula()) fCell.setValue(allocFee);
     }
   }
 
@@ -588,18 +595,26 @@ function updateLoanRepaymentStatus(params) {
       allocInterestPaid = allocInterest;
       allocFeePaid = allocFee;
 
-      loanSheet.getRange(targetLoanRow, loanCol["Total Paid"] + 1).setValue(newTotalPaid);
-      loanSheet.getRange(targetLoanRow, loanCol["Balance"] + 1).setValue(newBalance);
-      loanSheet.getRange(targetLoanRow, loanCol["Status"] + 1).setValue(newStatusLoan);
+      const totCell = loanSheet.getRange(targetLoanRow, loanCol["Total Paid"] + 1);
+      if (!totCell.getFormula()) totCell.setValue(newTotalPaid);
+
+      const balCell = loanSheet.getRange(targetLoanRow, loanCol["Balance"] + 1);
+      if (!balCell.getFormula()) balCell.setValue(newBalance);
+
+      const statCell = loanSheet.getRange(targetLoanRow, loanCol["Status"] + 1);
+      if (!statCell.getFormula()) statCell.setValue(newStatusLoan);
 
       if (loanCol["Principal Paid"] !== undefined) {
-        loanSheet.getRange(targetLoanRow, loanCol["Principal Paid"] + 1).setValue(allocPrincipal);
+        const pCell = loanSheet.getRange(targetLoanRow, loanCol["Principal Paid"] + 1);
+        if (!pCell.getFormula()) pCell.setValue(allocPrincipal);
       }
       if (loanCol["Interest Paid"] !== undefined) {
-        loanSheet.getRange(targetLoanRow, loanCol["Interest Paid"] + 1).setValue(allocInterest);
+        const iCell = loanSheet.getRange(targetLoanRow, loanCol["Interest Paid"] + 1);
+        if (!iCell.getFormula()) iCell.setValue(allocInterest);
       }
       if (loanCol["Fee Paid"] !== undefined) {
-        loanSheet.getRange(targetLoanRow, loanCol["Fee Paid"] + 1).setValue(allocFee);
+        const fCell = loanSheet.getRange(targetLoanRow, loanCol["Fee Paid"] + 1);
+        if (!fCell.getFormula()) fCell.setValue(allocFee);
       }
     }
   }
