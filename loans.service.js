@@ -155,7 +155,10 @@ function getMemberActiveLoans(memberId, memberName) {
       const repayment = Number(row[col["Repayment Amount"]]) || 0;
       const paid = Number(row[col["Total Paid"]]) || 0;
 
-      if (!loanId || status === LOAN_STATUS.SETTLED || status === LOAN_STATUS.REJECTED) continue;
+      const statusLower = status.toLowerCase();
+      if (!loanId || statusLower === "settled" || statusLower === "rejected") continue;
+
+      const effectiveBalance = balance > 0 ? balance : Math.max(0, repayment - paid);
 
       const borrowerLower = borrower.toLowerCase();
       const match = (targetMid && rowMid === targetMid) ||
@@ -166,7 +169,7 @@ function getMemberActiveLoans(memberId, memberName) {
           loanId: loanId,
           borrower: borrower,
           memberId: rowMid,
-          balance: balance,
+          balance: effectiveBalance,
           repayment: repayment,
           paid: paid,
           status: status

@@ -36,6 +36,23 @@ function normalizeKenyanPhone_(phone) {
 }
 
 /**
+ * Normalizes deposit channels strictly to the 5 approved channels
+ */
+function normalizeDepositChannel_(channel) {
+  if (!channel) return "Equity Bank";
+  const c = String(channel).trim();
+  const lower = c.toLowerCase();
+  if (lower === "m-pesa" || lower === "mpesa" || lower.indexOf("mpesa") !== -1 || lower.indexOf("paybill") !== -1) {
+    return "Equity Bank";
+  }
+  const VALID = ["Cash", "Equity Bank", "CIC MMF", "Mansa X", "Refund / Expense Offset"];
+  for (let i = 0; i < VALID.length; i++) {
+    if (VALID[i].toLowerCase() === lower) return VALID[i];
+  }
+  return c;
+}
+
+/**
  * Formats a number as KES currency string
  */
 function formatCurrency_(amount) {
@@ -169,9 +186,10 @@ function getMemberContactAndFinancials_(memberIdOrName) {
 function buildReceiptWhatsAppMessage_(data) {
   const receiptNo = data.receiptNo || "BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm");
   const dateStr = formatFriendlyDate_(data.date || new Date());
-  const memberNameUpper = String(data.memberName || "Member").toUpperCase();
-  const memberLine = data.memberId ? (memberNameUpper + " (" + data.memberId + ")") : memberNameUpper;
-  const channel = data.channel || data.mode || "Equity Bank";
+  const memberNameUpper = String(data.memberName || "Member").trim().toUpperCase();
+  const memberIdClean = String(data.memberId || "").trim().toUpperCase();
+  const memberLine = memberIdClean ? (memberNameUpper + " (" + memberIdClean + ")") : memberNameUpper;
+  const channel = normalizeDepositChannel_(data.channel || data.mode);
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
 
@@ -211,9 +229,10 @@ function buildReceiptWhatsAppMessage_(data) {
 function buildReceiptHtmlEmail_(data) {
   const receiptNo = data.receiptNo || "BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm");
   const dateStr = formatFriendlyDate_(data.date || new Date());
-  const memberNameUpper = String(data.memberName || "Member").toUpperCase();
-  const memberLine = data.memberId ? (memberNameUpper + " (" + data.memberId + ")") : memberNameUpper;
-  const channel = data.channel || data.mode || "Equity Bank";
+  const memberNameUpper = String(data.memberName || "Member").trim().toUpperCase();
+  const memberIdClean = String(data.memberId || "").trim().toUpperCase();
+  const memberLine = memberIdClean ? (memberNameUpper + " (" + memberIdClean + ")") : memberNameUpper;
+  const channel = normalizeDepositChannel_(data.channel || data.mode);
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
   const savingsStr = formatCurrency_(data.totalSavings || 0);
@@ -363,7 +382,7 @@ function triggerTransactionReceipt(txData) {
       memberName: member ? member.name : (txData.memberName || "Member"),
       amount: Number(txData.amount) || 0,
       type: txData.type || "Monthly Contribution",
-      channel: txData.channel || txData.mode || "Equity Bank",
+      channel: normalizeDepositChannel_(txData.channel || txData.mode || "Equity Bank"),
       tid: txData.tid || "",
       isLoanRepayment: txData.isLoanRepayment || (txData.type === "Loan Repayment"),
       principalPaid: Number(txData.principalPaid) || 0,

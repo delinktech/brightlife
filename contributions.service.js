@@ -30,14 +30,14 @@ function saveContribution(data) {
     newRow[col["Member ID"]] = memberId;
   }
 
-  // Member Name is dynamically computed via formula pointing to Members Column N
+  // Member Name is dynamically computed via formula pointing to Members Named Ranges
   const nameIdx = col["Member Name"];
   if (nameIdx !== undefined) {
     const nextRowNumber = sheet.getLastRow() + 1;
     const midIdx = col["Member ID"];
     if (midIdx !== undefined) {
       const midColLetter = String.fromCharCode(65 + midIdx);
-      newRow[nameIdx] = '=IF(' + midColLetter + nextRowNumber + '="", "", IFERROR(XLOOKUP(' + midColLetter + nextRowNumber + ', Members!$A$2:$A, Members!$N$2:$N, "—"), ""))';
+      newRow[nameIdx] = '=IF(' + midColLetter + nextRowNumber + '="", "", IFERROR(XLOOKUP(' + midColLetter + nextRowNumber + ', Members_MemberID, Members_FullName, "—"), ""))';
     } else {
       newRow[nameIdx] = memberName;
     }
@@ -87,6 +87,16 @@ function saveContribution(data) {
   let receiptResult = null;
   if (initialStatus === "Approved") {
     try {
+      let currentBal = null;
+      try {
+        const lnRes = typeof getMemberActiveLoans === "function" ? getMemberActiveLoans(memberId, memberName) : null;
+        if (lnRes && lnRes.success && lnRes.loans && lnRes.loans.length > 0) {
+          let bSum = 0;
+          lnRes.loans.forEach(function(l) { bSum += Number(l.balance) || 0; });
+          currentBal = bSum;
+        }
+      } catch (e) {}
+
       receiptResult = triggerTransactionReceipt({
         receiptNo: "BL-RCP-" + (data.tid || ("ROW" + (sheet.getLastRow()))),
         date: new Date(),
@@ -97,6 +107,7 @@ function saveContribution(data) {
         channel: data.mode || data.channel || "Equity Bank",
         tid: data.tid || "",
         isLoanRepayment: data.type === "Loan Repayment",
+        loanBalance: currentBal,
       });
     } catch (rcpErr) {
       console.error("Auto receipt error: " + rcpErr.message);
@@ -322,6 +333,16 @@ function updateContributionStatus(params) {
       const rowChannel = chanA || chanB || "Equity Bank";
       const rowDate = col["Date"] !== undefined ? rowVals[col["Date"]] : new Date();
 
+      let currentBal = null;
+      try {
+        const lnRes = typeof getMemberActiveLoans === "function" ? getMemberActiveLoans(rowMid, rowMName) : null;
+        if (lnRes && lnRes.success && lnRes.loans && lnRes.loans.length > 0) {
+          let bSum = 0;
+          lnRes.loans.forEach(function(l) { bSum += Number(l.balance) || 0; });
+          currentBal = bSum;
+        }
+      } catch (e) {}
+
       receiptResult = triggerTransactionReceipt({
         receiptNo: "BL-RCP-" + (rowTid || ("ROW" + targetRow)),
         date: rowDate,
@@ -332,6 +353,7 @@ function updateContributionStatus(params) {
         channel: rowChannel,
         tid: rowTid,
         isLoanRepayment: rowType === "Loan Repayment",
+        loanBalance: currentBal,
       });
     } catch (rErr) {
       console.error("Auto-receipt error in updateContributionStatus: " + rErr.message);

@@ -305,7 +305,7 @@ function executeDividendDistribution(data) {
           const nextRowIdx = cSheet.getLastRow() + 1;
           const midColLetter = getColLetter_(cCol["Member ID"] + 1);
           nextRow[cCol["Member Name"]] =
-            '=IF(' + midColLetter + nextRowIdx + '="", "", IFERROR(XLOOKUP(' + midColLetter + nextRowIdx + ', Members!$A$2:$A, Members!$N$2:$N, "' + name + '"), "' + name + '"))';
+            '=IF(' + midColLetter + nextRowIdx + '="", "", IFERROR(XLOOKUP(' + midColLetter + nextRowIdx + ', Members_MemberID, Members_FullName, "' + name + '"), "' + name + '"))';
         }
 
         if (cCol["Amount"] !== undefined) nextRow[cCol["Amount"]] = savings;

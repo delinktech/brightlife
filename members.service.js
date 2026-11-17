@@ -254,33 +254,19 @@ function saveMember(data) {
     const memIdColIdx = col["Member ID"];
     const memIdLetter = getColLetter_(memIdColIdx + 1);
 
-    // 1. Total Savings: SUMIFS from Contributions where Status = "Approved"
+    // 1. Total Savings: SUMIFS from Contributions where Status = "Approved" via Named Ranges
     if (col["Total Savings"] !== undefined) {
-      let amtColLetter = "D";
-      let midColLetter = "B";
-      let statColLetter = "H";
-      try {
-        const cSheet = ss.getSheetByName(SHEETS.CONTRIBUTIONS);
-        if (cSheet && cSheet.getLastRow() >= 1) {
-          const cCol = getHeaderMap_(cSheet.getDataRange().getValues()[0]);
-          if (cCol["Amount"] !== undefined) amtColLetter = getColLetter_(cCol["Amount"] + 1);
-          const cMid = cCol["Member ID"] !== undefined ? cCol["Member ID"] : cCol["Member id"];
-          if (cMid !== undefined) midColLetter = getColLetter_(cMid + 1);
-          if (cCol["Status"] !== undefined) statColLetter = getColLetter_(cCol["Status"] + 1);
-        }
-      } catch (errC) {}
-
-      rowData[col["Total Savings"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Contributions!$' + amtColLetter + '$2:$' + amtColLetter + ', Contributions!$' + midColLetter + '$2:$' + midColLetter + ', ' + memIdLetter + nextRow + ', Contributions!$' + statColLetter + '$2:$' + statColLetter + ', "Approved"))';
+      rowData[col["Total Savings"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Contributions_Amount, Contributions_MemberID, ' + memIdLetter + nextRow + ', Contributions_Status, "Approved"))';
     }
 
-    // 2. Current Loan Balance: Structured Table reference
+    // 2. Current Loan Balance via Named Ranges
     if (col["Current Loan Balance"] !== undefined) {
-      rowData[col["Current Loan Balance"]] = '=SUMIFS(Loans[Balance], Loans[Member ID], Members[Member ID], Loans[Status], "Active")';
+      rowData[col["Current Loan Balance"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + nextRow + ', Loans_Status, "Active") + SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + nextRow + ', Loans_Status, "Approved"))';
     }
 
-    // 3. Guaranteed Amount: SUM of SUMIFS for Active & Approved loans
+    // 3. Guaranteed Amount via Named Ranges
     if (col["Guaranteed Amount"] !== undefined) {
-      rowData[col["Guaranteed Amount"]] = '=SUM(SUMIFS(Guarantors[Guaranteed Amount], Guarantors[Member ID], ' + memIdLetter + nextRow + ', Guarantors[Loan Status], {"Active","Approved"}, Guarantors[Guarantor Eligibility], "VALID", Guarantors[Legal Confirmation], TRUE))';
+      rowData[col["Guaranteed Amount"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + nextRow + ', Guarantors_Status, "Active") + SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + nextRow + ', Guarantors_Status, "Approved"))';
     }
 
     // 4. Max Loan Eligibility & Available to Guarantee
