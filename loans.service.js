@@ -548,6 +548,11 @@ function updateLoanRepaymentStatus(params) {
   const loanId = String(repVals[repRow - 1][repCol["Loan ID"]] || "").trim();
   const paymentAmount = Number(repVals[repRow - 1][repCol["Total Paid"]]) || 0;
 
+  let computedLoanBalance = null;
+  let allocPrincipalPaid = 0;
+  let allocInterestPaid = 0;
+  let allocFeePaid = 0;
+
   // If transitioning from Pending -> Approved, execute the waterfall balance reduction on the master Loans sheet
   if (currentRepStatus !== "Approved" && newStatus === "Approved") {
     const loanSheet = getRequiredSheet_(SHEETS.LOANS);
@@ -577,6 +582,11 @@ function updateLoanRepaymentStatus(params) {
       const allocInterest = Math.min(remAfterFee, interestTotal);
       const remAfterInterest = Math.max(0, remAfterFee - allocInterest);
       const allocPrincipal = Math.min(remAfterInterest, principalTotal);
+
+      computedLoanBalance = newBalance;
+      allocPrincipalPaid = allocPrincipal;
+      allocInterestPaid = allocInterest;
+      allocFeePaid = allocFee;
 
       loanSheet.getRange(targetLoanRow, loanCol["Total Paid"] + 1).setValue(newTotalPaid);
       loanSheet.getRange(targetLoanRow, loanCol["Balance"] + 1).setValue(newBalance);
@@ -669,16 +679,27 @@ function updateLoanRepaymentStatus(params) {
   let receiptResult = null;
   if (newStatus === "Approved" && !params.skipReceipt) {
     try {
+      const repMid = repCol["Member ID"] !== undefined ? String(repVals[repRow - 1][repCol["Member ID"]] || "").trim() : "";
+      const repBorrower = repCol["Borrower Name"] !== undefined ? String(repVals[repRow - 1][repCol["Borrower Name"]] || "").trim() : "";
+      const chanA = repCol["Deposit Channel"] !== undefined ? String(repVals[repRow - 1][repCol["Deposit Channel"]] || "").trim() : "";
+      const chanB = repCol["Payment Mode"] !== undefined ? String(repVals[repRow - 1][repCol["Payment Mode"]] || "").trim() : "";
+      const repChannel = chanA || chanB || "Equity Bank";
+      const repTid = repCol["Transaction ID"] !== undefined ? String(repVals[repRow - 1][repCol["Transaction ID"]] || "").trim() : paymentId;
+
       receiptResult = triggerTransactionReceipt({
-        receiptNo: paymentId,
+        receiptNo: "BL-RCP-" + (repTid || paymentId),
         date: new Date(),
-        memberId: repCol["Member ID"] !== undefined ? String(repVals[repRow - 1][repCol["Member ID"]] || "").trim() : "",
-        memberName: repCol["Borrower Name"] !== undefined ? String(repVals[repRow - 1][repCol["Borrower Name"]] || "").trim() : "",
+        memberId: repMid,
+        memberName: repBorrower,
         amount: paymentAmount,
         type: "Loan Repayment",
-        channel: repCol["Payment Mode"] !== undefined ? String(repVals[repRow - 1][repCol["Payment Mode"]] || "") : "Equity Bank",
-        tid: paymentId,
+        channel: repChannel,
+        tid: repTid || paymentId,
         isLoanRepayment: true,
+        principalPaid: allocPrincipalPaid,
+        interestPaid: allocInterestPaid,
+        feePaid: allocFeePaid,
+        loanBalance: computedLoanBalance,
       });
     } catch (rErr) {
       console.error("Auto-receipt error in updateLoanRepaymentStatus: " + rErr.message);

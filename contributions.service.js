@@ -94,7 +94,7 @@ function saveContribution(data) {
         memberName: memberName,
         amount: Number(data.amount) || 0,
         type: data.type || "Monthly Contribution",
-        channel: data.mode || data.channel || "Direct Deposit",
+        channel: data.mode || data.channel || "Equity Bank",
         tid: data.tid || "",
         isLoanRepayment: data.type === "Loan Repayment",
       });
@@ -317,7 +317,9 @@ function updateContributionStatus(params) {
       const rowAmt = Number(rowVals[col["Amount"]]) || 0;
       const rowTid = col["Transaction ID"] !== undefined ? String(rowVals[col["Transaction ID"]] || "").trim() : tid;
       const rowType = col["Transaction Type"] !== undefined ? String(rowVals[col["Transaction Type"]] || "") : (col["Type"] !== undefined ? String(rowVals[col["Type"]] || "") : "Monthly Contribution");
-      const rowChannel = col["Deposit Channel"] !== undefined ? String(rowVals[col["Deposit Channel"]] || "") : (col["Payment Mode"] !== undefined ? String(rowVals[col["Payment Mode"]] || "") : "Equity Bank");
+      const chanA = col["Deposit Channel"] !== undefined ? String(rowVals[col["Deposit Channel"]] || "").trim() : "";
+      const chanB = col["Payment Mode"] !== undefined ? String(rowVals[col["Payment Mode"]] || "").trim() : "";
+      const rowChannel = chanA || chanB || "Equity Bank";
       const rowDate = col["Date"] !== undefined ? rowVals[col["Date"]] : new Date();
 
       receiptResult = triggerTransactionReceipt({

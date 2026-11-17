@@ -134,7 +134,23 @@ function getMemberContactAndFinancials_(memberIdOrName) {
   const mPhone = col["Phone Number"] !== undefined ? String(targetRow[col["Phone Number"]] || "").trim() : "";
   const mEmail = col["Email"] !== undefined ? String(targetRow[col["Email"]] || "").trim() : "";
   const mSavings = col["Total Savings"] !== undefined ? (Number(targetRow[col["Total Savings"]]) || 0) : 0;
-  const mLoanBalance = col["Current Loan Balance"] !== undefined ? (Number(targetRow[col["Current Loan Balance"]]) || 0) : 0;
+  let mLoanBalance = col["Current Loan Balance"] !== undefined ? (Number(targetRow[col["Current Loan Balance"]]) || 0) : 0;
+
+  // Real-time lookup of active loan balances from Loans sheet
+  try {
+    const loanRes = typeof getMemberActiveLoans === "function" ? getMemberActiveLoans(mId, mName) : null;
+    if (loanRes && loanRes.success && loanRes.loans && loanRes.loans.length > 0) {
+      let activeSum = 0;
+      loanRes.loans.forEach(function (ln) {
+        activeSum += Number(ln.balance) || 0;
+      });
+      if (activeSum > 0) {
+        mLoanBalance = activeSum;
+      }
+    }
+  } catch (eLn) {
+    console.warn("getMemberContactAndFinancials_ active loans lookup notice: " + eLn.message);
+  }
 
   return {
     id: mId,
@@ -153,8 +169,9 @@ function getMemberContactAndFinancials_(memberIdOrName) {
 function buildReceiptWhatsAppMessage_(data) {
   const receiptNo = data.receiptNo || "BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm");
   const dateStr = formatFriendlyDate_(data.date || new Date());
-  const memberLine = data.memberId ? (data.memberName + " (" + data.memberId + ")") : data.memberName;
-  const channel = data.channel || data.mode || "Direct Deposit";
+  const memberNameUpper = String(data.memberName || "Member").toUpperCase();
+  const memberLine = data.memberId ? (memberNameUpper + " (" + data.memberId + ")") : memberNameUpper;
+  const channel = data.channel || data.mode || "Equity Bank";
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
 
@@ -194,8 +211,9 @@ function buildReceiptWhatsAppMessage_(data) {
 function buildReceiptHtmlEmail_(data) {
   const receiptNo = data.receiptNo || "BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm");
   const dateStr = formatFriendlyDate_(data.date || new Date());
-  const memberLine = data.memberId ? (data.memberName + " (" + data.memberId + ")") : data.memberName;
-  const channel = data.channel || data.mode || "Direct Deposit";
+  const memberNameUpper = String(data.memberName || "Member").toUpperCase();
+  const memberLine = data.memberId ? (memberNameUpper + " (" + data.memberId + ")") : memberNameUpper;
+  const channel = data.channel || data.mode || "Equity Bank";
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
   const savingsStr = formatCurrency_(data.totalSavings || 0);
@@ -329,6 +347,15 @@ function triggerTransactionReceipt(txData) {
     const settings = getNotificationSettings();
 
     const receiptNo = txData.receiptNo || ("BL-RCP-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd-HHmm"));
+
+    // If explicit post-payment loan balance is provided, use it; otherwise fallback to member live loan balance
+    let finalLoanBal = 0;
+    if (txData.loanBalance !== undefined && txData.loanBalance !== null && !isNaN(txData.loanBalance)) {
+      finalLoanBal = Number(txData.loanBalance);
+    } else if (member && member.loanBalance !== undefined && member.loanBalance !== null) {
+      finalLoanBal = Number(member.loanBalance);
+    }
+
     const dataForReceipt = {
       receiptNo: receiptNo,
       date: txData.date || new Date(),
@@ -343,7 +370,7 @@ function triggerTransactionReceipt(txData) {
       interestPaid: Number(txData.interestPaid) || 0,
       feePaid: Number(txData.feePaid) || 0,
       totalSavings: member ? member.savings : (Number(txData.totalSavings) || 0),
-      loanBalance: member ? member.loanBalance : (Number(txData.loanBalance) || 0),
+      loanBalance: finalLoanBal,
     };
 
     // 1. WhatsApp details
@@ -507,6 +534,8 @@ function getMemberMonthlyStatementData(memberId, monthKey) {
   // 3. Compute opening & closing savings
   const closingSavings = member.savings;
   const openingSavings = Math.max(0, closingSavings - monthDeposits);
+  const activeLoanSum = activeLoans.reduce((sum, ln) => sum + (ln.status !== LOAN_STATUS.SETTLED ? ln.balance : 0), 0);
+  const finalStmtLoanBalance = activeLoanSum > 0 ? activeLoanSum : member.loanBalance;
 
   return {
     memberId: member.id,
@@ -519,7 +548,7 @@ function getMemberMonthlyStatementData(memberId, monthKey) {
     openingSavings: openingSavings,
     monthDeposits: monthDeposits,
     closingSavings: closingSavings,
-    loanBalance: member.loanBalance,
+    loanBalance: finalStmtLoanBalance,
     monthLoanRepaid: monthLoanRepaid,
     transactions: monthlyTransactions,
     activeLoans: activeLoans,
@@ -532,7 +561,8 @@ function getMemberMonthlyStatementData(memberId, monthKey) {
  */
 function buildMonthlyStatementWhatsAppMessage_(stmt) {
   const dateStr = stmt.statementDate;
-  const memberLine = stmt.memberName + " (" + stmt.memberId + ")";
+  const memberNameUpper = String(stmt.memberName || "Member").toUpperCase();
+  const memberLine = stmt.memberId ? (memberNameUpper + " (" + stmt.memberId + ")") : memberNameUpper;
 
   let loansText = "• Outstanding Loan Balance: " + formatCurrency_(stmt.loanBalance);
   if (stmt.activeLoans && stmt.activeLoans.length > 0) {
@@ -575,7 +605,8 @@ function buildMonthlyStatementWhatsAppMessage_(stmt) {
  * Builds Rich Branded HTML Monthly Statement Email
  */
 function buildMonthlyStatementHtmlEmail_(stmt) {
-  const memberLine = stmt.memberName + " (" + stmt.memberId + ")";
+  const memberNameUpper = String(stmt.memberName || "Member").toUpperCase();
+  const memberLine = stmt.memberId ? (memberNameUpper + " (" + stmt.memberId + ")") : memberNameUpper;
   const openingStr = formatCurrency_(stmt.openingSavings);
   const depositsStr = formatCurrency_(stmt.monthDeposits);
   const closingSavingsStr = formatCurrency_(stmt.closingSavings);

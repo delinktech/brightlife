@@ -450,11 +450,12 @@ function handleSaveNotificationSettings(e) {
 }
 
 function buildClientSideStatementHtml_(stmt) {
+  const mNameUpper = String(stmt.memberName || "").toUpperCase();
   return '<div style="font-family:sans-serif;padding:20px;color:#1e293b;">' +
     '<h2 style="color:#064e3b;margin:0;">BRIGHTLIFE SELF HELP GROUP</h2>' +
     '<p style="color:#64748b;margin:4px 0 16px 0;">Monthly Financial Statement • ' + (stmt.monthLabel || "") + '</p>' +
     '<div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:16px;">' +
-      '<strong>Member:</strong> ' + stmt.memberName + ' (' + stmt.memberId + ')<br>' +
+      '<strong>Member:</strong> ' + mNameUpper + ' (' + stmt.memberId + ')<br>' +
       '<strong>Email:</strong> ' + (stmt.email || "—") + '<br>' +
       '<strong>Phone:</strong> ' + (stmt.phone || "—") +
     '</div>' +

@@ -458,6 +458,7 @@
     else if (document.getElementById("pl-date")) document.getElementById("pl-date").value = new Date().toISOString().split("T")[0];
     const plTidInput = document.getElementById("pl-tid");
     if (plTidInput) plTidInput.value = "";
+    setShadcnSelectValue("select-plmode-wrapper", "Equity Bank");
 
     setupLoanBorrowerCombobox();
     document.getElementById("payLoanModal").classList.remove("hidden");
