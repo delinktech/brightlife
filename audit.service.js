@@ -1308,20 +1308,13 @@ function setupMembersSavingsFormula_(ss) {
   const guarSheet = ss.getSheetByName(SHEETS.GUARANTORS);
   if (!memSheet || memSheet.getLastRow() < 1) return;
 
-  const oldVals = memSheet.getDataRange().getValues();
-  const headers = oldVals[0];
+  const memVals = memSheet.getDataRange().getValues();
+  const headers = memVals[0];
   const memCol = getHeaderMap_(headers);
-  const rowsData = oldVals.slice(1);
+  const totalRows = memSheet.getLastRow();
+  if (totalRows <= 1) return;
 
-  // Clear sheet to eliminate table-typed column restrictions
-  memSheet.clear();
-  memSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-  if (rowsData.length > 0) {
-    memSheet.getRange(2, 1, rowsData.length, headers.length).setValues(rowsData);
-  }
-  memSheet.setFrozenRows(1);
-
-  // Refresh all named ranges now that sheet has been cleanly written
+  // Refresh all named ranges
   setupAllNamedRanges_(ss);
 
   const savColIdx = memCol["Total Savings"];
@@ -1343,8 +1336,6 @@ function setupMembersSavingsFormula_(ss) {
   const mLoanBalLetter = loanBalColIdx !== undefined ? getColLetter_(loanBalColIdx + 1) : "L";
   const guarColLetter = guarColIdx !== undefined ? getColLetter_(guarColIdx + 1) : "M";
   const memStatLetter = statusColIdx !== undefined ? getColLetter_(statusColIdx + 1) : "P";
-
-  const totalRows = Math.max(memSheet.getLastRow(), rowsData.length + 1, 2);
 
   for (let r = 2; r <= totalRows; r++) {
     // 1. Total Savings: sum approved contributions matching Member ID using Named Ranges
