@@ -429,3 +429,14 @@ function saveFundStatement(data) {
     return { success: false, error: err.message };
   }
 }
+
+/**
+ * Frontend aliases for compatibility with UI callers.
+ */
+function simulateDividendDistribution(params) {
+  return calculateDividendDistributionPreview(params);
+}
+
+function saveFundStatementEntry(data) {
+  return saveFundStatement(data);
+}
