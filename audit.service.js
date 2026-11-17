@@ -758,8 +758,10 @@ function setupFundStatementsSchema_(ss) {
  * Helper to get column range from row 2 downward for named range
  */
 function getNamedColumnRange_(ss, sheetName, colLetter) {
-  const quoted = sheetName.indexOf(" ") !== -1 ? "'" + sheetName + "'" : sheetName;
-  return ss.getRange(quoted + "!" + colLetter + "2:" + colLetter);
+  const s = ss.getSheetByName(sheetName);
+  if (!s) return null;
+  const maxRows = Math.max(s.getMaxRows(), 100);
+  return s.getRange(colLetter + "2:" + colLetter + maxRows);
 }
 
 /**
@@ -1383,17 +1385,6 @@ function setupMembersSavingsFormula_(ss) {
         : '=IF(' + fnL + r + '="", "", TRIM(' + fnL + r + ' & " " & ' + lnL + r + '))';
       memSheet.getRange(r, fnColIdx + 1).setFormula(nameFormula);
     }
-  }
-
-  // Format currency columns safely without failing on typed table columns
-  try {
-    if (savColIdx !== undefined) memSheet.getRange(2, savColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-    if (loanBalColIdx !== undefined) memSheet.getRange(2, loanBalColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-    if (guarColIdx !== undefined) memSheet.getRange(2, guarColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-    if (maxLoanColIdx !== undefined) memSheet.getRange(2, maxLoanColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-    if (availGuarColIdx !== undefined) memSheet.getRange(2, availGuarColIdx + 1, totalRows - 1, 1).setNumberFormat("#,##0.00");
-  } catch (errFmt) {
-    console.warn("setNumberFormat ignored: " + errFmt.message);
   }
 }
 
