@@ -442,6 +442,13 @@ function runSchemaMigrationAddMemberIds_() {
     console.error("setupMembersSavingsFormula_ error: " + errSav.message);
   }
 
+  // Refresh Contributions Member Name formula so any legacy #REF! is repaired
+  try {
+    setupTableColumns_(ss.getSheetByName(SHEETS.CONTRIBUTIONS), "Member ID", "Member Name");
+  } catch (errCRef) {
+    console.error("Contributions repair error: " + errCRef.message);
+  }
+
   // Setup formula-driven dynamic Bank & Cash Reconciliation on Accounts sheet
   try {
     setupAccountsReconciliationSchema_(ss);
@@ -717,7 +724,16 @@ function setupFundStatementsSchema_(ss) {
  * 'Max Loan Eligibility', and 'Available to Guarantee' on Members sheet are 100% dynamic and formula-driven.
  */
 /**
- * Helper to register or update a Named Range on the Spreadsheet
+ * Helper to get column range from row 2 downward for named range
+ */
+function getNamedColumnRange_(ss, sheetName, colLetter) {
+  const quoted = sheetName.indexOf(" ") !== -1 ? "'" + sheetName + "'" : sheetName;
+  return ss.getRange(quoted + "!" + colLetter + "2:" + colLetter);
+}
+
+/**
+ * Helper to register or update a Named Range on the Spreadsheet in-place
+ * (Uses setRange so existing formula references are never broken into #REF!)
  */
 function setOrUpdateNamedRange_(ss, name, range) {
   if (!ss || !name || !range) return;
@@ -725,14 +741,10 @@ function setOrUpdateNamedRange_(ss, name, range) {
     const namedRanges = ss.getNamedRanges();
     for (let i = 0; i < namedRanges.length; i++) {
       if (namedRanges[i].getName() === name) {
-        namedRanges[i].remove();
-        break;
+        namedRanges[i].setRange(range);
+        return;
       }
     }
-  } catch (e) {
-    console.warn("remove named range notice: " + e.message);
-  }
-  try {
     ss.setNamedRange(name, range);
   } catch (err) {
     console.error("setNamedRange error for " + name + ": " + err.message);
@@ -755,28 +767,28 @@ function setupAllNamedRanges_(ss) {
 
     if (memCol["Member ID"] !== undefined) {
       const l = getColLetter_(memCol["Member ID"] + 1);
-      setOrUpdateNamedRange_(ss, "Members_MemberID", ss.getRange("Members!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Members_MemberID", getNamedColumnRange_(ss, SHEETS.MEMBERS, l));
     }
     const fnCol = memCol["Full Name"] !== undefined ? memCol["Full Name"] : memCol["Member Name"];
     if (fnCol !== undefined) {
       const l = getColLetter_(fnCol + 1);
-      setOrUpdateNamedRange_(ss, "Members_FullName", ss.getRange("Members!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Members_FullName", getNamedColumnRange_(ss, SHEETS.MEMBERS, l));
     }
     if (memCol["Total Savings"] !== undefined) {
       const l = getColLetter_(memCol["Total Savings"] + 1);
-      setOrUpdateNamedRange_(ss, "Members_TotalSavings", ss.getRange("Members!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Members_TotalSavings", getNamedColumnRange_(ss, SHEETS.MEMBERS, l));
     }
     if (memCol["Current Loan Balance"] !== undefined) {
       const l = getColLetter_(memCol["Current Loan Balance"] + 1);
-      setOrUpdateNamedRange_(ss, "Members_CurrentLoanBalance", ss.getRange("Members!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Members_CurrentLoanBalance", getNamedColumnRange_(ss, SHEETS.MEMBERS, l));
     }
     if (memCol["Guaranteed Amount"] !== undefined) {
       const l = getColLetter_(memCol["Guaranteed Amount"] + 1);
-      setOrUpdateNamedRange_(ss, "Members_GuaranteedAmount", ss.getRange("Members!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Members_GuaranteedAmount", getNamedColumnRange_(ss, SHEETS.MEMBERS, l));
     }
     if (memCol["Status"] !== undefined) {
       const l = getColLetter_(memCol["Status"] + 1);
-      setOrUpdateNamedRange_(ss, "Members_Status", ss.getRange("Members!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Members_Status", getNamedColumnRange_(ss, SHEETS.MEMBERS, l));
     }
   }
 
@@ -788,56 +800,56 @@ function setupAllNamedRanges_(ss) {
 
     if (lCol["Loan ID"] !== undefined) {
       const l = getColLetter_(lCol["Loan ID"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_LoanID", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_LoanID", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     const lMid = lCol["Member ID"] !== undefined ? lCol["Member ID"] : lCol["Member id"];
     if (lMid !== undefined) {
       const l = getColLetter_(lMid + 1);
-      setOrUpdateNamedRange_(ss, "Loans_MemberID", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_MemberID", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Borrower Name"] !== undefined) {
       const l = getColLetter_(lCol["Borrower Name"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_BorrowerName", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_BorrowerName", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Requested Amount"] !== undefined) {
       const l = getColLetter_(lCol["Requested Amount"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_RequestedAmount", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_RequestedAmount", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Interest"] !== undefined) {
       const l = getColLetter_(lCol["Interest"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_Interest", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_Interest", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Transaction Fee"] !== undefined) {
       const l = getColLetter_(lCol["Transaction Fee"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_Fee", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_Fee", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Repayment Amount"] !== undefined) {
       const l = getColLetter_(lCol["Repayment Amount"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_RepaymentAmount", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_RepaymentAmount", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Total Paid"] !== undefined) {
       const l = getColLetter_(lCol["Total Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_TotalPaid", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_TotalPaid", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Principal Paid"] !== undefined) {
       const l = getColLetter_(lCol["Principal Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_PrincipalPaid", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_PrincipalPaid", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Interest Paid"] !== undefined) {
       const l = getColLetter_(lCol["Interest Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_InterestPaid", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_InterestPaid", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Fee Paid"] !== undefined) {
       const l = getColLetter_(lCol["Fee Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_FeePaid", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_FeePaid", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Balance"] !== undefined) {
       const l = getColLetter_(lCol["Balance"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_Balance", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_Balance", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
     if (lCol["Status"] !== undefined) {
       const l = getColLetter_(lCol["Status"] + 1);
-      setOrUpdateNamedRange_(ss, "Loans_Status", ss.getRange("Loans!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Loans_Status", getNamedColumnRange_(ss, SHEETS.LOANS, l));
     }
   }
 
@@ -849,45 +861,45 @@ function setupAllNamedRanges_(ss) {
 
     if (rCol["Payment ID"] !== undefined) {
       const l = getColLetter_(rCol["Payment ID"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_PaymentID", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_PaymentID", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Loan ID"] !== undefined) {
       const l = getColLetter_(rCol["Loan ID"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_LoanID", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_LoanID", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     const rMid = rCol["Member ID"] !== undefined ? rCol["Member ID"] : rCol["Member id"];
     if (rMid !== undefined) {
       const l = getColLetter_(rMid + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_MemberID", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_MemberID", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Borrower Name"] !== undefined) {
       const l = getColLetter_(rCol["Borrower Name"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_BorrowerName", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_BorrowerName", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Total Paid"] !== undefined) {
       const l = getColLetter_(rCol["Total Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_TotalPaid", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_TotalPaid", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Principal Paid"] !== undefined) {
       const l = getColLetter_(rCol["Principal Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_PrincipalPaid", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_PrincipalPaid", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Interest Paid"] !== undefined) {
       const l = getColLetter_(rCol["Interest Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_InterestPaid", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_InterestPaid", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Fee Paid"] !== undefined) {
       const l = getColLetter_(rCol["Fee Paid"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_FeePaid", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_FeePaid", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     const rChan = rCol["Deposit Channel"] !== undefined ? rCol["Deposit Channel"] : rCol["Payment Mode"];
     if (rChan !== undefined) {
       const l = getColLetter_(rChan + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_Mode", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_Mode", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
     if (rCol["Status"] !== undefined) {
       const l = getColLetter_(rCol["Status"] + 1);
-      setOrUpdateNamedRange_(ss, "Repayments_Status", ss.getRange("'Loan Repayments'!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Repayments_Status", getNamedColumnRange_(ss, SHEETS.LOAN_REPAYMENTS, l));
     }
   }
 
@@ -900,29 +912,29 @@ function setupAllNamedRanges_(ss) {
     const cMid = cCol["Member ID"] !== undefined ? cCol["Member ID"] : cCol["Member id"];
     if (cMid !== undefined) {
       const l = getColLetter_(cMid + 1);
-      setOrUpdateNamedRange_(ss, "Contributions_MemberID", ss.getRange("Contributions!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Contributions_MemberID", getNamedColumnRange_(ss, SHEETS.CONTRIBUTIONS, l));
     }
     if (cCol["Member Name"] !== undefined) {
       const l = getColLetter_(cCol["Member Name"] + 1);
-      setOrUpdateNamedRange_(ss, "Contributions_MemberName", ss.getRange("Contributions!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Contributions_MemberName", getNamedColumnRange_(ss, SHEETS.CONTRIBUTIONS, l));
     }
     if (cCol["Amount"] !== undefined) {
       const l = getColLetter_(cCol["Amount"] + 1);
-      setOrUpdateNamedRange_(ss, "Contributions_Amount", ss.getRange("Contributions!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Contributions_Amount", getNamedColumnRange_(ss, SHEETS.CONTRIBUTIONS, l));
     }
     const cChan = cCol["Deposit Channel"] !== undefined ? cCol["Deposit Channel"] : cCol["Payment Mode"];
     if (cChan !== undefined) {
       const l = getColLetter_(cChan + 1);
-      setOrUpdateNamedRange_(ss, "Contributions_Mode", ss.getRange("Contributions!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Contributions_Mode", getNamedColumnRange_(ss, SHEETS.CONTRIBUTIONS, l));
     }
     const cType = cCol["Transaction Type"] !== undefined ? cCol["Transaction Type"] : cCol["Type"];
     if (cType !== undefined) {
       const l = getColLetter_(cType + 1);
-      setOrUpdateNamedRange_(ss, "Contributions_Type", ss.getRange("Contributions!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Contributions_Type", getNamedColumnRange_(ss, SHEETS.CONTRIBUTIONS, l));
     }
     if (cCol["Status"] !== undefined) {
       const l = getColLetter_(cCol["Status"] + 1);
-      setOrUpdateNamedRange_(ss, "Contributions_Status", ss.getRange("Contributions!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Contributions_Status", getNamedColumnRange_(ss, SHEETS.CONTRIBUTIONS, l));
     }
   }
 
@@ -934,21 +946,21 @@ function setupAllNamedRanges_(ss) {
 
     if (gCol["Loan ID"] !== undefined) {
       const l = getColLetter_(gCol["Loan ID"] + 1);
-      setOrUpdateNamedRange_(ss, "Guarantors_LoanID", ss.getRange("Guarantors!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Guarantors_LoanID", getNamedColumnRange_(ss, SHEETS.GUARANTORS, l));
     }
     const gMid = gCol["Member ID"] !== undefined ? gCol["Member ID"] : gCol["Member id"];
     if (gMid !== undefined) {
       const l = getColLetter_(gMid + 1);
-      setOrUpdateNamedRange_(ss, "Guarantors_MemberID", ss.getRange("Guarantors!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Guarantors_MemberID", getNamedColumnRange_(ss, SHEETS.GUARANTORS, l));
     }
     if (gCol["Guaranteed Amount"] !== undefined) {
       const l = getColLetter_(gCol["Guaranteed Amount"] + 1);
-      setOrUpdateNamedRange_(ss, "Guarantors_GuaranteedAmount", ss.getRange("Guarantors!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Guarantors_GuaranteedAmount", getNamedColumnRange_(ss, SHEETS.GUARANTORS, l));
     }
     const gStat = gCol["Loan Status"] !== undefined ? gCol["Loan Status"] : gCol["Status"];
     if (gStat !== undefined) {
       const l = getColLetter_(gStat + 1);
-      setOrUpdateNamedRange_(ss, "Guarantors_Status", ss.getRange("Guarantors!$" + l + "$2:$" + l));
+      setOrUpdateNamedRange_(ss, "Guarantors_Status", getNamedColumnRange_(ss, SHEETS.GUARANTORS, l));
     }
   }
 }
@@ -1277,35 +1289,6 @@ function setupMembersSavingsFormula_(ss) {
 
   if (memIdColIdx === undefined) return;
 
-  // Resolve dynamic column letters for external sheets
-  let cAmtLetter = "D", cMidLetter = "B", cStatLetter = "H";
-  if (cSheet && cSheet.getLastRow() >= 1) {
-    const cCol = getHeaderMap_(cSheet.getDataRange().getValues()[0]);
-    if (cCol["Amount"] !== undefined) cAmtLetter = getColLetter_(cCol["Amount"] + 1);
-    const cm = cCol["Member ID"] !== undefined ? cCol["Member ID"] : cCol["Member id"];
-    if (cm !== undefined) cMidLetter = getColLetter_(cm + 1);
-    if (cCol["Status"] !== undefined) cStatLetter = getColLetter_(cCol["Status"] + 1);
-  }
-
-  let lBalLetter = "N", lMidLetter = "D", lStatLetter = "O";
-  if (loanSheet && loanSheet.getLastRow() >= 1) {
-    const lCol = getHeaderMap_(loanSheet.getDataRange().getValues()[0]);
-    if (lCol["Balance"] !== undefined) lBalLetter = getColLetter_(lCol["Balance"] + 1);
-    const lm = lCol["Member ID"] !== undefined ? lCol["Member ID"] : lCol["Member id"];
-    if (lm !== undefined) lMidLetter = getColLetter_(lm + 1);
-    if (lCol["Status"] !== undefined) lStatLetter = getColLetter_(lCol["Status"] + 1);
-  }
-
-  let gAmtLetter = "F", gMidLetter = "B", gStatLetter = "D";
-  if (guarSheet && guarSheet.getLastRow() >= 1) {
-    const gCol = getHeaderMap_(guarSheet.getDataRange().getValues()[0]);
-    if (gCol["Guaranteed Amount"] !== undefined) gAmtLetter = getColLetter_(gCol["Guaranteed Amount"] + 1);
-    const gm = gCol["Member ID"] !== undefined ? gCol["Member ID"] : gCol["Member id"];
-    if (gm !== undefined) gMidLetter = getColLetter_(gm + 1);
-    const gs = gCol["Loan Status"] !== undefined ? gCol["Loan Status"] : gCol["Status"];
-    if (gs !== undefined) gStatLetter = getColLetter_(gs + 1);
-  }
-
   const memIdLetter = getColLetter_(memIdColIdx + 1);
   const savColLetter = savColIdx !== undefined ? getColLetter_(savColIdx + 1) : "K";
   const mLoanBalLetter = loanBalColIdx !== undefined ? getColLetter_(loanBalColIdx + 1) : "L";
@@ -1313,27 +1296,27 @@ function setupMembersSavingsFormula_(ss) {
   const memStatLetter = statusColIdx !== undefined ? getColLetter_(statusColIdx + 1) : "P";
   const fnColIdx = memCol["Full Name"];
 
-  const totalRows = Math.max(memSheet.getLastRow(), 2);
+  const totalRows = Math.max(memSheet.getLastRow(), memVals.length, 2);
 
   for (let r = 2; r <= totalRows; r++) {
-    // 1. Total Savings: sum approved contributions matching Member ID
+    // 1. Total Savings: sum approved contributions matching Member ID via Named Ranges
     if (savColIdx !== undefined) {
       const savCell = memSheet.getRange(r, savColIdx + 1);
-      const savFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Contributions!$' + cAmtLetter + '$2:$' + cAmtLetter + ', Contributions!$' + cMidLetter + '$2:$' + cMidLetter + ', ' + memIdLetter + r + ', Contributions!$' + cStatLetter + '$2:$' + cStatLetter + ', "Approved"))';
+      const savFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Contributions_Amount, Contributions_MemberID, ' + memIdLetter + r + ', Contributions_Status, "Approved"))';
       savCell.setFormula(savFormula);
     }
 
-    // 2. Current Loan Balance: sum Balance from Loans matching Member ID and Status Active or Approved
+    // 2. Current Loan Balance: sum Balance from Loans matching Member ID and Status Active or Approved via Named Ranges
     if (loanBalColIdx !== undefined) {
       const loanCell = memSheet.getRange(r, loanBalColIdx + 1);
-      const loanFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Loans!$' + lBalLetter + '$2:$' + lBalLetter + ', Loans!$' + lMidLetter + '$2:$' + lMidLetter + ', ' + memIdLetter + r + ', Loans!$' + lStatLetter + '$2:$' + lStatLetter + ', "Active") + SUMIFS(Loans!$' + lBalLetter + '$2:$' + lBalLetter + ', Loans!$' + lMidLetter + '$2:$' + lMidLetter + ', ' + memIdLetter + r + ', Loans!$' + lStatLetter + '$2:$' + lStatLetter + ', "Approved"))';
+      const loanFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + r + ', Loans_Status, "Active") + SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + r + ', Loans_Status, "Approved"))';
       loanCell.setFormula(loanFormula);
     }
 
-    // 3. Guaranteed Amount: sum Guaranteed Amount from Guarantors matching Member ID and Status Active or Approved
+    // 3. Guaranteed Amount: sum Guaranteed Amount from Guarantors matching Member ID and Status Active or Approved via Named Ranges
     if (guarColIdx !== undefined) {
       const guarCell = memSheet.getRange(r, guarColIdx + 1);
-      const guarFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Guarantors!$' + gAmtLetter + '$2:$' + gAmtLetter + ', Guarantors!$' + gMidLetter + '$2:$' + gMidLetter + ', ' + memIdLetter + r + ', Guarantors!$' + gStatLetter + '$2:$' + gStatLetter + ', "Active") + SUMIFS(Guarantors!$' + gAmtLetter + '$2:$' + gAmtLetter + ', Guarantors!$' + gMidLetter + '$2:$' + gMidLetter + ', ' + memIdLetter + r + ', Guarantors!$' + gStatLetter + '$2:$' + gStatLetter + ', "Approved"))';
+      const guarFormula = '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + r + ', Guarantors_Status, "Active") + SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + r + ', Guarantors_Status, "Approved"))';
       guarCell.setFormula(guarFormula);
     }
 
