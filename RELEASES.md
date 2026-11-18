@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v102** | `@103` | `AKfycbx4........wRCA` | `ad17c14` | **Production** | 2026-11-18 | Fixer & Sentinel: Task FIN-1 - Decoupled PAR (Portfolio at Risk) from guarantor shortfall and implemented 3-tier delinquency aging (30/60/90+ days past due) with clean mathematical separation. |
+| **v103** | `@104` | `AKfycbx4........wRCA` | `c029dbf` | **Production** | 2026-11-18 | Designer & Sentinel: Modal theme purity across all 15 modals - pure light mode headers (`bg-white`, `text-slate-900`) and pure dark mode headers (`dark:bg-[#090d16]`, `dark:text-white`). |
+| **v102** | `@103` | `AKfycbx4........wRCA` | `ad17c14` | Archived | 2026-11-18 | Fixer & Sentinel: Task FIN-1 - Decoupled PAR (Portfolio at Risk) from guarantor shortfall and implemented 3-tier delinquency aging (30/60/90+ days past due) with clean mathematical separation. |
 | **v101** | `@102` | `AKfycbx4........wRCA` | `74bd537` | Archived | 2026-11-18 | Designer & Sentinel: Complete UI component & theme harmonization across all 15 modals (executive dark top headers), buttons (3-tier hierarchy), and touch targets (min 38-44px). |
 | **v100** | `@101` | `AKfycbx4........wRCA` | `9e4d0d4` | Archived | 2026-11-18 | Designer & Sentinel: Milestone Release - Adapted Bank Balance per Records overview card to light mode styling with crisp borders and high-contrast typography. |
 | **v99** | `@100` | `AKfycbx4........wRCA` | `8184ee2` | Archived | 2026-11-18 | Designer & Sentinel: Print modal executive full-bleed dark top header pattern matching session modal styling with sky badge and cancel/print actions. |
