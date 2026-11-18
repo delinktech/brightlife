@@ -78,7 +78,14 @@ function doGet(e) {
     }
   }
 
-  return HtmlService.createTemplateFromFile("Index")
+  var template;
+  try {
+    template = HtmlService.createTemplateFromFile("client/views/Index");
+  } catch (eTpl) {
+    template = HtmlService.createTemplateFromFile("Index");
+  }
+
+  return template
     .evaluate()
     .setTitle("Brightlife SHG Dashboard")
     .addMetaTag("viewport", "width=device-width, initial-scale=1")
@@ -86,5 +93,24 @@ function doGet(e) {
 }
 
 function include(filename) {
+  var candidates = [];
+  if (filename.indexOf("/") !== -1) {
+    candidates.push(filename);
+  } else {
+    if (filename.indexOf(".ui.js") !== -1 || filename.indexOf(".js") !== -1) {
+      candidates.push("client/scripts/" + filename);
+    } else {
+      candidates.push("client/views/" + filename);
+    }
+    candidates.push(filename);
+  }
+
+  for (var i = 0; i < candidates.length; i++) {
+    try {
+      return HtmlService.createHtmlOutputFromFile(candidates[i]).getContent();
+    } catch (e) {
+      // Try next candidate
+    }
+  }
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }

@@ -1,0 +1,13 @@
+# Ignore everything by default
+**/**
+
+# Allow manifest and GAS source files
+!appsscript.json
+!**/*.js
+!**/*.gs
+!**/*.html
+
+# Explicitly block non-GAS files
+**/*.md
+**/*.test.js
+**/*.spec.js

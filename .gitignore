@@ -1,0 +1,28 @@
+# Google Apps Script / clasp local credentials & project IDs
+.clasp.json
+.clasprc.json
+
+# Environment & local secrets
+.env
+.env.*
+*.pem
+*credentials*.json
+*secret*.json
+
+# Node / local syntax-check tooling
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Local test outputs & temporary migration dumps
+tests/output/
+*.csv
+*.xlsx
+!docs/**/*.xlsx
