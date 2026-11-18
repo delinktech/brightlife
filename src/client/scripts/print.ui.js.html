@@ -24,6 +24,8 @@
   }
 
   function showPrintModal_() {
+    const refEl = document.getElementById("print-ref-display");
+    if (refEl) refEl.textContent = "Ref: BLG-RPT-" + Date.now().toString(36).toUpperCase();
     const modal = document.getElementById("printReportModal");
     if (modal) modal.classList.remove("hidden");
     document.body.classList.add("print-modal-open");
@@ -232,7 +234,7 @@
     kpiContainer.innerHTML =
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Total Contribution Volume</div>' +
-      '<div class="text-sm font-bold text-emerald-600 font-mono tabular-nums mt-0.5">' + formatMoney(totalSum) + '</div>' +
+      '<div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatMoney(totalSum) + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Recorded Transactions</div>' +

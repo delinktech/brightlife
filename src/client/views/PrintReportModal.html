@@ -5,7 +5,7 @@
     <!-- Modal Control Header (Hidden when printing) -->
     <div class="no-print flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-slate-200 dark:border-slate-800 mb-6">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
+        <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 flex items-center justify-center">
           <i class="fas fa-print"></i>
         </div>
         <div>
@@ -17,7 +17,7 @@
         <button type="button" onclick="closePrintModal()" class="min-h-[38px] px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl transition-colors">
           Cancel
         </button>
-        <button type="button" onclick="triggerBrowserPrint()" class="min-h-[38px] inline-flex items-center gap-2 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">
+        <button type="button" onclick="triggerBrowserPrint()" class="inline-flex items-center gap-2 text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 font-semibold min-h-[38px] px-5 py-2 rounded-xl shadow-xs transition-colors">
           <i class="fas fa-file-pdf"></i> Print / Save PDF
         </button>
       </div>
@@ -33,21 +33,21 @@
       <div class="flex justify-between items-start pb-2">
         <!-- Logo & Title -->
         <div class="flex items-center gap-3.5">
-          <div class="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center text-emerald-400 font-black text-lg tracking-tighter border border-slate-800 shadow-sm shrink-0">
+          <div class="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center text-white font-black text-lg tracking-tighter border border-slate-800 shadow-sm shrink-0">
             BLG
           </div>
           <div>
             <h1 class="text-xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase">BRIGHTLIFE SHG</h1>
-            <p class="text-xs text-emerald-600 font-bold tracking-wide mt-0.5">Empowerment through Savings & Credit</p>
-            <p class="text-[10px] text-slate-400 mt-0.5">Reg No: KNY/SHG/2021/84920 • Nairobi, Kenya</p>
+            <p class="text-xs text-slate-700 font-bold tracking-wide mt-0.5">Empowerment through Savings & Credit</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Reg No: KNY/SHG/2021/84920 • Nairobi, Kenya</p>
           </div>
         </div>
 
         <!-- Stacked Contact Details -->
         <div class="text-right text-xs text-slate-600 space-y-1">
-          <div><i class="fas fa-phone text-emerald-600 mr-1.5 text-[10px]"></i> +254 700 000 000</div>
-          <div><i class="fas fa-envelope text-emerald-600 mr-1.5 text-[10px]"></i> info@brightlifeshg.org</div>
-          <div><i class="fas fa-location-dot text-emerald-600 mr-1.5 text-[10px]"></i> Nairobi, Kenya</div>
+          <div><i class="fas fa-phone text-slate-700 mr-1.5 text-[10px]"></i> +254 700 000 000</div>
+          <div><i class="fas fa-envelope text-slate-700 mr-1.5 text-[10px]"></i> info@brightlifeshg.org</div>
+          <div><i class="fas fa-location-dot text-slate-700 mr-1.5 text-[10px]"></i> Nairobi, Kenya</div>
         </div>
       </div>
 
@@ -88,9 +88,9 @@
       </div>
 
       <!-- Clean Footer (Confidentiality Notice only, Signatures removed) -->
-      <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-400">
-        <div><i class="fas fa-shield-halved text-emerald-500 mr-1"></i> Brightlife SHG • Confidential System Record</div>
-        <div class="font-mono text-[10px]">Ref: BLG-RPT-<?!= new Date().getTime().toString(36).toUpperCase() ?></div>
+      <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
+        <div><i class="fas fa-shield-halved text-slate-700 mr-1"></i> Brightlife SHG • Confidential System Record</div>
+        <div id="print-ref-display" class="font-mono text-[10px]">Ref: BLG-RPT-—</div>
       </div>
 
     </div>
