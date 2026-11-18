@@ -376,6 +376,8 @@ function getHomeAnalyticsByRange_(rangeKey) {
     investmentCount = 0;
   }
 
+  const liquiditySummary = computeLiquiditySummary_(ss, totalSavings, totalLoans);
+
   const result = {
     range: effectiveRange,
     savings: totalSavings,
@@ -383,7 +385,8 @@ function getHomeAnalyticsByRange_(rangeKey) {
     invested: 0,
     investmentCount: investmentCount,
     memberCount: memberCount,
-    cash: totalSavings - totalLoans,
+    cash: liquiditySummary.cash,
+    liquidity: liquiditySummary.liquidity,
     yearlyContributions: filteredContributions,
     yearToDateContributions: yearToDateContributions,
     currentMonthContributions: monthlyContributionsCurrent,
@@ -444,6 +447,127 @@ function getHomeAnalyticsByRange_(rangeKey) {
   }
 
   return result;
+}
+
+/**
+ * Computes actual liquid cash across Bank/Till (operatingCash) and MMF/Fund accounts (cashEquivalents),
+ * falling back to latest Fund Statements closing balances and finally unlent member capital.
+ */
+function computeLiquiditySummary_(ss, totalSavings, totalLoans) {
+  let operatingCash = 0;
+  let cashEquivalents = 0;
+  let totalStatementCash = 0;
+  let totalSystemCash = 0;
+
+  try {
+    const accSheet = getSheetByNameInsensitive_(ss, SHEETS.ACCOUNTS);
+    if (accSheet && accSheet.getLastRow() > 1) {
+      const accRows = accSheet.getDataRange().getValues();
+      if (accRows.length > 1) {
+        const col = getHeaderMap_(accRows[0]);
+        for (let i = 1; i < accRows.length; i++) {
+          const row = accRows[i];
+          const orgName = col["Org. Name"] !== undefined ? String(row[col["Org. Name"]] || "").trim() : "";
+          const accNumber = col["Acc. Number"] !== undefined ? String(row[col["Acc. Number"]] || "").trim() : "";
+          if (!orgName && !accNumber) continue;
+
+          const hasStmtVal = col["Statement Balance"] !== undefined && row[col["Statement Balance"]] !== "" && row[col["Statement Balance"]] !== undefined;
+          const stmtBal = Number(hasStmtVal ? row[col["Statement Balance"]] : row[col["Balance"]]) || 0;
+
+          const hasSysVal = col["System Balance"] !== undefined && row[col["System Balance"]] !== "" && row[col["System Balance"]] !== undefined;
+          const inflows = col["Inflows"] !== undefined ? (Number(row[col["Inflows"]]) || 0) : 0;
+          const outflows = col["Outflows"] !== undefined ? (Number(row[col["Outflows"]]) || 0) : 0;
+          const sysBal = hasSysVal ? (Number(row[col["System Balance"]]) || 0) : (inflows - outflows);
+
+          const effectiveBal = stmtBal > 0 ? stmtBal : sysBal;
+          const labelLower = (orgName + " " + accNumber).toLowerCase();
+          if (
+            labelLower.indexOf("mmf") !== -1 ||
+            labelLower.indexOf("cic") !== -1 ||
+            labelLower.indexOf("mansa") !== -1 ||
+            labelLower.indexOf("fund") !== -1
+          ) {
+            cashEquivalents += effectiveBal;
+          } else {
+            operatingCash += effectiveBal;
+          }
+
+          totalStatementCash += effectiveBal;
+          totalSystemCash += sysBal;
+        }
+      }
+    }
+  } catch (accErr) {
+    console.error("Accounts liquidity read error: " + accErr.message);
+  }
+
+  // Fallback Tier 2: Latest Fund Statements closing balance per channel if Accounts yielded no balance
+  if (totalStatementCash === 0) {
+    try {
+      const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+      if (fundSheet && fundSheet.getLastRow() > 1) {
+        const fRows = fundSheet.getDataRange().getValues();
+        if (fRows.length > 1) {
+          const fCol = getHeaderMap_(fRows[0]);
+          const closingCol = fCol["Closing Balance"];
+          const dateCol = fCol["Statement Date"];
+          const channelCol = fCol["Fund Channel"];
+          if (closingCol !== undefined) {
+            const latestByChannel = {};
+            for (let f = 1; f < fRows.length; f++) {
+              const fRow = fRows[f];
+              const rawClosing = fRow[closingCol];
+              if (rawClosing === "" || rawClosing === undefined || rawClosing === null) continue;
+              const closingBal = Number(rawClosing) || 0;
+              const channelName = channelCol !== undefined ? String(fRow[channelCol] || "Fund").trim() : "Fund";
+              const rawDate = dateCol !== undefined ? fRow[dateCol] : null;
+              const parsedDate = rawDate instanceof Date ? rawDate : (rawDate ? new Date(rawDate) : null);
+              const ts = parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate.getTime() : 0;
+
+              const prev = latestByChannel[channelName];
+              if (!prev || ts > prev.ts || (ts === prev.ts && f > prev.rowIdx)) {
+                latestByChannel[channelName] = { ts: ts, rowIdx: f, closing: closingBal };
+              }
+            }
+            Object.keys(latestByChannel).forEach(function (ch) {
+              const bal = latestByChannel[ch].closing;
+              if (bal > 0) {
+                totalStatementCash += bal;
+                cashEquivalents += bal;
+              }
+            });
+          }
+        }
+      }
+    } catch (fundErr) {
+      console.error("Fund statements liquidity fallback error: " + fundErr.message);
+    }
+  }
+
+  // Fallback Tier 3: Unlent member capital when neither Accounts nor Fund Statements provide balances
+  const totalLiquidCash = totalStatementCash > 0 ? totalStatementCash : Math.max(0, totalSavings - totalLoans);
+  const liqRatio = totalSavings > 0 ? (totalLiquidCash / totalSavings) * 100 : 0;
+  let liqStatus = "Optimal";
+  if (liqRatio < 15) liqStatus = "Deficit / High Risk";
+  else if (liqRatio < 30) liqStatus = "Adequate";
+  else liqStatus = "Well Capitalized";
+
+  return {
+    cash: totalLiquidCash,
+    liquidity: {
+      ratio: Math.round(liqRatio * 100) / 100,
+      status: liqStatus,
+      totalStatementCash: totalLiquidCash,
+      totalSystemCash: totalSystemCash,
+      netVariance: totalLiquidCash - totalSystemCash,
+      isReconciled: Math.abs(totalLiquidCash - totalSystemCash) < 1,
+      isEstimated: totalStatementCash === 0,
+      tiers: {
+        operatingCash: operatingCash,
+        cashEquivalents: cashEquivalents,
+      },
+    },
+  };
 }
 
 function getAccountsBalanceChartData_() {
