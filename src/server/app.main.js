@@ -1,6 +1,17 @@
 function doGet(e) {
+  var params = (e && e.parameter) ? e.parameter : {};
+  var isDebugAction = Boolean(params.fix || params.backfillCic || params.testReconciliation || params.diagnose || params.migrate);
+
+  // Security Gate (@sentinel): Block unauthorized access to diagnostic and maintenance endpoints
+  if (isDebugAction) {
+    if (!isDiagnosticAuthorized_(e)) {
+      return ContentService.createTextOutput("403_FORBIDDEN: Administrative authorization required to access diagnostic endpoints.")
+        .setMimeType(ContentService.MimeType.TEXT);
+    }
+  }
+
   // If ?fix=1 is in the URL, instantly restore all formulas on Members, Loans, and Guarantors
-  if (e && e.parameter && e.parameter.fix === "1") {
+  if (params.fix === "1") {
     try {
       const ss = getSpreadsheet_();
       const memSheet = ss.getSheetByName(SHEETS.MEMBERS);
@@ -113,4 +124,34 @@ function include(filename) {
     }
   }
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
+ * Security Gate (@sentinel): Verifies administrative clearance for diagnostic/maintenance endpoints.
+ * Requires an active admin session OR a matching admin secret key.
+ */
+function isDiagnosticAuthorized_(e) {
+  var providedKey = (e && e.parameter && e.parameter.key) ? String(e.parameter.key).trim() : "";
+  if (providedKey) {
+    try {
+      var scriptKey = PropertiesService.getScriptProperties().getProperty("ADMIN_DIAGNOSTIC_KEY");
+      if (scriptKey && providedKey === scriptKey) return true;
+    } catch (eProp) {}
+
+    if (typeof ADMIN_SECRET_KEY !== "undefined" && ADMIN_SECRET_KEY && providedKey === ADMIN_SECRET_KEY) {
+      return true;
+    }
+  }
+
+  try {
+    var email = getCurrentUserEmail_();
+    if (email) {
+      var ctx = getSessionRoleContext_(email);
+      if (ctx && ctx.hasAccess && ctx.permissions && (ctx.permissions.isAdmin === true || ctx.roleKey === "admin")) {
+        return true;
+      }
+    }
+  } catch (eAuth) {}
+
+  return false;
 }
