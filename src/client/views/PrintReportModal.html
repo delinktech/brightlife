@@ -1,30 +1,34 @@
 <!-- Printable PDF Report Modal & Official BLG Letterhead Component -->
 <div id="printReportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm hidden overflow-y-auto p-4">
-  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700/80 transition-all transform my-auto max-h-[90vh] overflow-y-auto">
+  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
     
     <!-- Modal Control Header (Hidden when printing) -->
-    <div class="no-print flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-slate-200 dark:border-slate-800 mb-6">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 flex items-center justify-center">
-          <i class="fas fa-print"></i>
+    <div class="no-print bg-slate-900 dark:bg-[#090d16] px-6 py-4 flex flex-wrap justify-between items-center gap-3 text-white border-b border-slate-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 rounded-xl bg-sky-950 border border-sky-500/40 text-sky-300 font-bold flex items-center justify-center shrink-0">
+          <i class="fas fa-print text-sm"></i>
         </div>
-        <div>
-          <h3 class="text-base font-bold text-slate-900 dark:text-white">Print Preview / Save PDF</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400">Official BLG formatted document ready for printing or PDF download.</p>
+        <div class="min-w-0">
+          <h3 class="text-sm font-bold text-white truncate">Print Preview / Save PDF</h3>
+          <p class="text-[11px] text-slate-400 truncate">Official BLG formatted document ready for printing or PDF download.</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <button type="button" onclick="closePrintModal()" class="min-h-[38px] px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl transition-colors">
+      <div class="flex items-center gap-2.5 shrink-0">
+        <button type="button" onclick="closePrintModal()" class="min-h-[38px] px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium rounded-xl transition-colors">
           Cancel
         </button>
-        <button type="button" onclick="triggerBrowserPrint()" class="inline-flex items-center gap-2 text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 font-semibold min-h-[38px] px-5 py-2 rounded-xl shadow-xs transition-colors">
+        <button type="button" onclick="triggerBrowserPrint()" class="min-h-[38px] inline-flex items-center gap-2 px-4 py-1.5 bg-sky-700 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-xs transition-colors">
           <i class="fas fa-file-pdf"></i> Print / Save PDF
+        </button>
+        <button type="button" onclick="closePrintModal()" aria-label="Close Print Preview" class="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+          <i class="fas fa-times text-sm"></i>
         </button>
       </div>
     </div>
 
     <!-- Printable Report Container with Official BLG Letterhead (Always Pure Light for Official PDF Fidelity) -->
-    <div id="blg-printable-area" class="relative bg-white text-slate-900 rounded-xl pl-8 pr-4 py-4">
+    <div class="p-6 bg-slate-50 dark:bg-[#0b1320]">
+      <div id="blg-printable-area" class="relative bg-white text-slate-900 rounded-xl border border-slate-200/80 shadow-xs pl-8 pr-4 py-4">
       
       <!-- Faded Left Margin Vertical Line (Intersecting) -->
       <div class="blg-vertical-line absolute left-2 top-0 bottom-0 w-[1.5px] bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
@@ -91,6 +95,8 @@
       <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">
         <div><i class="fas fa-shield-halved text-slate-700 mr-1"></i> Brightlife SHG • Confidential System Record</div>
         <div id="print-ref-display" class="font-mono text-[10px]">Ref: BLG-RPT-—</div>
+      </div>
+
       </div>
 
     </div>
