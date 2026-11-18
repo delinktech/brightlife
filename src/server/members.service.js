@@ -11,7 +11,7 @@ function getMembersData(page, limit) {
     const sheet = getRequiredSheet_(SHEETS.MEMBERS);
     const values = sheet.getDataRange().getValues();
     if (values.length <= 1) {
-      return { success: true, members: [], totalPages: 0, currentPage: 1 };
+      return { success: true, members: [], totalPages: 0, totalRows: 0, currentPage: 1 };
     }
 
     const headers = values[0];
@@ -142,6 +142,7 @@ function getMembersData(page, limit) {
       members: members,
       totalGroupSavings: totalGroupSavings,
       totalPages: totalPages,
+      totalRows: dataRows.length,
       currentPage: Math.min(currentPage, totalPages),
       isPersonalOnly: Boolean(isMemberOnly),
     };

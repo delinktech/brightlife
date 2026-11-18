@@ -1,8 +1,9 @@
 <script>
   let currentPage = 1;
-  const rowsPerPage = 15;
+  let rowsPerPage = 10;
   let totalPages = 1;
   let loadedContributions = [];
+  let filteredContributions = [];
   let currentReceiptData = null;
 
   function renderStatusBadge(status) {
@@ -219,24 +220,81 @@
         "</td></tr>";
     });
     container.innerHTML =
-      html || '<tr><td colspan="7" class="p-8 text-center text-slate-500">No transactions found.</td></tr>';
+      html ||
+      '<tr><td colspan="7" class="p-8 text-center text-slate-500">' +
+      (loadedContributions.length > 0
+        ? "No contributions match your search or filter criteria."
+        : "No transactions found.") +
+      "</td></tr>";
 
     if (typeof applySavedColumnPreferences === "function") {
       applySavedColumnPreferences("contributions-table");
     }
   }
 
-  function updatePaginationUI(current, total) {
-    document.getElementById("current-page-num").innerText = current;
-    document.getElementById("total-pages-num").innerText = total || 1;
-    document.getElementById("prev-btn").disabled = current <= 1;
-    document.getElementById("next-btn").disabled = current >= total;
+  function filterContributionsTable(targetPage) {
+    const searchEl = document.getElementById("c-search-input");
+    const statusEl = document.getElementById("c-status-filter");
+    const channelEl = document.getElementById("c-channel-filter");
+    const q = (searchEl ? searchEl.value : "").toLowerCase().trim();
+    const statusFilter = (statusEl ? statusEl.value : "all").toLowerCase().trim();
+    const channelFilter = (channelEl ? channelEl.value : "all").toLowerCase().trim();
+
+    filteredContributions = (loadedContributions || []).filter(function (c) {
+      if (q) {
+        const hay = [c.name, c.memberId, c.tid, c.type, c.mode, c.date].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      if (statusFilter && statusFilter !== "all") {
+        const st = String(c.status || "Approved").toLowerCase().trim();
+        if (st !== statusFilter) return false;
+      }
+      if (channelFilter && channelFilter !== "all") {
+        const ch = String(c.mode || "").toLowerCase().trim();
+        if (ch !== channelFilter) return false;
+      }
+      return true;
+    });
+
+    const totalRows = filteredContributions.length;
+    totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+    const reqPage = Number(targetPage);
+    currentPage = reqPage > 0 ? Math.min(totalPages, reqPage) : 1;
+
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    const pageRows = filteredContributions.slice(startIdx, startIdx + rowsPerPage);
+
+    renderContributionTable(pageRows);
+    if (typeof renderTablePagination === "function") {
+      renderTablePagination("contributions-pagination", {
+        currentPage: currentPage,
+        totalPages: totalPages,
+        totalRows: totalRows,
+        rowsPerPage: rowsPerPage,
+        onPageChangeName: "setContributionsPage",
+        onRowsPerPageChangeName: "setContributionsRowsPerPage",
+        entityLabel: "contributions",
+      });
+    }
   }
+  window.filterContributionsTable = filterContributionsTable;
+
+  function setContributionsPage(page) {
+    const p = Number(page) || 1;
+    if (p < 1 || p > totalPages) return;
+    filterContributionsTable(p);
+  }
+  window.setContributionsPage = setContributionsPage;
+
+  function setContributionsRowsPerPage(limit) {
+    const n = Number(limit);
+    rowsPerPage = n > 0 ? n : 10;
+    filterContributionsTable(1);
+  }
+  window.setContributionsRowsPerPage = setContributionsRowsPerPage;
 
   function loadContributions(page) {
-    currentPage = page || 1;
-    document.getElementById("prev-btn").disabled = true;
-    document.getElementById("next-btn").disabled = true;
+    currentPage = Number(page) > 0 ? Number(page) : 1;
     startAppLoader();
     document.getElementById("contribution-table-body").innerHTML =
       typeof renderTableSkeleton === "function"
@@ -247,25 +305,36 @@
       .withSuccessHandler(function (response) {
         if (!response || !response.success) {
           stopAppLoader();
+          loadedContributions = [];
+          filteredContributions = [];
+          renderContributionTable([]);
+          if (typeof renderTablePagination === "function") {
+            renderTablePagination("contributions-pagination", {
+              currentPage: 1,
+              totalPages: 1,
+              totalRows: 0,
+              rowsPerPage: rowsPerPage,
+              onPageChangeName: "setContributionsPage",
+              onRowsPerPageChangeName: "setContributionsRowsPerPage",
+              entityLabel: "contributions",
+            });
+          }
           handleErr(response || { message: "Failed to load contributions" });
           return;
         }
-        totalPages = response.totalPages || 1;
         loadedContributions = response.contributions || [];
-        renderContributionTable(response.contributions);
-        updatePaginationUI(response.currentPage, response.totalPages);
+        filterContributionsTable(currentPage);
         stopAppLoader();
       })
       .withFailureHandler((err) => {
         stopAppLoader();
         handleErr(err);
       })
-      .getContributionsData(currentPage, rowsPerPage);
+      .getContributionsData(1, 2000);
   }
 
   function changePage(direction) {
-    const newPage = currentPage + direction;
-    if (newPage >= 1 && newPage <= totalPages) loadContributions(newPage);
+    setContributionsPage(currentPage + (Number(direction) || 0));
   }
 
   function setupContributionMemberCombobox() {

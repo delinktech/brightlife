@@ -130,7 +130,7 @@ function getContributionsData(page, limit) {
     const sheet = getRequiredSheet_(SHEETS.CONTRIBUTIONS);
     const values = sheet.getDataRange().getValues();
     if (values.length <= 1) {
-      return { success: true, contributions: [], totalPages: 0, currentPage: 1 };
+      return { success: true, contributions: [], totalPages: 0, totalRows: 0, currentPage: 1 };
     }
 
     const headers = values[0];
@@ -216,6 +216,7 @@ function getContributionsData(page, limit) {
       success: true,
       contributions: contributions,
       totalPages: totalPages,
+      totalRows: allRowsWithIndex.length,
       currentPage: Math.min(currentPage, totalPages),
     };
   } catch (error) {

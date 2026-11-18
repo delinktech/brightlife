@@ -70,6 +70,31 @@
 
   <!-- Roles Table Card -->
   <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <!-- Filter Toolbar -->
+    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-2.5">
+      <div class="relative flex-1 min-w-0">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+        <input type="text" id="roles-search-input" oninput="filterRolesTable()"
+          placeholder="Search by member name, email, or Member ID..."
+          class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2">
+        <select id="roles-role-filter" onchange="filterRolesTable()" aria-label="Filter by role"
+          class="w-full lg:w-40 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          <option value="all">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="treasurer">Treasurer</option>
+          <option value="secretary">Secretary</option>
+          <option value="member">Member</option>
+        </select>
+        <select id="roles-status-filter" onchange="filterRolesTable()" aria-label="Filter by account status"
+          class="w-full lg:w-40 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+    </div>
     <div class="overflow-x-auto">
       <table id="roles-table" class="shadcn-table">
         <thead>
@@ -90,6 +115,7 @@
         </tbody>
       </table>
     </div>
+    <div id="roles-pagination"></div>
   </div>
 </div>
 

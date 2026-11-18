@@ -1,9 +1,14 @@
 <script>
   let loanPage = 1;
+  let loansPerPage = 10;
   let loanTotalPages = 1;
   let repPage = 1;
+  let repaymentsPerPage = 10;
   let repTotalPages = 1;
   let loadedLoans = [];
+  let filteredLoans = [];
+  let loadedRepayments = [];
+  let filteredRepayments = [];
 
   function renderRepaymentStatusBadge(status) {
     const s = String(status || "").toLowerCase().trim();
@@ -124,7 +129,12 @@
     const body = document.getElementById("loan-repayments-body");
     if (!body) return;
     if (!repayments || !repayments.length) {
-      body.innerHTML = '<tr><td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400">No loan repayments recorded yet.</td></tr>';
+      body.innerHTML =
+        '<tr><td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400">' +
+        (loadedRepayments.length > 0
+          ? "No loan repayments match your search or filter criteria."
+          : "No loan repayments recorded yet.") +
+        "</td></tr>";
       return;
     }
 
@@ -148,8 +158,69 @@
     }).join("");
   }
 
+  function filterRepaymentsTable(targetPage) {
+    const searchEl = document.getElementById("rep-search-input");
+    const statusEl = document.getElementById("rep-status-filter");
+    const channelEl = document.getElementById("rep-channel-filter");
+    const q = (searchEl ? searchEl.value : "").toLowerCase().trim();
+    const statusFilter = (statusEl ? statusEl.value : "all").toLowerCase().trim();
+    const channelFilter = (channelEl ? channelEl.value : "all").toLowerCase().trim();
+
+    filteredRepayments = (loadedRepayments || []).filter(function (r) {
+      if (q) {
+        const hay = [r.paymentId, r.loanId, r.borrower, r.memberId, r.tid, r.mode, r.date].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      if (statusFilter && statusFilter !== "all") {
+        const st = String(r.status || "Approved").toLowerCase().trim();
+        if (st !== statusFilter) return false;
+      }
+      if (channelFilter && channelFilter !== "all") {
+        const ch = String(r.mode || "").toLowerCase().trim();
+        if (ch !== channelFilter) return false;
+      }
+      return true;
+    });
+
+    const totalRows = filteredRepayments.length;
+    repTotalPages = Math.max(1, Math.ceil(totalRows / repaymentsPerPage));
+    const reqPage = Number(targetPage);
+    repPage = reqPage > 0 ? Math.min(repTotalPages, reqPage) : 1;
+
+    const startIdx = (repPage - 1) * repaymentsPerPage;
+    const pageRows = filteredRepayments.slice(startIdx, startIdx + repaymentsPerPage);
+
+    renderLoanRepaymentsTable(pageRows);
+    if (typeof renderTablePagination === "function") {
+      renderTablePagination("repayments-pagination", {
+        currentPage: repPage,
+        totalPages: repTotalPages,
+        totalRows: totalRows,
+        rowsPerPage: repaymentsPerPage,
+        onPageChangeName: "setRepaymentsPage",
+        onRowsPerPageChangeName: "setRepaymentsRowsPerPage",
+        entityLabel: "repayments",
+      });
+    }
+  }
+  window.filterRepaymentsTable = filterRepaymentsTable;
+
+  function setRepaymentsPage(page) {
+    const p = Number(page) || 1;
+    if (p < 1 || p > repTotalPages) return;
+    filterRepaymentsTable(p);
+  }
+  window.setRepaymentsPage = setRepaymentsPage;
+
+  function setRepaymentsRowsPerPage(limit) {
+    const n = Number(limit);
+    repaymentsPerPage = n > 0 ? n : 10;
+    filterRepaymentsTable(1);
+  }
+  window.setRepaymentsRowsPerPage = setRepaymentsRowsPerPage;
+
   function loadLoanRepayments(page) {
-    repPage = page || 1;
+    repPage = Number(page) > 0 ? Number(page) : 1;
     const body = document.getElementById("loan-repayments-body");
     if (body) {
       body.innerHTML =
@@ -160,28 +231,33 @@
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
+          loadedRepayments = [];
+          filteredRepayments = [];
           if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-amber-600">Failed to load sub-ledger: ' + (res && res.error ? res.error : "") + '</td></tr>';
+          if (typeof renderTablePagination === "function") {
+            renderTablePagination("repayments-pagination", {
+              currentPage: 1,
+              totalPages: 1,
+              totalRows: 0,
+              rowsPerPage: repaymentsPerPage,
+              onPageChangeName: "setRepaymentsPage",
+              onRowsPerPageChangeName: "setRepaymentsRowsPerPage",
+              entityLabel: "repayments",
+            });
+          }
           return;
         }
-        repTotalPages = res.totalPages || 1;
-        renderLoanRepaymentsTable(res.repayments);
-        const pNum = document.getElementById("rep-page-num");
-        if (pNum) pNum.innerText = res.currentPage;
-        const prevBtn = document.getElementById("rep-prev");
-        const nextBtn = document.getElementById("rep-next");
-        if (prevBtn) prevBtn.disabled = res.currentPage <= 1;
-        if (nextBtn) nextBtn.disabled = res.currentPage >= res.totalPages;
+        loadedRepayments = res.repayments || [];
+        filterRepaymentsTable(repPage);
       })
       .withFailureHandler(function (err) {
         if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-rose-600">Error loading sub-ledger: ' + (err && err.message ? err.message : err) + '</td></tr>';
       })
-      .getLoanRepaymentsData("", repPage, 10);
+      .getLoanRepaymentsData("", 1, 2000);
   }
 
   function changeRepPage(direction) {
-    if (repPage + direction >= 1 && repPage + direction <= repTotalPages) {
-      loadLoanRepayments(repPage + direction);
-    }
+    setRepaymentsPage(repPage + (Number(direction) || 0));
   }
 
   function getStatusStyle(status) {
@@ -198,7 +274,12 @@
     const body = document.getElementById("loan-table-body");
     if (!body) return;
     if (!loans || !loans.length) {
-      body.innerHTML = '<tr><td colspan="10" class="px-4 py-8 text-center text-xs text-slate-400">No loan records found.</td></tr>';
+      body.innerHTML =
+        '<tr><td colspan="10" class="px-4 py-8 text-center text-xs text-slate-400">' +
+        (loadedLoans.length > 0
+          ? "No loans match your search or status filter."
+          : "No loan records found.") +
+        "</td></tr>";
       return;
     }
     body.innerHTML = loans
@@ -270,8 +351,67 @@
     }
   }
 
+  function filterLoansTable(targetPage) {
+    const searchEl = document.getElementById("loan-search-input");
+    const statusEl = document.getElementById("loan-status-filter");
+    const q = (searchEl ? searchEl.value : "").toLowerCase().trim();
+    const statusFilter = (statusEl ? statusEl.value : "all").toLowerCase().trim();
+
+    filteredLoans = (loadedLoans || []).filter(function (loan) {
+      if (q) {
+        const hay = [loan.id, loan.borrower, loan.memberId, loan.date].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      if (statusFilter && statusFilter !== "all") {
+        const st = String(loan.status || "").toLowerCase().trim();
+        if (statusFilter === "settled") {
+          if (st !== "settled" && st !== "cleared") return false;
+        } else if (st !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const totalRows = filteredLoans.length;
+    loanTotalPages = Math.max(1, Math.ceil(totalRows / loansPerPage));
+    const reqPage = Number(targetPage);
+    loanPage = reqPage > 0 ? Math.min(loanTotalPages, reqPage) : 1;
+
+    const startIdx = (loanPage - 1) * loansPerPage;
+    const pageRows = filteredLoans.slice(startIdx, startIdx + loansPerPage);
+
+    renderLoanTable(pageRows);
+    if (typeof renderTablePagination === "function") {
+      renderTablePagination("loans-pagination", {
+        currentPage: loanPage,
+        totalPages: loanTotalPages,
+        totalRows: totalRows,
+        rowsPerPage: loansPerPage,
+        onPageChangeName: "setLoansPage",
+        onRowsPerPageChangeName: "setLoansRowsPerPage",
+        entityLabel: "loans",
+      });
+    }
+  }
+  window.filterLoansTable = filterLoansTable;
+
+  function setLoansPage(page) {
+    const p = Number(page) || 1;
+    if (p < 1 || p > loanTotalPages) return;
+    filterLoansTable(p);
+  }
+  window.setLoansPage = setLoansPage;
+
+  function setLoansRowsPerPage(limit) {
+    const n = Number(limit);
+    loansPerPage = n > 0 ? n : 10;
+    filterLoansTable(1);
+  }
+  window.setLoansRowsPerPage = setLoansRowsPerPage;
+
   function loadLoans(page) {
-    loanPage = page || 1;
+    loanPage = Number(page) > 0 ? Number(page) : 1;
     startAppLoader();
     document.getElementById("loan-table-body").innerHTML =
       typeof renderTableSkeleton === "function"
@@ -281,16 +421,26 @@
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
           stopAppLoader();
+          loadedLoans = [];
+          filteredLoans = [];
+          renderLoanTable([]);
+          if (typeof renderTablePagination === "function") {
+            renderTablePagination("loans-pagination", {
+              currentPage: 1,
+              totalPages: 1,
+              totalRows: 0,
+              rowsPerPage: loansPerPage,
+              onPageChangeName: "setLoansPage",
+              onRowsPerPageChangeName: "setLoansRowsPerPage",
+              entityLabel: "loans",
+            });
+          }
           handleErr(res || { message: "Failed to load loans." });
           return;
         }
 
-        loanTotalPages = res.totalPages || 1;
         loadedLoans = res.loans || [];
-        renderLoanTable(loadedLoans);
-        document.getElementById("loan-page-num").innerText = res.currentPage;
-        document.getElementById("l-prev").disabled = res.currentPage <= 1;
-        document.getElementById("l-next").disabled = res.currentPage >= res.totalPages;
+        filterLoansTable(loanPage);
         stopAppLoader();
         loadLoanRepayments(1);
       })
@@ -298,13 +448,11 @@
         stopAppLoader();
         handleErr(err);
       })
-      .getLoansData(loanPage, 10);
+      .getLoansData(1, 2000);
   }
 
   function changeLoanPage(direction) {
-    if (loanPage + direction >= 1 && loanPage + direction <= loanTotalPages) {
-      loadLoans(loanPage + direction);
-    }
+    setLoansPage(loanPage + (Number(direction) || 0));
   }
 
   function openRequestLoanModal() {

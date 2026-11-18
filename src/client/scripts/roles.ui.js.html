@@ -1,5 +1,9 @@
 <script>
   let currentRoles = [];
+  let filteredRoles = [];
+  let rolesPage = 1;
+  let rolesPerPage = 10;
+  let rolesTotalPages = 1;
 
   function getRoleBadge(roleKey) {
     const r = (roleKey || "").toLowerCase();
@@ -43,38 +47,7 @@
         }
 
         currentRoles = response.roles || [];
-        let html = "";
-        currentRoles.forEach((item) => {
-          html +=
-            '<tr class="hover:bg-slate-50/70 transition-colors">' +
-            '<td class="col-r-identity px-4 py-3"><div class="font-semibold text-xs text-slate-900">' +
-            (item.name || "User") +
-            "</div></td>" +
-            '<td class="col-r-email px-4 py-3 text-slate-500 font-mono text-xs">' +
-            item.email +
-            "</td>" +
-            '<td class="col-r-role px-4 py-3 text-center">' +
-            getRoleBadge(item.roleKey) +
-            "</td>" +
-            '<td class="col-r-status px-4 py-3 text-center">' +
-            getActiveStatusBadge(item.active) +
-            "</td>" +
-            '<td class="col-r-action px-4 py-3 text-center" data-require-perm="isAdmin"><button type="button" onclick="openRoleModal(\'' +
-            item.email +
-            '\')" class="text-slate-400 hover:text-slate-900 transition-colors px-2 py-1"><i class="fas fa-edit"></i></button></td>' +
-            "</tr>";
-        });
-
-        container.innerHTML =
-          html || '<tr><td colspan="5" class="text-center py-6 text-slate-500">No user roles configured.</td></tr>';
-
-        if (typeof applySavedColumnPreferences === "function") {
-          applySavedColumnPreferences("roles-table");
-        }
-
-        if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
-          applyRolePermissions(window.APP_PERMS);
-        }
+        filterRolesTable(rolesPage);
         stopAppLoader();
       })
       .withFailureHandler((err) => {
@@ -83,6 +56,111 @@
       })
       .getRolesData();
   }
+
+  function renderRolesTable(rows) {
+    const container = document.getElementById("roles-table-body");
+    if (!container) return;
+
+    let html = "";
+    (rows || []).forEach((item) => {
+      html +=
+        '<tr class="hover:bg-slate-50/70 transition-colors">' +
+        '<td class="col-r-identity px-4 py-3"><div class="font-semibold text-xs text-slate-900">' +
+        (item.name || "User") +
+        "</div></td>" +
+        '<td class="col-r-email px-4 py-3 text-slate-500 font-mono text-xs">' +
+        item.email +
+        "</td>" +
+        '<td class="col-r-role px-4 py-3 text-center">' +
+        getRoleBadge(item.roleKey) +
+        "</td>" +
+        '<td class="col-r-status px-4 py-3 text-center">' +
+        getActiveStatusBadge(item.active) +
+        "</td>" +
+        '<td class="col-r-action px-4 py-3 text-center" data-require-perm="isAdmin"><button type="button" onclick="openRoleModal(\'' +
+        item.email +
+        '\')" class="text-slate-400 hover:text-slate-900 transition-colors px-2 py-1"><i class="fas fa-edit"></i></button></td>' +
+        "</tr>";
+    });
+
+    container.innerHTML =
+      html ||
+      '<tr><td colspan="5" class="text-center py-6 text-slate-500">' +
+      (currentRoles.length > 0
+        ? "No user roles match your search or filter criteria."
+        : "No user roles configured.") +
+      "</td></tr>";
+
+    if (typeof applySavedColumnPreferences === "function") {
+      applySavedColumnPreferences("roles-table");
+    }
+
+    if (typeof applyRolePermissions === "function" && window.APP_PERMS) {
+      applyRolePermissions(window.APP_PERMS);
+    }
+  }
+
+  function filterRolesTable(targetPage) {
+    const searchEl = document.getElementById("roles-search-input");
+    const roleEl = document.getElementById("roles-role-filter");
+    const statusEl = document.getElementById("roles-status-filter");
+    const q = (searchEl ? searchEl.value : "").toLowerCase().trim();
+    const roleFilter = (roleEl ? roleEl.value : "all").toLowerCase().trim();
+    const statusFilter = (statusEl ? statusEl.value : "all").toLowerCase().trim();
+
+    filteredRoles = (currentRoles || []).filter(function (item) {
+      if (q) {
+        const hay = [item.name, item.email, item.memberId, item.member, item.role].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      if (roleFilter && roleFilter !== "all") {
+        const rk = String(item.roleKey || item.role || "").toLowerCase().trim();
+        if (rk !== roleFilter) return false;
+      }
+      if (statusFilter && statusFilter !== "all") {
+        const isActive = Boolean(item.active);
+        if (statusFilter === "active" && !isActive) return false;
+        if (statusFilter === "inactive" && isActive) return false;
+      }
+      return true;
+    });
+
+    const totalRows = filteredRoles.length;
+    rolesTotalPages = Math.max(1, Math.ceil(totalRows / rolesPerPage));
+    const reqPage = Number(targetPage);
+    rolesPage = reqPage > 0 ? Math.min(rolesTotalPages, reqPage) : 1;
+
+    const startIdx = (rolesPage - 1) * rolesPerPage;
+    const pageRows = filteredRoles.slice(startIdx, startIdx + rolesPerPage);
+
+    renderRolesTable(pageRows);
+    if (typeof renderTablePagination === "function") {
+      renderTablePagination("roles-pagination", {
+        currentPage: rolesPage,
+        totalPages: rolesTotalPages,
+        totalRows: totalRows,
+        rowsPerPage: rolesPerPage,
+        onPageChangeName: "setRolesPage",
+        onRowsPerPageChangeName: "setRolesRowsPerPage",
+        entityLabel: "users",
+      });
+    }
+  }
+  window.filterRolesTable = filterRolesTable;
+
+  function setRolesPage(page) {
+    const p = Number(page) || 1;
+    if (p < 1 || p > rolesTotalPages) return;
+    filterRolesTable(p);
+  }
+  window.setRolesPage = setRolesPage;
+
+  function setRolesRowsPerPage(limit) {
+    const n = Number(limit);
+    rolesPerPage = n > 0 ? n : 10;
+    filterRolesTable(1);
+  }
+  window.setRolesRowsPerPage = setRolesRowsPerPage;
 
   function setupRoleMemberCombobox(selectedMemberValue, currentEditingEmail) {
     const searchInput = document.getElementById("r-member-search");

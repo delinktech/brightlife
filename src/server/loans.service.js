@@ -11,7 +11,7 @@ function getLoansData(page, limit) {
     const sheet = getRequiredSheet_(SHEETS.LOANS);
     const values = sheet.getDataRange().getValues();
     if (values.length <= 1) {
-      return { success: true, loans: [], totalPages: 0, currentPage: 1 };
+      return { success: true, loans: [], totalPages: 0, totalRows: 0, currentPage: 1 };
     }
 
     const headers = values[0];
@@ -115,6 +115,7 @@ function getLoansData(page, limit) {
       success: true,
       loans: loans,
       totalPages: totalPages,
+      totalRows: allRows.length,
       currentPage: Math.min(currentPage, totalPages),
     };
   } catch (error) {
@@ -453,7 +454,7 @@ function getLoanRepaymentsData(loanId, page, limit) {
     const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
     if (!sheet || sheet.getLastRow() <= 1) {
-      return { success: true, repayments: [], totalPages: 0, currentPage: 1 };
+      return { success: true, repayments: [], totalPages: 0, totalRows: 0, currentPage: 1 };
     }
 
     const values = sheet.getDataRange().getValues();
@@ -504,6 +505,7 @@ function getLoanRepaymentsData(loanId, page, limit) {
       success: true,
       repayments: repayments,
       totalPages: totalPages,
+      totalRows: allRows.length,
       currentPage: Math.min(currentPage, totalPages),
     };
   } catch (error) {

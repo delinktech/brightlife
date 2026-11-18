@@ -49,6 +49,24 @@
 
   <!-- Loan Portfolio Table Container -->
   <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <!-- Filter Toolbar -->
+    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center gap-2.5">
+      <div class="relative flex-1 min-w-0">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+        <input type="text" id="loan-search-input" oninput="filterLoansTable()"
+          placeholder="Search by Loan ID or Borrower name..."
+          class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600" />
+      </div>
+      <div class="flex items-center gap-2">
+        <select id="loan-status-filter" onchange="filterLoansTable()" aria-label="Filter loans by status"
+          class="w-full sm:w-44 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="settled">Settled</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+    </div>
     <div class="overflow-x-auto">
       <table id="loans-table" class="shadcn-table">
         <thead>
@@ -69,14 +87,7 @@
         </tbody>
       </table>
     </div>
-    
-    <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-white border-t border-slate-100">
-      <span class="text-xs text-slate-500">Page <span id="loan-page-num" class="font-bold text-slate-900 font-mono">1</span></span>
-      <div class="flex items-center gap-1.5">
-        <button onclick="changeLoanPage(-1)" id="l-prev" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><i class="fas fa-chevron-left mr-1 text-[10px]"></i> Prev</button>
-        <button onclick="changeLoanPage(1)" id="l-next" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next <i class="fas fa-chevron-right ml-1 text-[10px]"></i></button>
-      </div>
-    </div>
+    <div id="loans-pagination"></div>
   </div>
 
   <!-- Dedicated Loan Repayments Sub-Ledger Stream -->
@@ -93,6 +104,34 @@
         <button type="button" onclick="loadLoanRepayments(1)" class="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors">
           <i class="fas fa-rotate mr-1 text-[10px]"></i> Refresh Ledger
         </button>
+      </div>
+    </div>
+
+    <!-- Repayments Filter Toolbar -->
+    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-2.5">
+      <div class="relative flex-1 min-w-0">
+        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+        <input type="text" id="rep-search-input" oninput="filterRepaymentsTable()"
+          placeholder="Search by Receipt #, Loan ID, Borrower, or Transaction ID..."
+          class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600" />
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2">
+        <select id="rep-status-filter" onchange="filterRepaymentsTable()" aria-label="Filter repayments by status"
+          class="w-full lg:w-40 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          <option value="all">All Statuses</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <select id="rep-channel-filter" onchange="filterRepaymentsTable()" aria-label="Filter repayments by channel"
+          class="w-full lg:w-48 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          <option value="all">All Channels</option>
+          <option value="Cash">Cash</option>
+          <option value="Equity Bank">Equity Bank</option>
+          <option value="CIC MMF">CIC MMF</option>
+          <option value="Mansa X">Mansa X</option>
+          <option value="Refund / Expense Offset">Refund / Expense Offset</option>
+        </select>
       </div>
     </div>
 
@@ -121,14 +160,7 @@
         </tbody>
       </table>
     </div>
-
-    <div class="flex items-center justify-between px-4 sm:px-6 py-3 bg-white border-t border-slate-100">
-      <span class="text-xs text-slate-500">Page <span id="rep-page-num" class="font-bold text-slate-900 font-mono">1</span></span>
-      <div class="flex items-center gap-1.5">
-        <button onclick="changeRepPage(-1)" id="rep-prev" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"><i class="fas fa-chevron-left mr-1 text-[10px]"></i> Prev</button>
-        <button onclick="changeRepPage(1)" id="rep-next" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Next <i class="fas fa-chevron-right ml-1 text-[10px]"></i></button>
-      </div>
-    </div>
+    <div id="repayments-pagination"></div>
   </div>
 </section>
 

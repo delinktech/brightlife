@@ -1,7 +1,9 @@
 <script>
   let invPage = 1;
+  let invPerPage = 10;
   let invTotalPages = 1;
   let invListCache = [];
+  let filteredInvestments = [];
 
   function getInvestmentStatusStyle(status) {
     const s = (status || "").toLowerCase().trim();
@@ -14,7 +16,17 @@
 
   function renderInvestmentsTable(rows) {
     const body = document.getElementById("investments-table-body");
-    body.innerHTML = (rows || [])
+    if (!body) return;
+    if (!rows || !rows.length) {
+      body.innerHTML =
+        '<tr><td colspan="8" class="px-4 py-8 text-center text-xs text-slate-400">' +
+        (invListCache.length > 0
+          ? "No investments match your search or status filter."
+          : "No investment records found.") +
+        "</td></tr>";
+      return;
+    }
+    body.innerHTML = rows
       .map(function (inv) {
         const roiPct = Number(inv.roiPercent) || 0;
         const roiAmt = Number(inv.roiAmount) || 0;
@@ -70,8 +82,67 @@
     }
   }
 
+  function filterInvestmentsTable(targetPage) {
+    const searchEl = document.getElementById("inv-search-input");
+    const statusEl = document.getElementById("inv-status-filter");
+    const q = (searchEl ? searchEl.value : "").toLowerCase().trim();
+    const statusFilter = (statusEl ? statusEl.value : "all").toLowerCase().trim();
+
+    filteredInvestments = (invListCache || []).filter(function (inv) {
+      if (q) {
+        const hay = [inv.id, inv.name, inv.startDate].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      if (statusFilter && statusFilter !== "all") {
+        const st = String(inv.status || "").toLowerCase().trim();
+        if (statusFilter === "closed") {
+          if (st !== "closed" && st !== "completed") return false;
+        } else if (st !== statusFilter) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const totalRows = filteredInvestments.length;
+    invTotalPages = Math.max(1, Math.ceil(totalRows / invPerPage));
+    const reqPage = Number(targetPage);
+    invPage = reqPage > 0 ? Math.min(invTotalPages, reqPage) : 1;
+
+    const startIdx = (invPage - 1) * invPerPage;
+    const pageRows = filteredInvestments.slice(startIdx, startIdx + invPerPage);
+
+    renderInvestmentsTable(pageRows);
+    if (typeof renderTablePagination === "function") {
+      renderTablePagination("investments-pagination", {
+        currentPage: invPage,
+        totalPages: invTotalPages,
+        totalRows: totalRows,
+        rowsPerPage: invPerPage,
+        onPageChangeName: "setInvestmentsPage",
+        onRowsPerPageChangeName: "setInvestmentsRowsPerPage",
+        entityLabel: "investments",
+      });
+    }
+  }
+  window.filterInvestmentsTable = filterInvestmentsTable;
+
+  function setInvestmentsPage(page) {
+    const p = Number(page) || 1;
+    if (p < 1 || p > invTotalPages) return;
+    filterInvestmentsTable(p);
+  }
+  window.setInvestmentsPage = setInvestmentsPage;
+
+  function setInvestmentsRowsPerPage(limit) {
+    const n = Number(limit);
+    invPerPage = n > 0 ? n : 10;
+    filterInvestmentsTable(1);
+  }
+  window.setInvestmentsRowsPerPage = setInvestmentsRowsPerPage;
+
   function loadInvestments(page) {
-    invPage = page || 1;
+    invPage = Number(page) > 0 ? Number(page) : 1;
     startAppLoader();
     document.getElementById("investments-table-body").innerHTML =
       typeof renderTableSkeleton === "function"
@@ -81,32 +152,39 @@
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
           stopAppLoader();
+          invListCache = [];
+          filteredInvestments = [];
           document.getElementById("investments-table-body").innerHTML =
             '<tr><td colspan="8" class="px-4 py-6 text-center text-rose-600">' +
             (res && res.error ? res.error : "Failed to load investments.") +
             "</td></tr>";
+          if (typeof renderTablePagination === "function") {
+            renderTablePagination("investments-pagination", {
+              currentPage: 1,
+              totalPages: 1,
+              totalRows: 0,
+              rowsPerPage: invPerPage,
+              onPageChangeName: "setInvestmentsPage",
+              onRowsPerPageChangeName: "setInvestmentsRowsPerPage",
+              entityLabel: "investments",
+            });
+          }
           handleErr(res || { message: "Failed to load investments." });
           return;
         }
-        invTotalPages = res.totalPages || 1;
         invListCache = res.investments || [];
-        renderInvestmentsTable(res.investments);
-        document.getElementById("inv-page-num").innerText = res.currentPage;
-        document.getElementById("inv-prev").disabled = res.currentPage <= 1;
-        document.getElementById("inv-next").disabled = res.currentPage >= res.totalPages;
+        filterInvestmentsTable(invPage);
         stopAppLoader();
       })
       .withFailureHandler(function (err) {
         stopAppLoader();
         handleErr(err);
       })
-      .getInvestmentsData(invPage, 15);
+      .getInvestmentsData(1, 1000);
   }
 
   function changeInvestmentPage(dir) {
-    if (invPage + dir >= 1 && invPage + dir <= invTotalPages) {
-      loadInvestments(invPage + dir);
-    }
+    setInvestmentsPage(invPage + (Number(dir) || 0));
   }
 
   function openInvestmentLedger(id) {

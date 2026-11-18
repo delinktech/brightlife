@@ -276,6 +276,133 @@
   }
   window.renderChartSkeleton = renderChartSkeleton;
 
+  function escapePaginationHtml(str) {
+    return String(str == null ? "" : str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function safeGlobalCallbackExpr(fnName, argExpr) {
+    const clean = String(fnName || "").trim();
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(clean)) return "";
+    return "if(typeof window['" + clean + "']==='function'){window['" + clean + "'](" + argExpr + ");}";
+  }
+
+  window.renderTablePagination = function (containerId, options) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const opts = options || {};
+    const rowsPerPage = Math.max(1, Number(opts.rowsPerPage) || 10);
+    const totalRows = Math.max(0, Number(opts.totalRows) || 0);
+    const totalPages = Math.max(1, Number(opts.totalPages) || Math.ceil(totalRows / rowsPerPage) || 1);
+    const currentPage = Math.min(totalPages, Math.max(1, Number(opts.currentPage) || 1));
+    const entityLabel = escapePaginationHtml(opts.entityLabel || "records");
+    const onPageChangeName = String(opts.onPageChangeName || "").trim();
+    const onRowsPerPageChangeName = String(opts.onRowsPerPageChangeName || "").trim();
+
+    const start = totalRows === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+    const end = totalRows === 0 ? 0 : Math.min(totalRows, currentPage * rowsPerPage);
+
+    const sizeOptions = [10, 25, 50, 100];
+    if (sizeOptions.indexOf(rowsPerPage) === -1) {
+      sizeOptions.push(rowsPerPage);
+      sizeOptions.sort(function (a, b) {
+        return a - b;
+      });
+    }
+
+    const rppHandler = safeGlobalCallbackExpr(onRowsPerPageChangeName, "Number(this.value)");
+    const selectHtml =
+      '<div class="flex items-center gap-1.5">' +
+        '<label for="' + escapePaginationHtml(containerId) + '-rpp" class="text-[11px] font-medium text-slate-500 whitespace-nowrap">Rows:</label>' +
+        '<select id="' + escapePaginationHtml(containerId) + '-rpp" aria-label="Rows per page" ' +
+          (rppHandler ? 'onchange="' + rppHandler + '" ' : "") +
+          'class="pl-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg font-mono tabular-nums min-h-[44px] sm:min-h-[34px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">' +
+          sizeOptions
+            .map(function (n) {
+              return '<option value="' + n + '"' + (n === rowsPerPage ? " selected" : "") + ">" + n + "</option>";
+            })
+            .join("") +
+        "</select>" +
+      "</div>";
+
+    const pages = [];
+    if (totalPages <= 5) {
+      for (let p = 1; p <= totalPages; p++) pages.push(p);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const winStart = Math.max(2, currentPage - 1);
+      const winEnd = Math.min(totalPages - 1, currentPage + 1);
+      for (let p = winStart; p <= winEnd; p++) pages.push(p);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    const prevDisabled = currentPage <= 1 || totalRows === 0;
+    const nextDisabled = currentPage >= totalPages || totalRows === 0;
+    const prevExpr = prevDisabled ? "" : safeGlobalCallbackExpr(onPageChangeName, String(currentPage - 1));
+    const nextExpr = nextDisabled ? "" : safeGlobalCallbackExpr(onPageChangeName, String(currentPage + 1));
+
+    const pageButtonsHtml = pages
+      .map(function (p) {
+        if (p === "...") {
+          return '<span class="px-1.5 text-xs text-slate-400 font-mono select-none">&hellip;</span>';
+        }
+        const isActive = p === currentPage;
+        const clickExpr = isActive ? "" : safeGlobalCallbackExpr(onPageChangeName, String(p));
+        return (
+          '<button type="button" ' +
+            (isActive ? 'aria-current="page" ' : "") +
+            (clickExpr ? 'onclick="' + clickExpr + '" ' : "") +
+            'class="min-h-[44px] min-w-[44px] sm:min-h-[34px] sm:min-w-[34px] px-2.5 py-1 text-xs font-mono tabular-nums rounded-lg border transition-colors inline-flex items-center justify-center ' +
+            (isActive
+              ? "bg-emerald-700 text-white border-emerald-700 font-bold shadow-xs"
+              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 font-medium") +
+          '">' +
+          p +
+          "</button>"
+        );
+      })
+      .join("");
+
+    container.innerHTML =
+      '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-3 bg-white border-t border-slate-100">' +
+        '<div class="flex flex-wrap items-center justify-between sm:justify-start gap-3">' +
+          '<p class="text-xs text-slate-500">' +
+            'Showing <span class="font-bold text-slate-900 font-mono tabular-nums">' + start + "</span> to " +
+            '<span class="font-bold text-slate-900 font-mono tabular-nums">' + end + "</span> of " +
+            '<span class="font-bold text-slate-900 font-mono tabular-nums">' + totalRows + "</span> " +
+            entityLabel +
+          "</p>" +
+          selectHtml +
+        "</div>" +
+        '<div class="flex flex-wrap items-center justify-center sm:justify-end gap-1.5">' +
+          '<button type="button" ' +
+            (prevDisabled ? "disabled " : "") +
+            (prevExpr ? 'onclick="' + prevExpr + '" ' : "") +
+            'aria-label="Previous page" ' +
+            'class="min-h-[44px] sm:min-h-[34px] px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1">' +
+            '<i class="fas fa-chevron-left text-[10px]"></i><span>Prev</span>' +
+          "</button>" +
+          '<div class="flex items-center gap-1">' +
+            pageButtonsHtml +
+          "</div>" +
+          '<button type="button" ' +
+            (nextDisabled ? "disabled " : "") +
+            (nextExpr ? 'onclick="' + nextExpr + '" ' : "") +
+            'aria-label="Next page" ' +
+            'class="min-h-[44px] sm:min-h-[34px] px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1">' +
+            '<span>Next</span><i class="fas fa-chevron-right text-[10px]"></i>' +
+          "</button>" +
+        "</div>" +
+      "</div>";
+  };
+
   let activeConfirmResolver = null;
   function showConfirmDialog(options) {
     const opts = options && typeof options === "object" ? options : {};
@@ -1229,7 +1356,7 @@
           membersLoadPromise = null;
           reject(err);
         })
-        .getMembersData();
+        .getMembersData(1, 1000);
     });
 
     return membersLoadPromise;

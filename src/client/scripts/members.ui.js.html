@@ -66,7 +66,11 @@
     }
   }
 
-  function filterMembersTable() {
+  let membersPage = 1;
+  let membersPerPage = 10;
+  let membersTotalPages = 1;
+
+  function filterMembersTable(targetPage) {
     const searchVal = (document.getElementById("member-search-input") ? document.getElementById("member-search-input").value : "").toLowerCase().trim();
     const statusVal = document.getElementById("member-loan-status-filter") ? document.getElementById("member-loan-status-filter").value : "all";
 
@@ -90,8 +94,42 @@
       return true;
     });
 
-    renderMembersTable(filtered);
+    const totalRows = filtered.length;
+    membersTotalPages = Math.max(1, Math.ceil(totalRows / membersPerPage));
+    const reqPage = Number(targetPage);
+    membersPage = reqPage > 0 ? Math.min(membersTotalPages, reqPage) : 1;
+
+    const startIdx = (membersPage - 1) * membersPerPage;
+    const pageRows = filtered.slice(startIdx, startIdx + membersPerPage);
+
+    renderMembersTable(pageRows);
+    if (typeof renderTablePagination === "function") {
+      renderTablePagination("members-pagination", {
+        currentPage: membersPage,
+        totalPages: membersTotalPages,
+        totalRows: totalRows,
+        rowsPerPage: membersPerPage,
+        onPageChangeName: "setMembersPage",
+        onRowsPerPageChangeName: "setMembersRowsPerPage",
+        entityLabel: "members",
+      });
+    }
   }
+  window.filterMembersTable = filterMembersTable;
+
+  function setMembersPage(page) {
+    const p = Number(page) || 1;
+    if (p < 1 || p > membersTotalPages) return;
+    filterMembersTable(p);
+  }
+  window.setMembersPage = setMembersPage;
+
+  function setMembersRowsPerPage(limit) {
+    const n = Number(limit);
+    membersPerPage = n > 0 ? n : 10;
+    filterMembersTable(1);
+  }
+  window.setMembersRowsPerPage = setMembersRowsPerPage;
 
   function getGenderChip(gender) {
     const g = String(gender || "").trim().toUpperCase();
@@ -297,7 +335,7 @@
           }
         }
       })
-      .getMembersData();
+      .getMembersData(1, 1000);
   }
 
   function openMemberModal(memberId) {
