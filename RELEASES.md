@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v99** | `@100` | `AKfycbx4........wRCA` | `8184ee2` | **Production** | 2026-11-18 | Designer & Sentinel: Print modal executive full-bleed dark top header pattern matching session modal styling with sky badge and cancel/print actions. |
+| **v100** | `@101` | `AKfycbx4........wRCA` | `9e4d0d4` | **Production** | 2026-11-18 | Designer & Sentinel: Milestone Release - Adapted Bank Balance per Records overview card to light mode styling with crisp borders and high-contrast typography. |
+| **v99** | `@100` | `AKfycbx4........wRCA` | `8184ee2` | Archived | 2026-11-18 | Designer & Sentinel: Print modal executive full-bleed dark top header pattern matching session modal styling with sky badge and cancel/print actions. |
 | **v98** | `@99` | `AKfycbx4........wRCA` | `549946f` | Archived | 2026-11-18 | Designer & Sentinel: Task 1.C Refinements - Full light mode sidebar styling, print report modal dark/light theme alignment, and dynamic reference tag template fix. |
 | **v97** | `@98` | `AKfycbx4........wRCA` | `13ae02d` | Archived | 2026-11-18 | Designer & Sentinel: Task 1.C - Unified brand palette (#004D40 teal, #D97706 warm amber, emerald accents), zero-flash CSS variable dark/light mode engine, and semantic status badge mapping across all 22 client views. |
 | **v96** | `@97` | `AKfycbx4........wRCA` | `e9460b5` | Archived | 2026-11-18 | Designer & Fixer: Task 1.A - Interactive search, multi-criteria filtering, and 10-records-per-page pagination across all ledgers (Members, Contributions, Loans, Investments, Roles). |
