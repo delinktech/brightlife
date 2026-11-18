@@ -228,11 +228,11 @@
         '<td class="col-m-loanstatus px-3 py-3 text-center">' + getMemberLoanStatusBadge(m) + '</td>' +
         '<td class="col-m-accountstatus px-3 py-3 text-center">' + getUserAccountStatusBadge(m.status) + '</td>' +
         '<td class="col-m-actions px-3 py-3 text-center">' +
-        '<div class="flex items-center justify-center gap-1.5">' +
-        '<button type="button" onclick="openPrintMemberStatement(\'' + m.id + '\')" title="Print Member Statement" class="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-1"><i class="fas fa-print"></i></button>' +
-        '<button type="button" onclick="openMemberEmailStatement(\'' + m.id + '\')" title="Email Monthly Statement" class="text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors p-1"><i class="fas fa-envelope"></i></button>' +
-        '<button type="button" onclick="openMemberWhatsAppStatement(\'' + m.id + '\')" title="Send WhatsApp Statement" class="text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors p-1"><i class="fab fa-whatsapp"></i></button>' +
-        '<button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' + m.id + '\')" title="Edit Member Profile" class="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-1 hidden"><i class="fas fa-pen"></i></button>' +
+        '<div class="flex items-center justify-center gap-1">' +
+        '<button type="button" onclick="openPrintMemberStatement(\'' + m.id + '\')" title="Print Member Statement" class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><i class="fas fa-print"></i></button>' +
+        '<button type="button" onclick="openMemberEmailStatement(\'' + m.id + '\')" title="Email Monthly Statement" class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"><i class="fas fa-envelope"></i></button>' +
+        '<button type="button" onclick="openMemberWhatsAppStatement(\'' + m.id + '\')" title="Send WhatsApp Statement" class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"><i class="fab fa-whatsapp"></i></button>' +
+        '<button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' + m.id + '\')" title="Edit Member Profile" class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors hidden"><i class="fas fa-pen"></i></button>' +
         '</div>' +
         '</td>' +
         '</tr>';
@@ -253,15 +253,15 @@
   function renderMembersErrorRow(msg) {
     return (
       '<tr><td colspan="11" class="px-4 py-8">' +
-        '<div class="max-w-md mx-auto p-5 rounded-xl bg-rose-50/70 border border-rose-200 text-center space-y-3">' +
-          '<div class="w-10 h-10 mx-auto rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-sm">' +
+        '<div class="max-w-md mx-auto p-5 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-center space-y-3">' +
+          '<div class="w-10 h-10 mx-auto rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-sm">' +
             '<i class="fas fa-triangle-exclamation"></i>' +
           '</div>' +
           '<div>' +
-            '<h4 class="text-xs font-bold text-rose-900">Unable to Load Members Registry</h4>' +
-            '<p class="text-[11px] text-rose-700 mt-1">' + escapeMemberErrHtml(msg || "Failed to load members.") + '</p>' +
+            '<h4 class="text-xs font-bold text-rose-900 dark:text-rose-200">Unable to Load Members Registry</h4>' +
+            '<p class="text-[11px] text-rose-700 dark:text-rose-300 mt-1">' + escapeMemberErrHtml(msg || "Failed to load members.") + '</p>' +
           '</div>' +
-          '<button type="button" onclick="loadMembers(true)" class="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
+          '<button type="button" onclick="loadMembers(true)" class="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
             '<i class="fas fa-arrows-rotate text-[11px]"></i> <span>Try Again</span>' +
           '</button>' +
         '</div>' +

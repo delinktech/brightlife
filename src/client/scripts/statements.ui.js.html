@@ -37,7 +37,7 @@ function loadMonthlyStatementsView(monthKey) {
     .withFailureHandler(function (err) {
       stopAppLoader();
       if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-rose-500 font-medium">Failed to load statements: ' + escapeHtmlAttr(err.message) + '</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-rose-700 dark:text-rose-400 font-medium">Failed to load statements: ' + escapeHtmlAttr(err.message) + '</td></tr>';
       }
       handleErr(err);
     })
@@ -77,7 +77,11 @@ function renderMonthlyStatementsView(data) {
   if (elPhonePct) elPhonePct.innerText = phonePct + "% ready for 1-click share";
 
   if (elBadge && data.settings) {
-    if (data.settings.autoEmailReceipts) {
+    if (typeof renderStatusPill === "function") {
+      const isOn = Boolean(data.settings.autoEmailReceipts);
+      elBadge.className = "inline-flex items-center";
+      elBadge.innerHTML = renderStatusPill(isOn ? "Active" : "Paused", isOn ? "ACTIVE (ON)" : "PAUSED (OFF)");
+    } else if (data.settings.autoEmailReceipts) {
       elBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30";
       elBadge.innerHTML = '<i class="fas fa-check-circle mr-1 text-[10px]"></i> ACTIVE (ON)';
     } else {
@@ -130,15 +134,15 @@ function renderStatementMembersTable(members) {
         '<td class="py-3 px-3 text-center">' +
           '<div class="flex items-center justify-center gap-1.5">' +
             '<button type="button" onclick="previewMemberStatement(\'' + escapeHtmlAttr(m.id) + '\')" title="Preview Statement" ' +
-              'class="p-1 px-2 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-[10px] transition-colors flex items-center gap-1">' +
+              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5">' +
               '<i class="fas fa-eye text-slate-500 dark:text-slate-400"></i> Preview' +
             '</button>' +
             '<button type="button" onclick="sendSingleMemberStatement(\'' + escapeHtmlAttr(m.id) + '\')" title="Send Email Statement" ' +
-              'class="p-1 px-2 rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[10px] transition-colors flex items-center gap-1 ' + (!m.hasEmail ? 'opacity-50 cursor-not-allowed' : '') + '">' +
+              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 ' + (!m.hasEmail ? 'opacity-50 cursor-not-allowed' : '') + '">' +
               '<i class="fas fa-envelope text-emerald-700 dark:text-emerald-400"></i> Email' +
             '</button>' +
             '<button type="button" onclick="sendSingleMemberWhatsApp(\'' + escapeHtmlAttr(m.id) + '\')" title="Send WhatsApp Statement" ' +
-              'class="p-1 px-2 rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[10px] transition-colors flex items-center gap-1 ' + (!m.hasPhone ? 'opacity-50 cursor-not-allowed' : '') + '">' +
+              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 ' + (!m.hasPhone ? 'opacity-50 cursor-not-allowed' : '') + '">' +
               '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> WhatsApp' +
             '</button>' +
           '</div>' +

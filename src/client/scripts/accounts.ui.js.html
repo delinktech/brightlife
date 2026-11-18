@@ -124,14 +124,14 @@ function paymentGuideHtml(account) {
   }
 
   const accCopyBtn = accNum
-    ? '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(accNum) + '\', this)" class="text-[10px] text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 p-1 rounded hover:bg-sky-50 dark:hover:bg-sky-950/60" title="Copy Account Number"><i class="fas fa-copy"></i></button>'
+    ? '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(accNum) + '\', this)" class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center text-xs text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/60 transition-colors" title="Copy Account Number"><i class="fas fa-copy"></i></button>'
     : '';
   const paybillRow = paybill
     ? '<div class="flex items-center justify-between text-xs pt-1 border-t border-slate-200/70 dark:border-slate-700/70">' +
         '<span class="text-slate-500 dark:text-slate-400 text-[11px]">Paybill / Till:</span>' +
         '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800 dark:text-slate-100">' +
           '<span>' + escapeAcctHtml(paybill) + '</span>' +
-          '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(paybill) + '\', this)" class="text-[10px] text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 p-1 rounded hover:bg-sky-50 dark:hover:bg-sky-950/60" title="Copy Paybill / Till"><i class="fas fa-copy"></i></button>' +
+          '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(paybill) + '\', this)" class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center text-xs text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 rounded-lg hover:bg-sky-50 dark:hover:bg-sky-950/60 transition-colors" title="Copy Paybill / Till"><i class="fas fa-copy"></i></button>' +
         '</div>' +
       '</div>'
     : '';
@@ -264,7 +264,7 @@ function renderReconciliationDashboard(data) {
       '  <td class="py-3 px-4 text-center font-sans text-[10px] text-slate-500 dark:text-slate-400">' + escapeAcctHtml(row.statementDate || "—") + '</td>' +
       '  <td class="py-3 px-4 text-center font-sans">' +
       '    <button type="button" onclick="openReconcileModal(' + accRowJson + ')"' +
-      '      class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 rounded-md text-[11px] font-medium transition-colors">' +
+      '      class="min-h-[38px] inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 rounded-lg text-[11px] font-medium transition-colors">' +
       '      <i class="fas fa-file-pen text-[10px]"></i> <span>Reconcile</span>' +
       '    </button>' +
       '  </td>' +
@@ -284,7 +284,7 @@ function renderReconciliationErrorRow(message) {
           '<h4 class="text-xs font-bold text-rose-900 dark:text-rose-200">Unable to Load Reconciliation Data</h4>' +
           '<p class="text-[11px] text-rose-700 dark:text-rose-300 mt-1">' + escapeAcctHtml(message || "Could not retrieve bank account reconciliation balances.") + '</p>' +
         '</div>' +
-        '<button type="button" onclick="loadAccounts(true)" class="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
+        '<button type="button" onclick="loadAccounts(true)" class="min-h-[38px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
           '<i class="fas fa-arrows-rotate text-[11px]"></i> <span>Retry Reconciliation</span>' +
         '</button>' +
       '</div>' +

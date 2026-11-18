@@ -13,7 +13,7 @@
       </button>
 
       <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
-        class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+        class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
         <i class="fas fa-plus text-xs"></i> <span>Register Member</span>
       </button>
     </div>
@@ -139,20 +139,26 @@
 
 <!-- Member Registration & Edit Modal (Unified Shadcn Theme) -->
 <div id="memberModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-100 dark:border-slate-700/80 transition-all transform my-auto max-h-[92vh] overflow-y-auto">
+  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden transition-all transform my-auto max-h-[92vh] overflow-y-auto">
 
-    <!-- Modal Header (Identical to Roles Modal) -->
-    <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
-      <div>
-        <h3 id="modalTitle" class="text-base font-bold text-slate-900 dark:text-white">Register New Member</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Add or update member identity and membership configuration</p>
+    <!-- Modal Header (Full-Bleed Dark Executive Pattern) -->
+    <div class="bg-slate-900 dark:bg-[#090d16] px-6 py-4 flex justify-between items-center gap-3 text-white border-b border-slate-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 rounded-xl bg-sky-950 border border-sky-500/40 text-sky-300 font-bold flex items-center justify-center shrink-0">
+          <i class="fas fa-user-plus text-sm"></i>
+        </div>
+        <div class="min-w-0">
+          <h3 id="modalTitle" class="text-sm font-bold text-white truncate">Register New Member</h3>
+          <p class="text-[11px] text-slate-400 mt-0.5 truncate">Add or update member identity and membership configuration</p>
+        </div>
       </div>
-      <button type="button" onclick="closeMemberModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+      <button type="button" onclick="closeMemberModal()" aria-label="Close Member Dialog"
+        class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors shrink-0">
         <i class="fas fa-times text-sm"></i>
       </button>
     </div>
 
-    <form id="memberForm" class="space-y-4">
+    <form id="memberForm" class="p-6 space-y-4">
       <input type="hidden" id="m-id">
 
       <div>
@@ -300,7 +306,7 @@
         <button type="button" onclick="closeMemberModal()"
           class="min-h-[38px] px-4 py-2 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 font-medium rounded-lg text-xs border border-slate-200 dark:border-slate-700 transition-colors">Cancel</button>
         <button type="submit"
-          class="min-h-[38px] px-5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition-colors">Save Member Profile</button>
+          class="min-h-[38px] px-5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition-colors">Save Member Profile</button>
       </div>
     </form>
   </div>

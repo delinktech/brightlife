@@ -33,7 +33,7 @@
           } else {
             const cTbody = document.getElementById("pf-contrib-tbody");
             if (cTbody) {
-              cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-600">Unable to load personal records. <button type="button" onclick="loadPersonalFinancials(true)" class="underline font-semibold ml-1">Retry</button></td></tr>';
+              cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-700 dark:text-rose-400">Unable to load personal records. <button type="button" onclick="loadPersonalFinancials(true)" class="underline font-semibold ml-1">Retry</button></td></tr>';
             }
           }
           return;
@@ -61,7 +61,7 @@
           if (userEl) userEl.textContent = "Unable to load profile";
           const cTbody = document.getElementById("pf-contrib-tbody");
           if (cTbody) {
-            cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-600">Failed to fetch personal financials. <button type="button" onclick="loadPersonalFinancials(true)" class="underline font-semibold ml-1">Retry</button></td></tr>';
+            cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-700 dark:text-rose-400">Failed to fetch personal financials. <button type="button" onclick="loadPersonalFinancials(true)" class="underline font-semibold ml-1">Retry</button></td></tr>';
           }
         }
       })
