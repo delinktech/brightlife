@@ -21,6 +21,18 @@
   }
 
   let currentSessionEmail = "";
+  let sessionAccessDenied = false;
+
+  const ADMIN_RESTRICTED_PAGES = [
+    "members",
+    "contributions",
+    "loans",
+    "investments",
+    "accounts",
+    "dividends",
+    "statements",
+    "roles",
+  ];
 
   function handleErr(err) {
     console.error(err);
@@ -36,12 +48,23 @@
   }
 
   function showAccessDenied(email) {
-    const activeEmail = email || currentSessionEmail || (document.getElementById("session-email") ? document.getElementById("session-email").textContent : "");
-    const cleanEmail = activeEmail && activeEmail !== "—" ? activeEmail.trim() : "";
-    
+    sessionAccessDenied = true;
+    window.currentUser = null;
+    window.session = null;
+    applyRolePermissions({ isMemberOnly: true });
+
+    const sidebarEmailEl = document.getElementById("sidebar-email") || document.getElementById("session-email");
+    const activeEmail = email || currentSessionEmail || (sidebarEmailEl ? sidebarEmailEl.textContent : "");
+    const cleanEmail = activeEmail && activeEmail !== "—" && activeEmail !== "--" ? activeEmail.trim() : "";
+
     const msgEl = document.getElementById("access-denied-msg");
     if (msgEl) {
-      msgEl.innerHTML = "Your Google account (<strong>" + (cleanEmail || "unknown") + "</strong>) is not recognized or active in the Roles sheet.";
+      msgEl.textContent = "";
+      msgEl.appendChild(document.createTextNode("Your Google account ("));
+      const strong = document.createElement("strong");
+      strong.textContent = cleanEmail || "unknown";
+      msgEl.appendChild(strong);
+      msgEl.appendChild(document.createTextNode(") is not recognized or active in the Roles sheet."));
     }
 
     const emailDisplayEl = document.getElementById("access-denied-email-display");
@@ -56,10 +79,12 @@
    * Floating Toast Notification component (Shadcn / Tailwind style)
    * Types: 'success' | 'error' | 'warning' | 'info'
    */
-  function showNotification(message, type, durationMs) {
+  function showNotification(message, type, durationMs, options) {
     if (!message) return;
+    const opts = options && typeof options === "object" ? options : {};
     const toastType = (type || "info").toLowerCase();
-    const duration = durationMs || 3500;
+    const persistent = opts.persistent === true || durationMs === 0;
+    const duration = persistent ? 0 : (durationMs || 3500);
 
     let container = document.getElementById("toast-notification-container");
     if (!container) {
@@ -69,25 +94,66 @@
       document.body.appendChild(container);
     }
 
+    if (opts.id) {
+      const existing = document.getElementById(opts.id);
+      if (existing && existing.parentElement) {
+        existing.remove();
+      }
+    }
+
     let borderClass = "border-slate-200 bg-white text-slate-900";
-    let iconHtml = '<i class="fas fa-circle-info text-sky-500 text-sm shrink-0"></i>';
+    let iconClass = "fas fa-circle-info text-sky-500 text-sm shrink-0 mt-0.5";
 
     if (toastType === "success") {
       borderClass = "border-emerald-200 bg-emerald-50/95 text-emerald-950";
-      iconHtml = '<i class="fas fa-check-circle text-emerald-600 text-sm shrink-0"></i>';
+      iconClass = "fas fa-check-circle text-emerald-600 text-sm shrink-0 mt-0.5";
     } else if (toastType === "error") {
       borderClass = "border-rose-200 bg-rose-50/95 text-rose-950";
-      iconHtml = '<i class="fas fa-circle-exclamation text-rose-600 text-sm shrink-0"></i>';
+      iconClass = "fas fa-circle-exclamation text-rose-600 text-sm shrink-0 mt-0.5";
     } else if (toastType === "warning") {
       borderClass = "border-amber-200 bg-amber-50/95 text-amber-950";
-      iconHtml = '<i class="fas fa-triangle-exclamation text-amber-600 text-sm shrink-0"></i>';
+      iconClass = "fas fa-triangle-exclamation text-amber-600 text-sm shrink-0 mt-0.5";
     }
 
     const toast = document.createElement("div");
+    if (opts.id) toast.id = opts.id;
     toast.className = "pointer-events-auto flex items-start gap-3 p-3.5 rounded-xl border shadow-lg backdrop-blur-sm transition-all duration-300 transform translate-y-2 opacity-0 text-xs font-medium " + borderClass;
-    toast.innerHTML = iconHtml +
-      '<div class="flex-1 leading-snug break-words">' + message + '</div>' +
-      '<button type="button" class="text-slate-400 hover:text-slate-600 text-xs p-0.5 ml-1 transition-colors" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+
+    const iconEl = document.createElement("i");
+    iconEl.className = iconClass;
+    toast.appendChild(iconEl);
+
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "flex-1 leading-snug break-words";
+    const msgEl = document.createElement("div");
+    msgEl.textContent = String(message);
+    bodyEl.appendChild(msgEl);
+
+    if (opts.actionLabel && typeof opts.onAction === "function") {
+      const actionBtn = document.createElement("button");
+      actionBtn.type = "button";
+      actionBtn.className = "mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-semibold shadow-xs transition-colors";
+      const retryIcon = document.createElement("i");
+      retryIcon.className = "fas fa-arrows-rotate text-[10px]";
+      actionBtn.appendChild(retryIcon);
+      actionBtn.appendChild(document.createTextNode(String(opts.actionLabel)));
+      actionBtn.addEventListener("click", function () {
+        if (toast.parentElement) toast.remove();
+        opts.onAction();
+      });
+      bodyEl.appendChild(actionBtn);
+    }
+    toast.appendChild(bodyEl);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "text-slate-400 hover:text-slate-600 text-xs p-0.5 ml-1 transition-colors";
+    closeBtn.setAttribute("aria-label", "Dismiss notification");
+    closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+    closeBtn.addEventListener("click", function () {
+      if (toast.parentElement) toast.remove();
+    });
+    toast.appendChild(closeBtn);
 
     container.appendChild(toast);
 
@@ -97,26 +163,51 @@
       toast.classList.add("translate-y-0", "opacity-100");
     });
 
-    // Auto dismiss
-    setTimeout(function () {
-      toast.classList.remove("translate-y-0", "opacity-100");
-      toast.classList.add("translate-y-2", "opacity-0");
+    // Auto dismiss unless persistent
+    if (duration > 0) {
       setTimeout(function () {
-        if (toast.parentElement) toast.remove();
-      }, 300);
-    }, duration);
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-2", "opacity-0");
+        setTimeout(function () {
+          if (toast.parentElement) toast.remove();
+        }, 300);
+      }, duration);
+    }
   }
   window.showNotification = showNotification;
 
+  function dismissSessionErrorNotification() {
+    const existing = document.getElementById("session-error-toast");
+    if (existing && existing.parentElement) {
+      existing.remove();
+    }
+  }
+
+  function showSessionErrorNotification(reason) {
+    showNotification(
+      reason || "Unable to verify your session role. Access is restricted to personal view.",
+      "warning",
+      0,
+      {
+        id: "session-error-toast",
+        persistent: true,
+        actionLabel: "Retry",
+        onAction: function () {
+          bootSession();
+        },
+      }
+    );
+  }
+
   /** Set from getSessionInfo(); used for UI gating (server still enforces). */
-  window.APP_PERMS = null;
+  window.APP_PERMS = { isMemberOnly: true };
 
   function applyRolePermissions(perms) {
-    if (!perms) return;
-    window.APP_PERMS = perms;
+    const effectivePerms = perms && typeof perms === "object" ? perms : { isMemberOnly: true };
+    window.APP_PERMS = effectivePerms;
 
-    // Check if user is member-only
-    const isMemberOnly = perms.isMemberOnly === true;
+    // Check if user is member-only (fail-closed if isMemberOnly is not explicitly false)
+    const isMemberOnly = effectivePerms.isMemberOnly !== false;
     const adminSection = document.getElementById("sidebar-admin-section");
     if (adminSection) {
       adminSection.classList.toggle("hidden", isMemberOnly);
@@ -124,7 +215,7 @@
 
     document.querySelectorAll("[data-require-perm]").forEach(function (el) {
       var key = el.getAttribute("data-require-perm");
-      var allowed = perms[key] === true;
+      var allowed = effectivePerms[key] === true;
       if (allowed) {
         el.classList.remove("hidden");
         el.removeAttribute("aria-hidden");
@@ -262,6 +353,16 @@
     return "US";
   }
 
+  function applySessionFallback(sNameEl, sEmailEl, fallbackName) {
+    const currentName = sNameEl ? sNameEl.textContent.trim() : "";
+    if (sNameEl && (!currentName || currentName === "Loading..." || currentName === "Session Delayed")) {
+      sNameEl.textContent = fallbackName || "Session Unavailable";
+    }
+    if (sEmailEl && (!sEmailEl.textContent || sEmailEl.textContent.trim() === "--")) {
+      sEmailEl.textContent = "—";
+    }
+  }
+
   function refreshSessionInfo(callback) {
     const sNameEl = document.getElementById("sidebar-display-name");
     const sEmailEl = document.getElementById("sidebar-email");
@@ -270,68 +371,207 @@
     const sInitials = document.getElementById("sidebar-initials");
     const verEl = document.getElementById("sidebar-version");
 
-    google.script.run
-      .withSuccessHandler((info) => {
-        if (info && info.success) {
-          currentSessionEmail = info.email || "";
-          const name = info.displayName || "User";
-          const email = info.email || "";
+    let callbackSettled = false;
+    let loaderSettled = false;
+    let sessionTimeoutTimer = null;
 
-          if (sNameEl) sNameEl.textContent = name;
-          if (sEmailEl) sEmailEl.textContent = email || "—";
-          if (verEl) verEl.textContent = "v" + String(info.version || "0.0.0");
-          if (sInitials) sInitials.textContent = getInitialsFromName(name, email);
+    startAppLoader();
+    const finishLoader = () => {
+      if (loaderSettled) return;
+      loaderSettled = true;
+      stopAppLoader();
+    };
 
-          if (sPhoto) {
-            const url = info.photoUrl && String(info.photoUrl).trim();
-            if (url) {
-              sPhoto.onload = function() {
-                sPhoto.classList.remove("hidden");
-                if (sInitials) sInitials.classList.add("hidden");
-              };
-              sPhoto.onerror = function() {
+    const failClosedSessionFallback = (fallbackLabel, reasonMessage) => {
+      applyRolePermissions({ isMemberOnly: true });
+      window.currentUser = null;
+      window.session = null;
+      applySessionFallback(sNameEl, sEmailEl, fallbackLabel);
+      if (!callbackSettled) {
+        showSessionErrorNotification(reasonMessage);
+      }
+      invokeCallbackOnce(null);
+    };
+
+    const invokeCallbackOnce = (arg) => {
+      finishLoader();
+      if (callbackSettled) return;
+      callbackSettled = true;
+      if (sessionTimeoutTimer) {
+        clearTimeout(sessionTimeoutTimer);
+        sessionTimeoutTimer = null;
+      }
+      if (typeof callback === "function") {
+        callback(arg);
+      } else {
+        const activePage = document.querySelector(".page-wrapper.active");
+        const activeId = activePage ? activePage.id.replace(/-container$/, "") : "";
+        const isRestrictedOrBoot =
+          !activeId ||
+          activeId === "session-loading" ||
+          ADMIN_RESTRICTED_PAGES.indexOf(activeId) !== -1 ||
+          (!arg && activeId === "home");
+        if (!arg && isRestrictedOrBoot) {
+          showPage(sessionAccessDenied ? "access-denied" : "my-financials");
+        } else if (arg && (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) && ADMIN_RESTRICTED_PAGES.indexOf(activeId) !== -1) {
+          showPage("my-financials");
+        }
+      }
+    };
+
+    sessionTimeoutTimer = setTimeout(() => {
+      if (callbackSettled) return;
+      console.warn("Session info fetch delayed; enforcing fail-closed defaults.");
+      failClosedSessionFallback(
+        "Session Delayed",
+        "Session verification timed out. Access is restricted to personal view."
+      );
+    }, 8000);
+
+    try {
+      if (typeof google === "undefined" || !google.script || !google.script.run) {
+        throw new Error("Apps Script RPC unavailable.");
+      }
+
+      google.script.run
+        .withSuccessHandler((info) => {
+          if (sessionTimeoutTimer) {
+            clearTimeout(sessionTimeoutTimer);
+            sessionTimeoutTimer = null;
+          }
+          finishLoader();
+
+          if (info && info.success) {
+            currentSessionEmail = info.email || "";
+            const name = info.displayName || "User";
+            const email = info.email || "";
+
+            if (sNameEl) sNameEl.textContent = name;
+            if (sEmailEl) sEmailEl.textContent = email || "—";
+            if (verEl) verEl.textContent = "v" + String(info.version || "0.0.0");
+            if (sInitials) sInitials.textContent = getInitialsFromName(name, email);
+
+            if (sPhoto) {
+              const url = info.photoUrl && String(info.photoUrl).trim();
+              if (url) {
+                sPhoto.onload = function() {
+                  sPhoto.classList.remove("hidden");
+                  if (sInitials) sInitials.classList.add("hidden");
+                };
+                sPhoto.onerror = function() {
+                  sPhoto.classList.add("hidden");
+                  if (sInitials) sInitials.classList.remove("hidden");
+                  sPhoto.removeAttribute("src");
+                };
+                sPhoto.src = url;
+              } else {
                 sPhoto.classList.add("hidden");
                 if (sInitials) sInitials.classList.remove("hidden");
-                sPhoto.removeAttribute("src");
-              };
-              sPhoto.src = url;
-            } else {
-              sPhoto.classList.add("hidden");
-              if (sInitials) sInitials.classList.remove("hidden");
+              }
             }
-          }
 
-          if (sRoleBadge) {
-            sRoleBadge.textContent = info.roleLabel || "";
-            const r = String(info.role || "").toLowerCase();
-            let bCls = "bg-slate-800 text-slate-300 border-slate-700";
-            if (r === "admin") bCls = "bg-sky-950 text-sky-300 border-sky-800";
-            else if (r === "treasurer") bCls = "bg-purple-950 text-purple-300 border-purple-800";
-            else if (r === "secretary") bCls = "bg-emerald-950 text-emerald-300 border-emerald-800";
-            else if (r === "member") bCls = "bg-slate-800 text-slate-400 border-slate-700";
-            sRoleBadge.className = "px-1.5 py-0.2 rounded text-[8px] font-bold tracking-wider uppercase border " + bCls;
-            sRoleBadge.classList.toggle("hidden", !info.roleLabel);
-          }
+            if (sRoleBadge) {
+              sRoleBadge.textContent = info.roleLabel || "";
+              const r = String(info.role || "").toLowerCase();
+              let bCls = "bg-slate-800 text-slate-300 border-slate-700";
+              if (r === "admin") bCls = "bg-sky-950 text-sky-300 border-sky-800";
+              else if (r === "treasurer") bCls = "bg-purple-950 text-purple-300 border-purple-800";
+              else if (r === "secretary") bCls = "bg-emerald-950 text-emerald-300 border-emerald-800";
+              else if (r === "member") bCls = "bg-slate-800 text-slate-400 border-slate-700";
+              sRoleBadge.className = "px-1.5 py-0.2 rounded text-[8px] font-bold tracking-wider uppercase border " + bCls;
+              sRoleBadge.classList.toggle("hidden", !info.roleLabel);
+            }
 
-          if (info.hasAccess === false) {
-            showAccessDenied(info.email, info);
+            if (info.hasAccess === false) {
+              callbackSettled = true;
+              dismissSessionErrorNotification();
+              showAccessDenied(info.email);
+              return;
+            }
+
+            sessionAccessDenied = false;
+            dismissSessionErrorNotification();
+            const perms = info.permissions && typeof info.permissions === "object" ? info.permissions : { isMemberOnly: true };
+            window.currentUser = info;
+            window.currentUser.roleKey = String(info.role || "").toLowerCase();
+            window.session = window.currentUser;
+            applyRolePermissions(perms);
+
+            invokeCallbackOnce(info);
+          } else {
+            const errMsg = info && info.error ? String(info.error) : "";
+            if (errMsg.indexOf("Access denied") !== -1 || errMsg.indexOf("Access Denied") !== -1) {
+              callbackSettled = true;
+              showAccessDenied(currentSessionEmail);
+              return;
+            }
+            console.warn("Session info returned an unsuccessful response:", info);
+            failClosedSessionFallback(
+              "Session Unavailable",
+              "Unable to verify your session role. Access is restricted to personal view."
+            );
+          }
+        })
+        .withFailureHandler((err) => {
+          if (sessionTimeoutTimer) {
+            clearTimeout(sessionTimeoutTimer);
+            sessionTimeoutTimer = null;
+          }
+          finishLoader();
+          const msg = err && err.message ? String(err.message) : String(err || "");
+          if (msg.indexOf("Access denied") !== -1 || msg.indexOf("Access Denied") !== -1) {
+            callbackSettled = true;
+            showAccessDenied(currentSessionEmail);
             return;
           }
-          window.currentUser = info;
-          window.currentUser.roleKey = String(info.role || "").toLowerCase();
-          window.session = window.currentUser;
-          applyRolePermissions(info.permissions || {});
-
-          if (callback) callback(info);
-        }
-      })
-      .withFailureHandler((err) => {
-        handleErr(err);
-      })
-      .getSessionInfo();
+          console.warn("Session info fetch failed; staying fail-closed:", err);
+          failClosedSessionFallback(
+            "Session Unavailable",
+            "Session verification failed. Access is restricted to personal view."
+          );
+        })
+        .getSessionInfo();
+    } catch (syncErr) {
+      if (sessionTimeoutTimer) {
+        clearTimeout(sessionTimeoutTimer);
+        sessionTimeoutTimer = null;
+      }
+      console.warn("Session info invocation failed; staying fail-closed:", syncErr);
+      failClosedSessionFallback(
+        "Session Unavailable",
+        "Session verification failed. Access is restricted to personal view."
+      );
+    }
   }
 
+  function resolveSessionLandingPage(info) {
+    if (!info) {
+      if (sessionAccessDenied) {
+        showAccessDenied(currentSessionEmail);
+      } else {
+        showPage("my-financials");
+      }
+      return;
+    }
+    if (info.hasAccess === false) {
+      showAccessDenied(info.email);
+      return;
+    }
+    if (info.permissions && info.permissions.isMemberOnly) {
+      showPage("my-financials");
+    } else {
+      showPage("home");
+    }
+  }
+
+  function bootSession() {
+    applyRolePermissions({ isMemberOnly: true });
+    refreshSessionInfo(resolveSessionLandingPage);
+  }
+  window.bootSession = bootSession;
+
   const PAGE_TITLE_LABELS = {
+    "session-loading": "Verifying session...",
     home: "Home (Group Overview)",
     "my-financials": "My Financials (Personal)",
     members: "Members Registry",
@@ -346,23 +586,33 @@
   };
 
   function showPage(pageId) {
+    let targetPageId = pageId;
+    if (sessionAccessDenied && targetPageId !== "access-denied") {
+      targetPageId = "access-denied";
+    } else if (
+      (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) &&
+      ADMIN_RESTRICTED_PAGES.indexOf(targetPageId) !== -1
+    ) {
+      targetPageId = "my-financials";
+    }
+
     document.querySelectorAll(".page-wrapper").forEach((container) => {
       container.classList.remove("active");
     });
 
-    const target = document.getElementById(pageId + "-container");
+    const target = document.getElementById(targetPageId + "-container");
     if (target) target.classList.add("active");
 
     const titleEl = document.getElementById("current-page-title");
     if (titleEl) {
-      titleEl.textContent = PAGE_TITLE_LABELS[pageId] || pageId;
+      titleEl.textContent = PAGE_TITLE_LABELS[targetPageId] || targetPageId;
     }
 
     document.querySelectorAll(".nav-item").forEach((link) => {
       link.classList.remove("active");
       link.removeAttribute("aria-current");
     });
-    const activeLink = document.querySelector('.nav-item[data-page="' + pageId + '"]');
+    const activeLink = document.querySelector('.nav-item[data-page="' + targetPageId + '"]');
     if (activeLink) {
       activeLink.classList.add("active");
       activeLink.setAttribute("aria-current", "page");
@@ -372,26 +622,26 @@
     document.querySelectorAll(".mobile-tab").forEach((tab) => {
       tab.classList.remove("active");
     });
-    const activeMobileTab = document.querySelector('.mobile-tab[data-mobile-page="' + pageId + '"]');
+    const activeMobileTab = document.querySelector('.mobile-tab[data-mobile-page="' + targetPageId + '"]');
     if (activeMobileTab) {
       activeMobileTab.classList.add("active");
     }
 
-    if (pageId === "home") refreshDashboard();
-    if (pageId === "my-financials") loadPersonalFinancials();
-    if (pageId === "members") loadMembers();
-    if (pageId === "contributions") {
+    if (targetPageId === "home") refreshDashboard();
+    if (targetPageId === "my-financials") loadPersonalFinancials();
+    if (targetPageId === "members") loadMembers();
+    if (targetPageId === "contributions") {
       if (typeof currentMembers === "undefined" || currentMembers.length === 0) {
         loadMembers();
       }
       loadContributions();
     }
-    if (pageId === "loans") loadLoans();
-    if (pageId === "investments") loadInvestments();
-    if (pageId === "accounts") loadAccounts();
-    if (pageId === "dividends") loadDividendOverview();
-    if (pageId === "statements") loadMonthlyStatementsView();
-    if (pageId === "roles") loadUserRoles();
+    if (targetPageId === "loans") loadLoans();
+    if (targetPageId === "investments") loadInvestments();
+    if (targetPageId === "accounts") loadAccounts();
+    if (targetPageId === "dividends") loadDividendOverview();
+    if (targetPageId === "statements") loadMonthlyStatementsView();
+    if (targetPageId === "roles") loadUserRoles();
   }
 
   function refreshDashboard() {
@@ -680,14 +930,9 @@
   }
 
   window.onload = function () {
+    applyRolePermissions({ isMemberOnly: true });
     initShadcnSelects();
     initFlatpickrInputs();
-    refreshSessionInfo(function (info) {
-      if (info.permissions && info.permissions.isMemberOnly) {
-        showPage("my-financials");
-      } else {
-        showPage("home");
-      }
-    });
+    bootSession();
   };
 </script>
