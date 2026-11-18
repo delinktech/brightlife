@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v90** | `@90` | `AKfycbw3........hWdQ` | `02fb667` | **Production** | 2026-11-18 | Standard folder structure migration to `src/` layout with clasp `rootDir`. Removed legacy `xindex.html`. |
+| **v91** | `@91` | `AKfycbws........M5WQ` | `5ece803` | **Production** | 2026-11-18 | Sentinel & Fixer: Hardened diagnostic and maintenance query endpoints behind isDiagnosticAuthorized_ RBAC gate. |
+| **v90** | `@90` | `AKfycbw3........hWdQ` | `02fb667` | Archived | 2026-11-18 | Standard folder structure migration to `src/` layout with clasp `rootDir`. Removed legacy `xindex.html`. |
 | **v89** | `@89` | `AKfycbyn........C50w` | `b170f50` | Archived | 2026-11-18 | Fixer: Implemented `getAccountsReconciliationData` RPC server method. |
 | **v88** | `@88` | `AKfycbyY........Vyg6w` | `9f1c94e` | Archived | 2026-11-18 | Fixer: Initial auto-reconciliation RPC server method. |
 | **v87** | `@87` | `AKfycbw6........PwyQ` | `11b468a` | Archived | 2026-11-18 | Migrator: Ingested full 138-tx CIC MMF historical statements (May 2021 – Jul 2026). |

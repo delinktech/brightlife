@@ -5,8 +5,8 @@
 
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
-- **Active Production Deployment:** `AKfycbw3........hWdQ` *(Masked)*
-- **Current Live Version:** `v90` (Google Apps Script Build `@90`)
+- **Active Production Deployment:** `AKfycbws........M5WQ` *(Masked)*
+- **Current Live Version:** `v91` (Google Apps Script Build `@91`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
