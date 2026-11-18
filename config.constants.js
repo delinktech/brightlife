@@ -14,6 +14,7 @@ const SHEETS = Object.freeze({
   AUDIT_LOG: "AuditLog",
   CONSTANTS: "Constants",
   FUND_STATEMENTS: "Fund Statements",
+  CIC_TRANSACTIONS: "CIC Transactions",
 });
 
 const TRANSACTION_STATUS = Object.freeze({

@@ -1500,7 +1500,7 @@ function testDiagnoseSheetHeaders_() {
     }
   });
 
-  [SHEETS.MEMBERS, SHEETS.CONTRIBUTIONS, SHEETS.LOANS, SHEETS.GUARANTORS, SHEETS.LOAN_REPAYMENTS, SHEETS.ACCOUNTS, SHEETS.INVESTMENTS, SHEETS.CONSTANTS, SHEETS.FUND_STATEMENTS].forEach(function(sName) {
+  [SHEETS.MEMBERS, SHEETS.CONTRIBUTIONS, SHEETS.LOANS, SHEETS.GUARANTORS, SHEETS.LOAN_REPAYMENTS, SHEETS.ACCOUNTS, SHEETS.INVESTMENTS, SHEETS.CONSTANTS, SHEETS.FUND_STATEMENTS, SHEETS.CIC_TRANSACTIONS].forEach(function(sName) {
     const s = ss.getSheetByName(sName);
     if (!s) {
       res[sName] = "SHEET NOT FOUND";
@@ -1508,7 +1508,7 @@ function testDiagnoseSheetHeaders_() {
       const headers = s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getValues()[0];
       const dataRows = s.getLastRow() > 1 ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getValues() : [];
       const formulaRows = s.getLastRow() > 1 ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getFormulas() : [];
-      res[sName] = { headers: headers, preview: dataRows, formulas: formulaRows };
+      res[sName] = { rowCount: s.getLastRow(), headers: headers, preview: dataRows, formulas: formulaRows };
     }
   });
   return res;

@@ -38,6 +38,16 @@ function doGet(e) {
     }
   }
 
+  // If ?backfillCic=1 is in the URL, run BrightlifeArchivist CIC statement backfill
+  if (e && e.parameter && e.parameter.backfillCic === "1") {
+    try {
+      const res = backfillCicStatement_();
+      return ContentService.createTextOutput("CIC_BACKFILL_SUCCESS: " + JSON.stringify(res, null, 2));
+    } catch (err) {
+      return ContentService.createTextOutput("CIC_BACKFILL_ERROR: " + err.message + "\n" + err.stack);
+    }
+  }
+
   // If ?diagnose=1 is in the URL, return sheet header layout
   if (e && e.parameter && e.parameter.diagnose === "1") {
     try {
