@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v93** | `@93` | `AKfycbxK........3jA` | `2becd28` | **Production** | 2026-11-18 | Designer & Sentinel: Implemented Tier 1 UI/UX Quick Wins & Data Truth fixes (rebound Outstanding loans KPI, removed fake fallbacks, wired all print reports, added tabular-nums, fixed colspans and modal scrolling). |
+| **v94** | `@95` | `AKfycbx4........wRCA` | `73c2534` | **Production** | 2026-11-18 | Designer & Sentinel: Tier 3 Strategic Upgrades (SWR client cache with owner isolation, liquidity & portfolio health cards, personal loan progress & consistency tracker, dynamic mobile bottom bar, and session popover). |
+| **v93** | `@93` | `AKfycbxK........3jA` | `2becd28` | Archived | 2026-11-18 | Designer & Sentinel: Implemented Tier 1 UI/UX Quick Wins & Data Truth fixes (rebound Outstanding loans KPI, removed fake fallbacks, wired all print reports, added tabular-nums, fixed colspans and modal scrolling). |
 | **v92** | `@92` | `AKfycbx4........wRCA` | `b0f9b25` | Archived | 2026-11-18 | Fixer & Sentinel: Resolved UI freeze with sub-second session bootstrap, People API cache, fail-closed RBAC, and session-gated routing. |
 | **v91** | `@91` | `AKfycbws........M5WQ` | `5ece803` | Archived | 2026-11-18 | Sentinel & Fixer: Hardened diagnostic and maintenance query endpoints behind isDiagnosticAuthorized_ RBAC gate. |
 | **v90** | `@90` | `AKfycbw3........hWdQ` | `02fb667` | Archived | 2026-11-18 | Standard folder structure migration to `src/` layout with clasp `rootDir`. Removed legacy `xindex.html`. |
