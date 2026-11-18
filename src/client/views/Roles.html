@@ -122,18 +122,18 @@
 <!-- Modal Dialog for Add / Edit User Role -->
 <div id="roleModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4 overflow-y-auto">
   <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden transition-all transform max-h-[90vh] overflow-y-auto my-auto">
-    <div class="bg-slate-900 dark:bg-[#090d16] px-6 py-4 flex justify-between items-center gap-3 text-white border-b border-slate-800">
+    <div class="bg-white dark:bg-[#090d16] px-6 py-4 flex justify-between items-center gap-3 text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="h-10 w-10 rounded-xl bg-sky-950 border border-sky-500/40 text-sky-300 font-bold flex items-center justify-center shrink-0">
+        <div class="h-10 w-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center shrink-0">
           <i class="fas fa-shield-halved text-sm"></i>
         </div>
         <div class="min-w-0">
-          <h3 id="roleModalTitle" class="text-sm font-bold text-white truncate">Add User Access Role</h3>
-          <p class="text-[11px] text-slate-400 truncate">Assign system role & linked chama member</p>
+          <h3 id="roleModalTitle" class="text-sm font-bold text-slate-900 dark:text-white truncate">Add User Access Role</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Assign system role & linked chama member</p>
         </div>
       </div>
       <button type="button" onclick="closeRoleModal()" aria-label="Close Role Dialog"
-        class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors shrink-0">
+        class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0">
         <i class="fas fa-times text-sm"></i>
       </button>
     </div>

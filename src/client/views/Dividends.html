@@ -211,18 +211,18 @@
   <!-- Dividend Confirm Modal -->
   <div id="dividend-confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
-      <div class="bg-slate-900 dark:bg-[#090d16] px-6 py-4 border-b border-slate-800 flex items-center justify-between gap-3 text-white">
+      <div class="bg-white dark:bg-[#090d16] px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-slate-900 dark:text-white">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="h-10 w-10 rounded-xl bg-emerald-950 border border-emerald-500/40 text-emerald-300 flex items-center justify-center text-sm shrink-0">
+          <div class="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-sm shrink-0">
             <i class="fas fa-check-double"></i>
           </div>
           <div class="min-w-0">
-            <h4 class="font-bold text-white text-sm truncate">Confirm Dividend Distribution</h4>
-            <p class="text-[11px] text-slate-400 truncate" id="confirm-modal-year">Financial Year 2026</p>
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm truncate">Confirm Dividend Distribution</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate" id="confirm-modal-year">Financial Year 2026</p>
           </div>
         </div>
         <button type="button" onclick="closeConfirmDividendModal()" aria-label="Close Dividend Confirmation"
-          class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors shrink-0">
+          class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0">
           <i class="fas fa-times text-sm"></i>
         </button>
       </div>
@@ -272,18 +272,18 @@
   <!-- Record Fund Statement Modal -->
   <div id="fund-statement-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
     <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
-      <div class="bg-slate-900 dark:bg-[#090d16] px-6 py-4 border-b border-slate-800 flex items-center justify-between gap-3 text-white">
+      <div class="bg-white dark:bg-[#090d16] px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-slate-900 dark:text-white">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="h-10 w-10 rounded-xl bg-sky-950 border border-sky-500/40 text-sky-300 flex items-center justify-center text-sm shrink-0">
+          <div class="h-10 w-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 flex items-center justify-center text-sm shrink-0">
             <i class="fas fa-file-invoice"></i>
           </div>
           <div class="min-w-0">
-            <h4 class="font-bold text-white text-sm truncate">Record Monthly Fund Statement</h4>
-            <p class="text-[11px] text-slate-400 truncate">Log monthly interest and closing balance from official statement</p>
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm truncate">Record Monthly Fund Statement</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Log monthly interest and closing balance from official statement</p>
           </div>
         </div>
         <button type="button" onclick="closeFundStatementModal()" aria-label="Close Fund Statement Dialog"
-          class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors shrink-0">
+          class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0">
           <i class="fas fa-times text-sm"></i>
         </button>
       </div>

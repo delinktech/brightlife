@@ -3,24 +3,24 @@
   <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-4xl w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
     
     <!-- Modal Control Header (Hidden when printing) -->
-    <div class="no-print bg-slate-900 dark:bg-[#090d16] px-6 py-4 flex flex-wrap justify-between items-center gap-3 text-white border-b border-slate-800">
+    <div class="no-print bg-white dark:bg-[#090d16] px-6 py-4 flex flex-wrap justify-between items-center gap-3 text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="h-10 w-10 rounded-xl bg-sky-950 border border-sky-500/40 text-sky-300 font-bold flex items-center justify-center shrink-0">
+        <div class="h-10 w-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 font-bold flex items-center justify-center shrink-0">
           <i class="fas fa-print text-sm"></i>
         </div>
         <div class="min-w-0">
-          <h3 class="text-sm font-bold text-white truncate">Print Preview / Save PDF</h3>
-          <p class="text-[11px] text-slate-400 truncate">Official BLG formatted document ready for printing or PDF download.</p>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate">Print Preview / Save PDF</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Official BLG formatted document ready for printing or PDF download.</p>
         </div>
       </div>
       <div class="flex items-center gap-2.5 shrink-0">
-        <button type="button" onclick="closePrintModal()" class="min-h-[38px] px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium rounded-xl transition-colors">
+        <button type="button" onclick="closePrintModal()" class="min-h-[38px] px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:text-slate-200 dark:border-slate-700 text-xs font-medium rounded-xl transition-colors">
           Cancel
         </button>
-        <button type="button" onclick="triggerBrowserPrint()" class="min-h-[38px] inline-flex items-center gap-2 px-4 py-1.5 bg-sky-700 hover:bg-sky-600 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-xs transition-colors">
+        <button type="button" onclick="triggerBrowserPrint()" class="min-h-[38px] inline-flex items-center gap-2 px-4 py-1.5 bg-sky-700 hover:bg-sky-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-xs transition-colors">
           <i class="fas fa-file-pdf"></i> Print / Save PDF
         </button>
-        <button type="button" onclick="closePrintModal()" aria-label="Close Print Preview" class="min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+        <button type="button" onclick="closePrintModal()" aria-label="Close Print Preview" class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors">
           <i class="fas fa-times text-sm"></i>
         </button>
       </div>

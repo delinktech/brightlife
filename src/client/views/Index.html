@@ -1212,19 +1212,19 @@
     class="no-print fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
     onclick="if(event.target === this) closeSessionPopover();">
     <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
-      <div class="bg-slate-900 dark:bg-[#090d16] px-5 py-4 flex items-center justify-between text-white border-b border-slate-800">
+      <div class="bg-white dark:bg-[#090d16] px-5 py-4 flex items-center justify-between text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="relative h-10 w-10 rounded-xl bg-sky-950 border border-sky-500/40 text-sky-300 font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden">
+          <div class="relative h-10 w-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 font-bold text-sm flex items-center justify-center shrink-0 overflow-hidden">
             <img id="session-modal-photo" src="" alt="" class="h-full w-full object-cover hidden" />
             <span id="session-modal-initials">--</span>
           </div>
           <div class="min-w-0">
-            <h3 id="session-modal-title" class="text-sm font-bold text-white truncate">Session &amp; Account</h3>
-            <p class="text-[11px] text-slate-400 truncate">Brightlife SHG Financial OS</p>
+            <h3 id="session-modal-title" class="text-sm font-bold text-slate-900 dark:text-white truncate">Session &amp; Account</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Brightlife SHG Financial OS</p>
           </div>
         </div>
         <button type="button" onclick="closeSessionPopover()" aria-label="Close Session Dialog"
-          class="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+          class="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors">
           <i class="fas fa-times text-sm"></i>
         </button>
       </div>
@@ -1295,18 +1295,18 @@
   <div id="blg-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="blg-confirm-title"
     class="no-print fixed inset-0 z-[60] hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
     <div class="max-w-md w-full bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
-      <div class="bg-slate-900 dark:bg-[#090d16] px-5 py-4 flex items-center justify-between gap-3 text-white border-b border-slate-800">
+      <div class="bg-white dark:bg-[#090d16] px-5 py-4 flex items-center justify-between gap-3 text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-3 min-w-0">
-          <div id="blg-confirm-icon" class="w-10 h-10 rounded-xl bg-amber-950 border border-amber-500/40 text-amber-300 flex items-center justify-center text-base shrink-0">
+          <div id="blg-confirm-icon" class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-500/40 text-amber-700 dark:text-amber-300 flex items-center justify-center text-base shrink-0">
             <i class="fas fa-triangle-exclamation"></i>
           </div>
           <div class="min-w-0">
-            <h3 id="blg-confirm-title" class="text-sm font-bold text-white leading-snug truncate">Confirm Action</h3>
-            <p class="text-[11px] text-slate-400 truncate">Brightlife Verification Required</p>
+            <h3 id="blg-confirm-title" class="text-sm font-bold text-slate-900 dark:text-white leading-snug truncate">Confirm Action</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Brightlife Verification Required</p>
           </div>
         </div>
         <button type="button" onclick="document.getElementById('blg-confirm-cancel').click()" aria-label="Close Confirmation Dialog"
-          class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors shrink-0">
+          class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0">
           <i class="fas fa-times text-sm"></i>
         </button>
       </div>
