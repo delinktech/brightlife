@@ -48,6 +48,16 @@ function doGet(e) {
     }
   }
 
+  // If ?testReconciliation=1 is in the URL, test getAccountsReconciliationData RPC
+  if (e && e.parameter && e.parameter.testReconciliation === "1") {
+    try {
+      const res = getAccountsReconciliationData();
+      return ContentService.createTextOutput("RECONCILIATION_TEST_SUCCESS:\n" + JSON.stringify(res, null, 2));
+    } catch (err) {
+      return ContentService.createTextOutput("RECONCILIATION_TEST_ERROR: " + err.message + "\n" + err.stack);
+    }
+  }
+
   // If ?diagnose=1 is in the URL, return sheet header layout
   if (e && e.parameter && e.parameter.diagnose === "1") {
     try {
