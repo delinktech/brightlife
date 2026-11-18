@@ -67,46 +67,80 @@ function switchAccountsTab(tabName) {
   }
 }
 
-function paymentGuideHtml(account) {
-  const channel = (account.channel || account.type || "").toLowerCase();
-  const accNum = account.accountNumber || "—";
-  const accName = account.accountName || "Brightlife Group";
-  const instructions = account.instructions || "";
+function escapeAcctHtml(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
-  let badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">Bank</span>';
+function paymentGuideHtml(account) {
+  const orgName = String((account && account.orgName) || "").trim();
+  const paymentMode = String((account && account.paymentMode) || "").trim();
+  const channel = paymentMode.toLowerCase();
+  const accNum = String((account && account.accountNumber) || "").trim();
+  const paybill = String((account && account.paybill) || "").trim();
+  const balanceDate = String((account && account.balanceDate) || "").trim();
+  const instructions = String((account && account.instructions) || "").trim();
+
+  const badgeText = paymentMode || "Payment Channel";
+  let badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">' + escapeAcctHtml(badgeText) + '</span>';
   let icon = '<i class="fas fa-building-columns text-sky-600"></i>';
 
-  if (channel.indexOf("mpesa") !== -1 || channel.indexOf("paybill") !== -1 || channel.indexOf("till") !== -1) {
-    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">M-Pesa</span>';
+  if (channel.indexOf("mpesa") !== -1 || channel.indexOf("m-pesa") !== -1 || channel.indexOf("paybill") !== -1 || channel.indexOf("till") !== -1) {
+    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">' + escapeAcctHtml(badgeText) + '</span>';
     icon = '<i class="fas fa-mobile-screen text-emerald-600"></i>';
   } else if (channel.indexOf("cash") !== -1 || channel.indexOf("petty") !== -1) {
-    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">Cash</span>';
+    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">' + escapeAcctHtml(badgeText) + '</span>';
     icon = '<i class="fas fa-coins text-amber-600"></i>';
+  } else if (channel.indexOf("cic") !== -1 || channel.indexOf("mmf") !== -1 || channel.indexOf("mansa") !== -1) {
+    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-100">' + escapeAcctHtml(badgeText) + '</span>';
+    icon = '<i class="fas fa-chart-line text-sky-600"></i>';
   }
+
+  const accCopyBtn = accNum
+    ? '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(accNum) + '\', this)" class="text-[10px] text-sky-600 hover:text-sky-700 p-1 rounded hover:bg-sky-50" title="Copy Account Number"><i class="fas fa-copy"></i></button>'
+    : '';
+  const paybillRow = paybill
+    ? '<div class="flex items-center justify-between text-xs pt-1 border-t border-slate-200/50">' +
+        '<span class="text-slate-500 text-[11px]">Paybill / Till:</span>' +
+        '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800">' +
+          '<span>' + escapeAcctHtml(paybill) + '</span>' +
+          '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(paybill) + '\', this)" class="text-[10px] text-sky-600 hover:text-sky-700 p-1 rounded hover:bg-sky-50" title="Copy Paybill / Till"><i class="fas fa-copy"></i></button>' +
+        '</div>' +
+      '</div>'
+    : '';
+  const dateRow = balanceDate
+    ? '<div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/50">' +
+        '<span>Statement / Balance Date:</span>' +
+        '<span class="font-mono tabular-nums text-slate-600">' + escapeAcctHtml(balanceDate) + '</span>' +
+      '</div>'
+    : '';
 
   return (
     '<div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-shadow space-y-3">' +
-      '<div class="flex items-center justify-between">' +
-        '<div class="flex items-center gap-2.5">' +
-          '<div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-sm">' + icon + '</div>' +
-          '<div>' +
-            '<h4 class="font-bold text-slate-900 text-xs">' + (account.name || "Account") + '</h4>' +
-            '<p class="text-[10px] text-slate-400">' + accName + '</p>' +
+      '<div class="flex items-center justify-between gap-2">' +
+        '<div class="flex items-center gap-2.5 min-w-0">' +
+          '<div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-sm shrink-0">' + icon + '</div>' +
+          '<div class="min-w-0">' +
+            '<h4 class="font-bold text-slate-900 text-xs truncate">' + escapeAcctHtml(orgName || "—") + '</h4>' +
+            '<p class="text-[10px] text-slate-500 truncate">' + escapeAcctHtml(paymentMode || "Official Payment Channel") + '</p>' +
           '</div>' +
         '</div>' +
         badge +
       '</div>' +
-      '<div class="p-2.5 bg-slate-50/70 rounded-lg border border-slate-100 space-y-1">' +
+      '<div class="p-2.5 bg-slate-50/70 rounded-lg border border-slate-100 space-y-1.5">' +
         '<div class="flex items-center justify-between text-xs">' +
-          '<span class="text-slate-500 text-[11px]">Account / Till / Paybill:</span>' +
-          '<div class="flex items-center gap-1.5 font-mono font-bold text-slate-800">' +
-            '<span>' + accNum + '</span>' +
-            '<button type="button" onclick="copyTextToClipboard(\'' + accNum + '\', this)" class="text-[10px] text-sky-600 hover:text-sky-700 p-0.5" title="Copy">' +
-              '<i class="fas fa-copy"></i>' +
-            '</button>' +
+          '<span class="text-slate-500 text-[11px]">Account Number:</span>' +
+          '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800">' +
+            '<span>' + escapeAcctHtml(accNum || "—") + '</span>' +
+            accCopyBtn +
           '</div>' +
         '</div>' +
-        (instructions ? '<p class="text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">' + instructions + '</p>' : '') +
+        paybillRow +
+        dateRow +
+        (instructions ? '<p class="text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">' + escapeAcctHtml(instructions) + '</p>' : '') +
       '</div>' +
     '</div>'
   );
@@ -143,7 +177,7 @@ function renderReconciliationDashboard(data) {
   if (elVar) {
     elVar.textContent = formatKsh(Math.abs(s.netVariance));
     if (s.isBalanced) {
-      elVar.className = "text-lg sm:text-xl font-extrabold text-emerald-600 mt-2";
+      elVar.className = "text-lg sm:text-xl font-extrabold text-emerald-600 mt-2 font-mono tabular-nums";
       if (elVarStat) {
         elVarStat.textContent = "✓ Reconciled & Balanced (0 Variance)";
         elVarStat.className = "text-[11px] mt-1 font-semibold text-emerald-600";
@@ -156,7 +190,7 @@ function renderReconciliationDashboard(data) {
       }
     } else {
       const isPositive = s.netVariance > 0;
-      elVar.className = "text-lg sm:text-xl font-extrabold text-rose-600 mt-2";
+      elVar.className = "text-lg sm:text-xl font-extrabold text-rose-600 mt-2 font-mono tabular-nums";
       if (elVarStat) {
         elVarStat.textContent = isPositive ? "Physical Bank exceeds System Ledger" : "System Ledger exceeds Physical Bank";
         elVarStat.className = "text-[11px] mt-1 font-semibold text-rose-600";
@@ -194,10 +228,10 @@ function renderReconciliationDashboard(data) {
       '    <div class="text-[10px] text-slate-400">' + (row.institution || "—") + '</div>' +
       '  </td>' +
       '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">' + row.type + '</span></td>' +
-      '  <td class="py-3 px-4 text-slate-600">' + (row.accountNumber || "—") + '</td>' +
-      '  <td class="py-3 px-4 text-right font-medium text-slate-900">' + formatKsh(row.physicalBalance) + '</td>' +
-      '  <td class="py-3 px-4 text-right text-slate-700">' + formatKsh(row.systemBalance) + '</td>' +
-      '  <td class="py-3 px-4 text-right ' + varClass + '">' + (row.variance !== 0 ? formatKsh(row.variance) : "0.00") + '</td>' +
+      '  <td class="py-3 px-4 text-slate-600 tabular-nums">' + escapeAcctHtml(row.accountNumber || "—") + '</td>' +
+      '  <td class="py-3 px-4 text-right font-medium text-slate-900 tabular-nums">' + formatKsh(row.physicalBalance) + '</td>' +
+      '  <td class="py-3 px-4 text-right text-slate-700 tabular-nums">' + formatKsh(row.systemBalance) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums ' + varClass + '">' + (row.variance !== 0 ? formatKsh(row.variance) : formatKsh(0)) + '</td>' +
       '  <td class="py-3 px-4 text-center font-sans">' + statusPill + '</td>' +
       '  <td class="py-3 px-4 text-center font-sans text-[10px] text-slate-500">' + (row.statementDate || "—") + '</td>' +
       '  <td class="py-3 px-4 text-center font-sans">' +

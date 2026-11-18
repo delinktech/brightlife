@@ -28,7 +28,7 @@
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors">
           <i class="fas fa-arrows-rotate text-[11px]"></i> <span>Refresh</span>
         </button>
-        <button type="button" onclick="window.print()"
+        <button type="button" onclick="openPrintPersonalStatement()"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
           <i class="fas fa-print text-[11px]"></i> <span>Statement</span>
         </button>
@@ -48,7 +48,7 @@
         </div>
       </div>
       <div>
-        <h3 id="pf-my-savings" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight font-mono">KSh 0</h3>
+        <h3 id="pf-my-savings" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">KES 0</h3>
         <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
           Cumulative equity in chama
         </p>
@@ -64,7 +64,7 @@
         </div>
       </div>
       <div>
-        <h3 id="pf-my-shares" class="text-lg sm:text-2xl font-bold text-blue-600 tracking-tight font-mono">0.00%</h3>
+        <h3 id="pf-my-shares" class="text-lg sm:text-2xl font-bold text-blue-600 tracking-tight font-mono tabular-nums">0.00%</h3>
         <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
           Ownership of group capital
         </p>
@@ -80,7 +80,7 @@
         </div>
       </div>
       <div>
-        <h3 id="pf-my-loan-balance" class="text-lg sm:text-2xl font-bold text-amber-600 tracking-tight font-mono">KSh 0</h3>
+        <h3 id="pf-my-loan-balance" class="text-lg sm:text-2xl font-bold text-amber-600 tracking-tight font-mono tabular-nums">KES 0</h3>
         <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
           Outstanding principal & interest
         </p>
@@ -88,16 +88,16 @@
     </div>
 
     <!-- Card 4: Dividend / Profit Share -->
-    <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">PROFIT / DIVIDEND SHARE</span>
-        <div class="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 text-sm shrink-0">
+    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm relative">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">Profit / Dividend Share</span>
+        <div class="w-7 h-7 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 text-xs shrink-0">
           <i class="fas fa-seedling"></i>
         </div>
       </div>
       <div>
-        <h3 id="pf-my-profit-share" class="text-2xl font-black text-indigo-600 tracking-tight">KSh 0</h3>
-        <p class="text-[11px] text-slate-500 font-medium mt-2">
+        <h3 id="pf-my-profit-share" class="text-lg sm:text-2xl font-bold text-indigo-600 tracking-tight font-mono tabular-nums">KES 0</h3>
+        <p class="text-[10px] text-slate-400 font-medium mt-1 truncate">
           Estimated return from group investments
         </p>
       </div>
@@ -117,19 +117,19 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
       <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
         <div class="text-[10px] font-semibold text-slate-400 uppercase">Total Chama Capital</div>
-        <div id="pf-group-pool" class="text-base font-black text-slate-900 mt-0.5">KSh 0</div>
+        <div id="pf-group-pool" class="text-base font-bold text-slate-900 mt-0.5 font-mono tabular-nums">KES 0</div>
       </div>
       <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
         <div class="text-[10px] font-semibold text-slate-400 uppercase">Capital Invested</div>
-        <div id="pf-group-invested" class="text-base font-black text-slate-900 mt-0.5">KSh 0</div>
+        <div id="pf-group-invested" class="text-base font-bold text-slate-900 mt-0.5 font-mono tabular-nums">KES 0</div>
       </div>
       <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
         <div class="text-[10px] font-semibold text-slate-400 uppercase">Net Group Returns</div>
-        <div id="pf-group-profit" class="text-base font-black text-emerald-600 mt-0.5">KSh 0</div>
+        <div id="pf-group-profit" class="text-base font-bold text-emerald-600 mt-0.5 font-mono tabular-nums">KES 0</div>
       </div>
       <div class="bg-white p-3 rounded-xl border border-slate-200/60 shadow-2xs">
         <div class="text-[10px] font-semibold text-slate-400 uppercase">Active Members</div>
-        <div id="pf-group-members" class="text-base font-black text-slate-900 mt-0.5">0</div>
+        <div id="pf-group-members" class="text-base font-bold text-slate-900 mt-0.5 font-mono tabular-nums">0</div>
       </div>
     </div>
   </div>
@@ -185,10 +185,10 @@
           <thead>
             <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold">
               <th class="pb-2">Loan ID</th>
-              <th class="pb-2">Requested</th>
-              <th class="pb-2">Repaid</th>
-              <th class="pb-2">Balance</th>
-              <th class="pb-2 text-right">Status</th>
+              <th class="pb-2 text-right">Requested</th>
+              <th class="pb-2 text-right">Repaid</th>
+              <th class="pb-2 text-right">Balance</th>
+              <th class="pb-2 text-center">Status</th>
             </tr>
           </thead>
           <tbody id="pf-loans-tbody" class="divide-y divide-slate-100 text-slate-700">

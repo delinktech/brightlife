@@ -48,7 +48,7 @@
             <i class="fas fa-building-columns"></i>
           </span>
         </div>
-        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="kpi-physical-bank-total">KES 0</p>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2 font-mono tabular-nums" id="kpi-physical-bank-total">KES 0</p>
         <p class="text-[11px] text-slate-500 mt-1" id="kpi-physical-bank-sub">Reconciled bank statement balances</p>
       </div>
 
@@ -60,7 +60,7 @@
             <i class="fas fa-book-open"></i>
           </span>
         </div>
-        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="kpi-system-book-total">KES 0</p>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2 font-mono tabular-nums" id="kpi-system-book-total">KES 0</p>
         <p class="text-[11px] text-slate-500 mt-1">Calculated net ledger inflows</p>
       </div>
 
@@ -72,7 +72,7 @@
             <i class="fas fa-scale-balanced"></i>
           </span>
         </div>
-        <p class="text-lg sm:text-xl font-extrabold mt-2" id="kpi-global-variance">KES 0</p>
+        <p class="text-lg sm:text-xl font-extrabold mt-2 font-mono tabular-nums" id="kpi-global-variance">KES 0</p>
         <p class="text-[11px] mt-1 font-medium" id="kpi-variance-status">Checking balance...</p>
       </div>
 
@@ -84,7 +84,7 @@
             <i class="fas fa-wallet"></i>
           </span>
         </div>
-        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2" id="kpi-total-assets">KES 0</p>
+        <p class="text-lg sm:text-xl font-extrabold text-slate-900 mt-2 font-mono tabular-nums" id="kpi-total-assets">KES 0</p>
         <p class="text-[11px] text-slate-500 mt-1">Cash + Active Loans + Investments</p>
       </div>
     </div>
@@ -157,8 +157,8 @@
   </div>
 
   <!-- Reconcile Account Statement Balance Modal -->
-  <div id="reconcile-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+  <div id="reconcile-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
       <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-sm">

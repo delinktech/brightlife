@@ -1,4 +1,12 @@
 <script>
+  function escapePrintHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function formatDateForLetterhead(d) {
     const dateObj = d instanceof Date ? d : new Date();
     const months = [
@@ -15,9 +23,16 @@
     window.print();
   }
 
+  function showPrintModal_() {
+    const modal = document.getElementById("printReportModal");
+    if (modal) modal.classList.remove("hidden");
+    document.body.classList.add("print-modal-open");
+  }
+
   function closePrintModal() {
     const modal = document.getElementById("printReportModal");
     if (modal) modal.classList.add("hidden");
+    document.body.classList.remove("print-modal-open");
   }
 
   function openPrintMemberStatement(memberId) {
@@ -37,15 +52,15 @@
     kpiContainer.innerHTML =
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Total Savings</div>' +
-      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + formatMoney(member.savings) + '</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono tabular-nums mt-0.5">' + formatMoney(member.savings) + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Current Loan Balance</div>' +
-      '<div class="text-sm font-bold text-rose-600 font-mono mt-0.5">' + formatMoney(member.loanBalance) + '</div>' +
+      '<div class="text-sm font-bold text-rose-600 font-mono tabular-nums mt-0.5">' + formatMoney(member.loanBalance) + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Guaranteed Amount</div>' +
-      '<div class="text-sm font-bold text-purple-600 font-mono mt-0.5">' + formatMoney(member.guaranteed) + '</div>' +
+      '<div class="text-sm font-bold text-purple-600 font-mono tabular-nums mt-0.5">' + formatMoney(member.guaranteed) + '</div>' +
       '</div>';
 
     document.getElementById("print-table-head").innerHTML =
@@ -59,48 +74,167 @@
     document.getElementById("print-table-body").innerHTML =
       '<tr>' +
       '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-piggy-bank text-emerald-600 mr-2"></i> Accumulated Member Savings</td>' +
-      '<td class="px-4 py-3 font-mono text-slate-500">' + member.id + '-SAV</td>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapePrintHtml(member.id) + '-SAV</td>' +
       '<td class="px-4 py-3 text-slate-600">Total monthly contributions & deposits</td>' +
-      '<td class="px-4 py-3 text-right font-mono font-bold text-slate-800">' + formatMoney(member.savings) + '</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-800">' + formatMoney(member.savings) + '</td>' +
       '</tr>' +
       '<tr>' +
       '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-hand-holding-dollar text-rose-600 mr-2"></i> Active Loan Outstanding Balance</td>' +
-      '<td class="px-4 py-3 font-mono text-slate-500">' + member.id + '-LN</td>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapePrintHtml(member.id) + '-LN</td>' +
       '<td class="px-4 py-3 text-slate-600">Principal + interest balance remaining</td>' +
-      '<td class="px-4 py-3 text-right font-mono font-bold text-rose-600">' + formatMoney(member.loanBalance) + '</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-rose-600">' + formatMoney(member.loanBalance) + '</td>' +
       '</tr>' +
       '<tr>' +
       '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-shield-cat text-purple-600 mr-2"></i> Guarantor Liability Commitment</td>' +
-      '<td class="px-4 py-3 font-mono text-slate-500">' + member.id + '-GTR</td>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapePrintHtml(member.id) + '-GTR</td>' +
       '<td class="px-4 py-3 text-slate-600">Savings pledged to guarantee loans</td>' +
-      '<td class="px-4 py-3 text-right font-mono font-bold text-purple-600">' + formatMoney(member.guaranteed) + '</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-purple-600">' + formatMoney(member.guaranteed) + '</td>' +
       '</tr>';
 
-    document.getElementById("printReportModal").classList.remove("hidden");
+    showPrintModal_();
   }
 
-  function openPrintContributionsReport() {
-    const list = typeof currentContributions !== "undefined" ? currentContributions : [];
+  function openPrintPersonalStatement() {
+    const data = window.latestPersonalFinancials;
+    if (!data) {
+      window.print();
+      return;
+    }
+
+    const user = data.user || {};
+    const summary = data.personalSummary || {};
+    const contribs = data.contributions || [];
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "PERSONAL FINANCIAL STATEMENT";
+    document.getElementById("print-report-badge").textContent = user.status || "Active";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official personal statement for " + (user.name || "Member") + " (" + (user.memberId || "—") + ")";
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">My Total Savings</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono tabular-nums mt-0.5">' + escapePrintHtml(summary.savingsFormatted || formatMoney(summary.savings || 0)) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Group Shares %</div>' +
+      '<div class="text-sm font-bold text-sky-600 font-mono tabular-nums mt-0.5">' + escapePrintHtml(summary.sharesPercentage || "0.00%") + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Active Loan Balance</div>' +
+      '<div class="text-sm font-bold text-amber-600 font-mono tabular-nums mt-0.5">' + escapePrintHtml(summary.activeLoanBalanceFormatted || formatMoney(summary.activeLoanBalance || 0)) + '</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Date</th>' +
+      '<th class="px-4 py-3">Type</th>' +
+      '<th class="px-4 py-3">Payment Channel</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      '</tr>';
+
+    let bodyHtml = "";
+    contribs.forEach((c) => {
+      bodyHtml +=
+        '<tr>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500">' + escapePrintHtml(c.date || "—") + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + escapePrintHtml(c.type || "Monthly Contribution") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + escapePrintHtml(c.mode || "—") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-800">' + escapePrintHtml(c.amountFormatted || formatMoney(c.amount || 0)) + '</td>' +
+        '</tr>';
+    });
+
+    document.getElementById("print-table-body").innerHTML =
+      bodyHtml || '<tr><td colspan="4" class="text-center py-6 text-slate-400">No personal contribution entries recorded.</td></tr>';
+
+    showPrintModal_();
+  }
+
+  function openPrintMembersReport() {
+    const list = typeof currentMembers !== "undefined" ? currentMembers : [];
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "MEMBERS FINANCIAL SUMMARY";
+    document.getElementById("print-report-badge").textContent = "Members Directory";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official summary of member savings, shareholding, active loans, and guarantor commitments (" + list.length + " members listed).";
+
+    let totalSavings = 0;
+    let totalLoanBalances = 0;
+    list.forEach((m) => {
+      totalSavings += Number(m.savings) || 0;
+      totalLoanBalances += Number(m.loanBalance) || 0;
+    });
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Group Savings</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono tabular-nums mt-0.5">' + formatMoney(totalSavings) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Active Loan Balances</div>' +
+      '<div class="text-sm font-bold text-amber-600 font-mono tabular-nums mt-0.5">' + formatMoney(totalLoanBalances) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Registered Members</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono tabular-nums mt-0.5">' + list.length + '</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Member ID</th>' +
+      '<th class="px-4 py-3">Member Name</th>' +
+      '<th class="px-4 py-3 text-right">Savings</th>' +
+      '<th class="px-4 py-3 text-right">Shares %</th>' +
+      '<th class="px-4 py-3 text-right">Loan Balance</th>' +
+      '<th class="px-4 py-3 text-right">Guaranteed</th>' +
+      '<th class="px-4 py-3 text-center">Status</th>' +
+      '</tr>';
+
+    let bodyHtml = "";
+    list.forEach((m) => {
+      bodyHtml +=
+        '<tr>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500">' + escapePrintHtml(m.id || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + escapePrintHtml(m.name || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900">' + formatMoney(m.savings) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-sky-700">' + escapePrintHtml(m.sharesPercent || "0.00") + '%</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-amber-700">' + formatMoney(m.loanBalance) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-600">' + formatMoney(m.guaranteed) + '</td>' +
+        '<td class="px-4 py-2.5 text-center font-semibold text-xs">' + escapePrintHtml(m.status || "Active") + '</td>' +
+        '</tr>';
+    });
+
+    document.getElementById("print-table-body").innerHTML =
+      bodyHtml || '<tr><td colspan="7" class="text-center py-6 text-slate-400">No member records loaded.</td></tr>';
+
+    showPrintModal_();
+  }
+
+  function renderContributionsPrintModal_(list) {
+    const rows = Array.isArray(list) ? list : [];
     document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
     document.getElementById("print-report-title").textContent = "GROUP CONTRIBUTIONS STATEMENT";
     document.getElementById("print-report-badge").textContent = "Financial Report";
     document.getElementById("print-report-subtitle").textContent =
-      "Official statement of member contributions and monthly deposits (" + list.length + " entries listed).";
+      "Official statement of member contributions and monthly deposits (" + rows.length + " entries listed).";
 
     let totalSum = 0;
-    list.forEach((c) => {
-      totalSum += parseFloat(String(c.amount || "0").replace(/[^0-9.-]+/g, "")) || 0;
+    rows.forEach((c) => {
+      const rawAmt = c.amountRaw !== undefined ? c.amountRaw : c.amount;
+      totalSum += parseFloat(String(rawAmt || "0").replace(/[^0-9.-]+/g, "")) || 0;
     });
 
     const kpiContainer = document.getElementById("print-kpi-row");
     kpiContainer.innerHTML =
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Total Contribution Volume</div>' +
-      '<div class="text-sm font-bold text-emerald-600 font-mono mt-0.5">' + formatMoney(totalSum) + '</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono tabular-nums mt-0.5">' + formatMoney(totalSum) + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Recorded Transactions</div>' +
-      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + list.length + '</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono tabular-nums mt-0.5">' + rows.length + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Group Status</div>' +
@@ -117,34 +251,58 @@
       '</tr>';
 
     let bodyHtml = "";
-    list.forEach((c) => {
+    rows.forEach((c) => {
       bodyHtml +=
         '<tr>' +
-        '<td class="px-4 py-2.5 font-mono text-slate-500">' + (c.date || "-") + '</td>' +
-        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + (c.name || "-") + '</td>' +
-        '<td class="px-4 py-2.5 text-slate-600">' + (c.mode || "-") + '</td>' +
-        '<td class="px-4 py-2.5 text-slate-600">' + (c.type || "Contribution") + '</td>' +
-        '<td class="px-4 py-2.5 text-right font-mono font-bold text-slate-800">' + (c.amount || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500">' + escapePrintHtml(c.date || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + escapePrintHtml(c.name || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + escapePrintHtml(c.mode || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + escapePrintHtml(c.type || "Contribution") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-800">' + escapePrintHtml(c.amount || "-") + '</td>' +
         '</tr>';
     });
 
     document.getElementById("print-table-body").innerHTML =
       bodyHtml || '<tr><td colspan="5" class="text-center py-6 text-slate-400">No contributions records found.</td></tr>';
 
-    document.getElementById("printReportModal").classList.remove("hidden");
+    showPrintModal_();
   }
 
-  function openPrintLoansReport() {
-    const list = typeof currentLoans !== "undefined" ? currentLoans : [];
+  function openPrintContributionsReport() {
+    const existing = typeof loadedContributions !== "undefined" ? loadedContributions : [];
+    if (existing.length > 0 || typeof google === "undefined" || !google.script || !google.script.run) {
+      renderContributionsPrintModal_(existing);
+      return;
+    }
+
+    if (typeof startAppLoader === "function") startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (typeof stopAppLoader === "function") stopAppLoader();
+        const rows = (res && res.success && Array.isArray(res.contributions)) ? res.contributions : [];
+        if (typeof loadedContributions !== "undefined" && rows.length) {
+          loadedContributions = rows;
+        }
+        renderContributionsPrintModal_(rows);
+      })
+      .withFailureHandler(function () {
+        if (typeof stopAppLoader === "function") stopAppLoader();
+        renderContributionsPrintModal_([]);
+      })
+      .getContributionsData(1, 100);
+  }
+
+  function renderLoansPrintModal_(list) {
+    const rows = Array.isArray(list) ? list : [];
     document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
     document.getElementById("print-report-title").textContent = "LOANS PORTFOLIO REPORT";
     document.getElementById("print-report-badge").textContent = "Portfolio Statement";
     document.getElementById("print-report-subtitle").textContent =
-      "Official statement of member loan applications, repayments, and outstanding balances.";
+      "Official statement of member loan applications, repayments, and outstanding balances (" + rows.length + " loans listed).";
 
     let activeCount = 0;
     let totalOutstanding = 0;
-    list.forEach((l) => {
+    rows.forEach((l) => {
       if ((l.status || "").toLowerCase() === "active") activeCount++;
       totalOutstanding += Number(l.balance) || 0;
     });
@@ -153,11 +311,11 @@
     kpiContainer.innerHTML =
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Active Loans</div>' +
-      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + activeCount + '</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono tabular-nums mt-0.5">' + activeCount + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Total Portfolio Balance</div>' +
-      '<div class="text-sm font-bold text-rose-600 font-mono mt-0.5">' + formatMoney(totalOutstanding) + '</div>' +
+      '<div class="text-sm font-bold text-rose-600 font-mono tabular-nums mt-0.5">' + formatMoney(totalOutstanding) + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Portfolio Status</div>' +
@@ -176,27 +334,54 @@
       '</tr>';
 
     let bodyHtml = "";
-    list.forEach((l) => {
+    rows.forEach((l) => {
+      const repAmt = Number(l.repayment) || ((Number(l.requested) || 0) + (Number(l.interest) || 0) + (Number(l.trsfee) || 0));
       bodyHtml +=
         '<tr>' +
-        '<td class="px-4 py-2.5 font-mono text-slate-500">' + l.id + '</td>' +
-        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + (l.borrower || "-") + '</td>' +
-        '<td class="px-4 py-2.5 text-right font-mono text-slate-700">' + formatMoney(l.requested) + '</td>' +
-        '<td class="px-4 py-2.5 text-right font-mono text-slate-700">' + formatMoney(l.repayment) + '</td>' +
-        '<td class="px-4 py-2.5 text-right font-mono text-emerald-600 font-semibold">' + formatMoney(l.paid) + '</td>' +
-        '<td class="px-4 py-2.5 text-right font-mono text-rose-600 font-bold">' + formatMoney(l.balance) + '</td>' +
-        '<td class="px-4 py-2.5 text-center font-bold text-xs">' + l.status + '</td>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500">#' + escapePrintHtml(l.id) + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + escapePrintHtml(l.borrower || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-700">' + formatMoney(l.requested) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-700">' + formatMoney(repAmt) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-emerald-600 font-semibold">' + formatMoney(l.paid) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-rose-600 font-bold">' + formatMoney(l.balance) + '</td>' +
+        '<td class="px-4 py-2.5 text-center font-bold text-xs">' + escapePrintHtml(l.status || "-") + '</td>' +
         '</tr>';
     });
 
     document.getElementById("print-table-body").innerHTML =
       bodyHtml || '<tr><td colspan="7" class="text-center py-6 text-slate-400">No loan records found.</td></tr>';
 
-    document.getElementById("printReportModal").classList.remove("hidden");
+    showPrintModal_();
+  }
+
+  function openPrintLoansReport() {
+    const existing = typeof loadedLoans !== "undefined" ? loadedLoans : [];
+    if (existing.length > 0 || typeof google === "undefined" || !google.script || !google.script.run) {
+      renderLoansPrintModal_(existing);
+      return;
+    }
+
+    if (typeof startAppLoader === "function") startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (typeof stopAppLoader === "function") stopAppLoader();
+        const rows = (res && res.success && Array.isArray(res.loans)) ? res.loans : [];
+        if (typeof loadedLoans !== "undefined" && rows.length) {
+          loadedLoans = rows;
+        }
+        renderLoansPrintModal_(rows);
+      })
+      .withFailureHandler(function () {
+        if (typeof stopAppLoader === "function") stopAppLoader();
+        renderLoansPrintModal_([]);
+      })
+      .getLoansData(1, 100);
   }
 
   function openPrintAccountsReport() {
-    const list = typeof currentAccounts !== "undefined" ? currentAccounts : [];
+    const list = (typeof accountsState !== "undefined" && accountsState && Array.isArray(accountsState.accounts))
+      ? accountsState.accounts
+      : [];
     document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
     document.getElementById("print-report-title").textContent = "ACCOUNTS & BANK BALANCES OVERVIEW";
     document.getElementById("print-report-badge").textContent = "Financial Audit";
@@ -205,18 +390,19 @@
 
     let totalCash = 0;
     list.forEach((a) => {
-      totalCash += Number(a.balance) || 0;
+      const bal = a.statementBalance !== undefined ? a.statementBalance : a.balance;
+      totalCash += Number(bal) || 0;
     });
 
     const kpiContainer = document.getElementById("print-kpi-row");
     kpiContainer.innerHTML =
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Total Liquid Balance</div>' +
-      '<div class="text-sm font-bold text-emerald-600 font-mono mt-0.5">' + formatMoney(totalCash) + '</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono tabular-nums mt-0.5">' + formatMoney(totalCash) + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Registered Accounts</div>' +
-      '<div class="text-sm font-bold text-slate-800 font-mono mt-0.5">' + list.length + '</div>' +
+      '<div class="text-sm font-bold text-slate-800 font-mono tabular-nums mt-0.5">' + list.length + '</div>' +
       '</div>' +
       '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
       '<div class="text-[10px] uppercase font-bold text-slate-400">Audit Status</div>' +
@@ -230,25 +416,26 @@
       '<th class="px-4 py-3">Payment Mode</th>' +
       '<th class="px-4 py-3">Paybill / Till</th>' +
       '<th class="px-4 py-3">Balance Date</th>' +
-      '<th class="px-4 py-3 text-right">Current Balance (KES)</th>' +
+      '<th class="px-4 py-3 text-right">Statement Balance (KES)</th>' +
       '</tr>';
 
     let bodyHtml = "";
     list.forEach((a) => {
+      const bal = a.statementBalance !== undefined ? a.statementBalance : a.balance;
       bodyHtml +=
         '<tr>' +
-        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + (a.orgName || "-") + '</td>' +
-        '<td class="px-4 py-2.5 font-mono text-slate-600">' + (a.accountNumber || "-") + '</td>' +
-        '<td class="px-4 py-2.5 text-slate-600">' + (a.paymentMode || "-") + '</td>' +
-        '<td class="px-4 py-2.5 font-mono text-slate-600">' + (a.paybill || "-") + '</td>' +
-        '<td class="px-4 py-2.5 font-mono text-slate-500 text-xs">' + (a.balanceDate || "-") + '</td>' +
-        '<td class="px-4 py-2.5 text-right font-mono font-bold text-slate-800">' + formatMoney(a.balance) + '</td>' +
+        '<td class="px-4 py-2.5 font-semibold text-slate-800">' + escapePrintHtml(a.orgName || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-600">' + escapePrintHtml(a.accountNumber || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-slate-600">' + escapePrintHtml(a.paymentMode || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-600">' + escapePrintHtml(a.paybill || "-") + '</td>' +
+        '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500 text-xs">' + escapePrintHtml(a.balanceDate || "-") + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-800">' + formatMoney(bal) + '</td>' +
         '</tr>';
     });
 
     document.getElementById("print-table-body").innerHTML =
       bodyHtml || '<tr><td colspan="6" class="text-center py-6 text-slate-400">No account records found.</td></tr>';
 
-    document.getElementById("printReportModal").classList.remove("hidden");
+    showPrintModal_();
   }
 </script>

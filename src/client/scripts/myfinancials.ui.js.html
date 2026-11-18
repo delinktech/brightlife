@@ -19,6 +19,7 @@
 
   function renderPersonalFinancials(data) {
     if (!data) return;
+    window.latestPersonalFinancials = data;
 
     // User Profile Header
     if (data.user) {
@@ -56,10 +57,10 @@
         .map(function (c) {
           return (
             '<tr class="hover:bg-slate-50/50">' +
-            '<td class="py-2.5 font-medium">' + (c.date || "—") + '</td>' +
+            '<td class="py-2.5 font-mono tabular-nums font-medium text-slate-600">' + (c.date || "—") + '</td>' +
             '<td class="py-2.5 text-slate-500">' + (c.type || "Monthly Contribution") + '</td>' +
             '<td class="py-2.5"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 font-semibold text-slate-600">' + (c.mode || "Cash") + '</span></td>' +
-            '<td class="py-2.5 text-right font-bold text-slate-900">' + (c.amountFormatted || "KSh 0") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums font-bold text-slate-900">' + (c.amountFormatted || "KES 0") + '</td>' +
             '</tr>'
           );
         })
@@ -85,11 +86,11 @@
 
           return (
             '<tr class="hover:bg-slate-50/50">' +
-            '<td class="py-2.5 font-mono font-bold text-slate-800">' + (l.id || "—") + '</td>' +
-            '<td class="py-2.5 font-medium">' + (l.requestedAmountFormatted || "KSh 0") + '</td>' +
-            '<td class="py-2.5 text-emerald-600 font-medium">' + (l.paidFormatted || "KSh 0") + '</td>' +
-            '<td class="py-2.5 font-bold text-amber-600">' + (l.balanceFormatted || "KSh 0") + '</td>' +
-            '<td class="py-2.5 text-right"><span class="px-2 py-0.5 rounded text-[10px] font-bold ' + statusClass + '">' + (l.status || "Pending") + '</span></td>' +
+            '<td class="py-2.5 font-mono tabular-nums font-bold text-slate-800">' + (l.id || "—") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums font-medium text-slate-700">' + (l.requestedAmountFormatted || "KES 0") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums text-emerald-600 font-medium">' + (l.paidFormatted || "KES 0") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums font-bold text-amber-600">' + (l.balanceFormatted || "KES 0") + '</td>' +
+            '<td class="py-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ' + statusClass + '">' + (l.status || "Pending") + '</span></td>' +
             '</tr>'
           );
         })

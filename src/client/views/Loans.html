@@ -116,7 +116,7 @@
         </thead>
         <tbody id="loan-repayments-body" class="divide-y divide-slate-100">
           <tr>
-            <td colspan="10" class="px-4 py-6 text-center text-xs text-slate-400">Loading repayment transactions...</td>
+            <td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400">Loading repayment transactions...</td>
           </tr>
         </tbody>
       </table>
@@ -133,8 +133,8 @@
 </section>
 
 <!-- Pay Loan Modal -->
-<div id="payLoanModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-5 sm:p-6">
+<div id="payLoanModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-5 sm:p-6 max-h-[90vh] overflow-y-auto my-auto">
     <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
       <h3 class="text-base font-bold text-slate-900">Record Loan Payment</h3>
       <button type="button" onclick="closePayLoanModal()" class="text-slate-400 hover:text-slate-600 transition-colors">

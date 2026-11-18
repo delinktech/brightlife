@@ -90,7 +90,7 @@
     if (!container) {
       container = document.createElement("div");
       container.id = "toast-notification-container";
-      container.className = "fixed bottom-5 right-5 z-50 flex flex-col space-y-2.5 pointer-events-none max-w-sm w-full px-4 sm:px-0";
+      container.className = "fixed bottom-20 md:bottom-5 right-4 md:right-5 z-50 flex flex-col space-y-2.5 pointer-events-none max-w-sm w-full px-4 sm:px-0";
       document.body.appendChild(container);
     }
 
@@ -650,18 +650,34 @@
     google.script.run
       .withSuccessHandler((data) => {
         updateRangeButtons(data.range || currentHomeRange);
-        document.getElementById("home-savings").innerText = formatMoney(data.savings);
-        document.getElementById("home-loans").innerText = formatMoney(data.loans);
-        document.getElementById("home-yearly-contrib").innerText = formatMoney(
-          data.yearToDateContributions !== undefined && data.yearToDateContributions !== null
-            ? data.yearToDateContributions
-            : data.yearlyContributions
-        );
-        document.getElementById("home-membercount").innerText = (data.memberCount || 0).toLocaleString();
-        document.getElementById("home-cash").innerText = formatMoney(data.cash);
-        document.getElementById("home-monthly-contrib").innerText = formatMoneyCompactK(
-          data.currentMonthContributions
-        );
+        const savingsEl = document.getElementById("home-savings");
+        if (savingsEl) savingsEl.innerText = formatMoney(data.savings);
+        const loansEl = document.getElementById("home-loans");
+        if (loansEl) loansEl.innerText = formatMoney(data.loans);
+        const outstandingEl = document.getElementById("home-outstanding");
+        if (outstandingEl) {
+          const outstandingVal =
+            data.portfolio && data.portfolio.totalOutstanding !== undefined
+              ? data.portfolio.totalOutstanding
+              : (data.loansOutstanding || 0);
+          outstandingEl.innerText = formatMoney(outstandingVal);
+        }
+        const ytdEl = document.getElementById("home-ytd-contrib");
+        if (ytdEl) {
+          ytdEl.innerText = formatMoney(
+            data.yearToDateContributions !== undefined && data.yearToDateContributions !== null
+              ? data.yearToDateContributions
+              : data.yearlyContributions
+          );
+        }
+        const memberCountEl = document.getElementById("home-membercount");
+        if (memberCountEl) memberCountEl.innerText = (data.memberCount || 0).toLocaleString();
+        const cashEl = document.getElementById("home-cash");
+        if (cashEl) cashEl.innerText = formatMoney(data.cash);
+        const monthlyContribEl = document.getElementById("home-monthly-contrib");
+        if (monthlyContribEl) {
+          monthlyContribEl.innerText = formatMoneyCompactK(data.currentMonthContributions);
+        }
         const prevMonthEl = document.getElementById("home-previous-month-contrib");
         if (prevMonthEl) {
           prevMonthEl.innerText = formatMoneyCompactK(data.previousMonthContributions);
@@ -681,12 +697,16 @@
         );
         const invCountEl = document.getElementById("home-investment-count");
         if (invCountEl) invCountEl.innerText = (data.investmentCount || 0).toLocaleString();
-        document.getElementById("home-growth-mom").innerText = formatPercent(data.growth && data.growth.monthOverMonth);
-        document.getElementById("home-growth-yoy-month").innerText = formatPercent(data.growth && data.growth.yearOverYearMonth);
-        document.getElementById("home-repayment-rate").innerText = formatPercent(data.portfolio && data.portfolio.repaymentRate);
-        document.getElementById("home-par-rate").innerText = formatPercent(data.portfolio && data.portfolio.parRate);
-        document.getElementById("home-range-label").innerText = rangeLabel(data.range || currentHomeRange);
-        renderTopContributors(data.topContributors || []);
+        const growthMomEl = document.getElementById("home-growth-mom");
+        if (growthMomEl) growthMomEl.innerText = formatPercent(data.growth && data.growth.monthOverMonth);
+        const growthYoyEl = document.getElementById("home-growth-yoy-month");
+        if (growthYoyEl) growthYoyEl.innerText = formatPercent(data.growth && data.growth.yearOverYearMonth);
+        const repaymentRateEl = document.getElementById("home-repayment-rate");
+        if (repaymentRateEl) repaymentRateEl.innerText = formatPercent(data.portfolio && data.portfolio.repaymentRate);
+        const parRateEl = document.getElementById("home-par-rate");
+        if (parRateEl) parRateEl.innerText = formatPercent(data.portfolio && data.portfolio.parRate);
+        const rangeLabelEl = document.getElementById("home-range-label");
+        if (rangeLabelEl) rangeLabelEl.innerText = rangeLabel(data.range || currentHomeRange);
         renderMainCharts(data);
         toggleLoading(false);
         stopAppLoader();

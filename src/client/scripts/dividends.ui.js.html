@@ -14,7 +14,27 @@ function formatKshDiv(val) {
   return "KES " + Math.round(num).toLocaleString();
 }
 
+function populateDividendYearOptions() {
+  const select = document.getElementById("div-sim-year");
+  if (!select) return;
+  const currentYear = new Date().getFullYear();
+  const minYear = 2021;
+  const previousValue = select.value;
+  const optionsHtml = [];
+  for (let y = currentYear; y >= minYear; y--) {
+    const val = String(y);
+    const isSelected = previousValue ? previousValue === val : y === currentYear;
+    optionsHtml.push(
+      '<option value="' + val + '"' + (isSelected ? " selected" : "") + ">Financial Year " + val + "</option>"
+    );
+  }
+  select.innerHTML = optionsHtml.join("");
+}
+
+populateDividendYearOptions();
+
 function loadDividendOverview() {
+  populateDividendYearOptions();
   startAppLoader();
   google.script.run
     .withSuccessHandler(function (res) {
@@ -168,7 +188,7 @@ function submitFundStatementForm(event) {
 function runDividendSimulation(event) {
   if (event) event.preventDefault();
 
-  const year = document.getElementById("div-sim-year").value || "2026";
+  const year = document.getElementById("div-sim-year").value || String(new Date().getFullYear());
   const pool = Number(document.getElementById("div-sim-pool").value) || 0;
   const reservePct = Number(document.getElementById("div-sim-reserve-pct").value) || 0;
 
@@ -256,7 +276,7 @@ function openConfirmDividendModal() {
   }
 
   const modal = document.getElementById("dividend-confirm-modal");
-  const year = document.getElementById("div-sim-year").value || "2026";
+  const year = document.getElementById("div-sim-year").value || String(new Date().getFullYear());
   const s = sim.summary;
 
   document.getElementById("confirm-modal-year").textContent = "Financial Year " + year;
@@ -279,7 +299,7 @@ function executeDividendPost() {
   if (!sim || !sim.preview) return;
 
   const btn = document.getElementById("btn-execute-dividend-confirm");
-  const year = document.getElementById("div-sim-year").value || "2026";
+  const year = document.getElementById("div-sim-year").value || String(new Date().getFullYear());
 
   if (btn) {
     btn.disabled = true;

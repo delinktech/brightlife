@@ -3,6 +3,7 @@
   let loanTotalPages = 1;
   let repPage = 1;
   let repTotalPages = 1;
+  let loadedLoans = [];
 
   function renderRepaymentStatusBadge(status) {
     const s = String(status || "").toLowerCase().trim();
@@ -136,12 +137,12 @@
     repPage = page || 1;
     const body = document.getElementById("loan-repayments-body");
     if (body) {
-      body.innerHTML = '<tr><td colspan="10" class="px-4 py-6 text-center text-xs text-slate-400"><div class="w-full h-1.5 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+      body.innerHTML = '<tr><td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400"><div class="w-full h-1.5 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
     }
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
-          if (body) body.innerHTML = '<tr><td colspan="10" class="px-4 py-4 text-center text-xs text-amber-600">Failed to load sub-ledger: ' + (res && res.error ? res.error : "") + '</td></tr>';
+          if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-amber-600">Failed to load sub-ledger: ' + (res && res.error ? res.error : "") + '</td></tr>';
           return;
         }
         repTotalPages = res.totalPages || 1;
@@ -154,7 +155,7 @@
         if (nextBtn) nextBtn.disabled = res.currentPage >= res.totalPages;
       })
       .withFailureHandler(function (err) {
-        if (body) body.innerHTML = '<tr><td colspan="10" class="px-4 py-4 text-center text-xs text-rose-600">Error loading sub-ledger: ' + (err && err.message ? err.message : err) + '</td></tr>';
+        if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-rose-600">Error loading sub-ledger: ' + (err && err.message ? err.message : err) + '</td></tr>';
       })
       .getLoanRepaymentsData("", repPage, 10);
   }
@@ -177,7 +178,12 @@
 
   function renderLoanTable(loans) {
     const body = document.getElementById("loan-table-body");
-    body.innerHTML = (loans || [])
+    if (!body) return;
+    if (!loans || !loans.length) {
+      body.innerHTML = '<tr><td colspan="10" class="px-4 py-8 text-center text-xs text-slate-400">No loan records found.</td></tr>';
+      return;
+    }
+    body.innerHTML = loans
       .map(function (loan) {
         const requested = Number(loan.requested) || 0;
         const interest = Number(loan.interest) || 0;
@@ -250,7 +256,7 @@
     loanPage = page || 1;
     startAppLoader();
     document.getElementById("loan-table-body").innerHTML =
-      '<tr><td colspan="9" class="px-4 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
+      '<tr><td colspan="10" class="px-4 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
@@ -260,7 +266,8 @@
         }
 
         loanTotalPages = res.totalPages || 1;
-        renderLoanTable(res.loans);
+        loadedLoans = res.loans || [];
+        renderLoanTable(loadedLoans);
         document.getElementById("loan-page-num").innerText = res.currentPage;
         document.getElementById("l-prev").disabled = res.currentPage <= 1;
         document.getElementById("l-next").disabled = res.currentPage >= res.totalPages;
@@ -289,6 +296,8 @@
     const hiddenInput = document.getElementById("pl-member");
     const combobox = document.getElementById("pl-member-combobox");
     if (!searchInput || !hiddenInput || !combobox) return;
+    if (searchInput.dataset.comboBound === "true") return;
+    searchInput.dataset.comboBound = "true";
 
     function renderList(filterText) {
       const q = (filterText || "").toLowerCase().trim();

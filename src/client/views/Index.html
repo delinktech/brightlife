@@ -4,7 +4,7 @@
 <head>
   <base target="_top">
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Brightlife SHG</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -42,6 +42,11 @@
 
     .font-mono {
       font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
     }
 
     /* Page Switcher Animation */
@@ -265,6 +270,7 @@
       text-align: left;
       border-collapse: collapse;
       font-size: 0.8125rem;
+      font-variant-numeric: tabular-nums;
     }
 
     .shadcn-table th {
@@ -282,6 +288,7 @@
       border-bottom: 1px solid #f1f5f9;
       color: #0f172a;
       vertical-align: middle;
+      font-variant-numeric: tabular-nums;
     }
 
     .shadcn-table tbody tr {
@@ -358,6 +365,19 @@
       border: 1px solid #bae6fd;
     }
 
+    .badge-purple {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      background-color: #faf5ff;
+      color: #6b21a8;
+      border: 1px solid #e9d5ff;
+    }
+
     /* Column Visibility View Popover Dropdown */
     .column-view-menu {
       position: absolute;
@@ -420,6 +440,8 @@
     table.hide-col-m-taken .col-m-taken,
     table.hide-col-m-balance .col-m-balance,
     table.hide-col-m-guaranteed .col-m-guaranteed,
+    table.hide-col-m-availguar .col-m-availguar,
+    table.hide-col-m-maxloan .col-m-maxloan,
     table.hide-col-m-loanstatus .col-m-loanstatus,
     table.hide-col-m-accountstatus .col-m-accountstatus,
     table.hide-col-c-type .col-c-type,
@@ -429,6 +451,7 @@
     table.hide-col-l-requested .col-l-requested,
     table.hide-col-l-repayment .col-l-repayment,
     table.hide-col-l-paid .col-l-paid,
+    table.hide-col-l-breakdown .col-l-breakdown,
     table.hide-col-inv-startdate .col-inv-startdate,
     table.hide-col-inv-invested .col-inv-invested,
     table.hide-col-inv-revenue .col-inv-revenue,
@@ -516,16 +539,35 @@
 
     /* Print Styles */
     @media print {
+      html, body, body > div, #main-content {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
       body {
         background: white !important;
         font-size: 11pt !important;
         color: #0f172a !important;
-        overflow: visible !important;
       }
-      #sidebar, #mobile-drawer, #mobile-bottom-bar, header, #app-loader, .no-print, nav, .page-wrapper {
+      #sidebar, #mobile-drawer, #mobile-drawer-backdrop, #mobile-bottom-bar, header, #app-loader, .no-print, nav {
         display: none !important;
       }
-      #printReportModal {
+      .page-wrapper:not(.active),
+      body.print-modal-open .page-wrapper {
+        display: none !important;
+      }
+      #my-financials-container.active {
+        display: block !important;
+      }
+      body.print-modal-open #my-financials-container.active {
+        display: none !important;
+      }
+      #printReportModal.hidden {
+        display: none !important;
+      }
+      #printReportModal:not(.hidden) {
         position: static !important;
         display: block !important;
         background: white !important;
@@ -534,7 +576,7 @@
         box-shadow: none !important;
         border: none !important;
       }
-      #printReportModal > div {
+      #printReportModal:not(.hidden) > div {
         box-shadow: none !important;
         border: none !important;
         padding: 0 !important;

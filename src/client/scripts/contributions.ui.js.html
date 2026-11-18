@@ -109,7 +109,7 @@
         type: c.type,
         channel: c.mode,
         tid: c.tid,
-        isLoanRepayment: c.type === "Loan Repayment"
+        isLoanRepayment: c.type === "Loan Repayment" || c.type === "Loan Payment"
       });
   }
 
@@ -224,7 +224,7 @@
     document.getElementById("next-btn").disabled = true;
     startAppLoader();
     document.getElementById("contribution-table-body").innerHTML =
-      '<tr><td colspan="5" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
+      '<tr><td colspan="7" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
 
     google.script.run
       .withSuccessHandler(function (response) {
@@ -256,6 +256,8 @@
     const hiddenInput = document.getElementById("c-member");
     const combobox = document.getElementById("c-member-combobox");
     if (!searchInput || !hiddenInput || !combobox) return;
+    if (searchInput.dataset.comboBound === "true") return;
+    searchInput.dataset.comboBound = "true";
 
     function renderList(filterText) {
       const q = (filterText || "").toLowerCase().trim();
@@ -456,9 +458,10 @@
     const submitBtn = document.getElementById("c-submit-btn");
     if (submitBtn) submitBtn.innerText = "Submit Transaction";
 
-    // Setup listener on shadcn select for transaction type
+    // Setup listener on shadcn select for transaction type (once)
     const cTypeWrapper = document.getElementById("select-ctype-wrapper");
-    if (cTypeWrapper) {
+    if (cTypeWrapper && cTypeWrapper.dataset.ctypeBound !== "true") {
+      cTypeWrapper.dataset.ctypeBound = "true";
       const items = cTypeWrapper.querySelectorAll(".shadcn-dropdown-item");
       items.forEach(function(item) {
         item.addEventListener("click", function() {
@@ -491,6 +494,7 @@
         borrower: document.getElementById("c-member").value,
         memberId: document.getElementById("c-member-id") ? document.getElementById("c-member-id").value : "",
         loanId: document.getElementById("c-loan-id") ? document.getElementById("c-loan-id").value : "",
+        date: document.getElementById("c-date") ? document.getElementById("c-date").value : "",
         amount: document.getElementById("c-amount").value,
         mode: document.getElementById("c-mode").value,
         tid: document.getElementById("c-tid").value,
