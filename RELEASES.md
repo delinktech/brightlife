@@ -1,10 +1,20 @@
 # Release Ledger
 Maintained by `@shipper`
 
-| Version | Clasp Deployment ID | Date | Summary |
-| :--- | :--- | :--- | :--- |
-| **v90** | `AKfycbw3tAZ-RrDuUZNafk2KtrrQSxknUhSfJimpV2k4XXMWsRiGGD5kveH6YyGb3TQjhrhWdQ` | 2026-11-18 | **Standard Folder Structure Migration**: Moved all code to `src/` (`server/`, `comms/`, `migration/`, `client/views/`, `client/scripts/`), configured `.clasp.json` (`rootDir: "./src"`), updated `.claspignore`, removed legacy `xindex.html`, added path-agnostic view/script loader in `app.main.js`. |
-| **v89** | `AKfycbyng6Zhc-DbvzXsc8y29wFXu_6JGCKuqxqFtyxoTCSCsBvPcy7UhSQFPUIgPZ_iZfC50w` | 2026-11-18 | **Fixer Agent**: Implemented `getAccountsReconciliationData` RPC server method, verified via `?testReconciliation=1`. |
-| **v88** | `AKfycbyY5IObcV5Smc1F2bhp87apwiGIritoXcKXzRX8OwEsDOktRQoS7tsmUdzO9VSjgVyg6w` | 2026-11-18 | Initial RPC implementation of `getAccountsReconciliationData`. |
-| **v87** | `AKfycbw6A8Z-cBidVc_A9pIFaW2atsK5sjEjYfRLWkCZVgs5v5gY0LJLJpiiLzDauuDY_5PwyQ` | 2026-11-18 | **Brightlife Archivist**: Ingested full 138-tx CIC MMF statement (May 2021 – Jul 2026), created `CIC Transactions` sheet and populated `Fund Statements`. |
-| **v86** | `AKfycbwfrAsNMp8kP44OJ0WVHr4td3BQZFTLpllUvjdejlsoDlaJButtQFSu5pl07LZ_YWNLEw` | 2026-11-17 | Direct sheet column references on `Members` (`Contributions!$D:$D`, etc.) resolving formula errors. |
+| Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
+| :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **v90** | `@90` | `AKfycbw3........hWdQ` | `02fb667` | **Production** | 2026-11-18 | Standard folder structure migration to `src/` layout with clasp `rootDir`. Removed legacy `xindex.html`. |
+| **v89** | `@89` | `AKfycbyn........C50w` | `b170f50` | Archived | 2026-11-18 | Fixer: Implemented `getAccountsReconciliationData` RPC server method. |
+| **v88** | `@88` | `AKfycbyY........Vyg6w` | `9f1c94e` | Archived | 2026-11-18 | Fixer: Initial auto-reconciliation RPC server method. |
+| **v87** | `@87` | `AKfycbw6........PwyQ` | `11b468a` | Archived | 2026-11-18 | Migrator: Ingested full 138-tx CIC MMF historical statements (May 2021 – Jul 2026). |
+| **v86** | `@86` | `AKfycbwf........NLEw` | `281fa7b` | Archived | 2026-11-17 | Ledger: Direct sheet column references for Members & Loans formulas. |
+| **v85** | `@85` | `AKfycbyE........RA9Ig` | `e99f572` | Archived | 2026-11-17 | Ledger: Bound named ranges, zero setNumberFormat on Members typed columns. |
+| **v84** | `@84` | `AKfycbz2........8nYg` | `75a7c2e` | Archived | 2026-11-17 | Fixer: Formula application directly without clearing table formatting. |
+| **v83** | `@83` | `AKfycbxt........lcGQ` | `5c6eb33` | Archived | 2026-11-17 | Ledger: Clear table typed columns and normalize channels. |
+| **v82** | `@82` | `AKfycbyT........StSQ` | `014d483` | Archived | 2026-11-17 | Fixer: Protected setNumberFormat and dynamic in-bound ranges. |
+
+---
+
+### Security Note
+- Full Deployment IDs and Web App execution URLs are intentionally masked (`xxxxx........xxxx`) in version control to prevent unauthorized endpoint enumeration and quota exhaustion.
+- Live deployment management and rollbacks are executed via local authenticated clasp (`clasp deployments` / `clasp undeploy`) or the Google Apps Script Console.
