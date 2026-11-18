@@ -114,13 +114,13 @@
     }
     if (capBadgeEl) {
       if (savings <= 0) {
-        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200";
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700";
         capBadgeEl.textContent = "Build Savings First";
       } else if (utilizationPct >= 100) {
-        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200";
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60";
         capBadgeEl.textContent = "Limit Reached";
       } else {
-        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200";
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30";
         capBadgeEl.textContent = (100 - utilizationPct).toFixed(0) + "% Headroom";
       }
     }
@@ -170,13 +170,13 @@
     }
     if (lblEl) {
       if (scopeLoans.length === 0) {
-        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60";
         lblEl.textContent = "Debt-Free";
       } else if (totalRemaining === 0) {
-        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60";
         lblEl.textContent = "All Loans Settled";
       } else {
-        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200";
+        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60";
         lblEl.textContent = activeSet.length + (activeSet.length === 1 ? " Active Loan" : " Active Loans");
       }
     }
@@ -214,20 +214,20 @@
 
         const barHeightPct = hasPaid ? Math.max(22, Math.round((amt / maxMonthAmt) * 100)) : (isFuture ? 10 : 12);
         const cardCls = hasPaid
-          ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+          ? "bg-emerald-50/70 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200"
           : isFuture
-          ? "bg-slate-50/40 border-slate-200/60 border-dashed text-slate-400"
-          : "bg-slate-50 border-slate-200 text-slate-500";
+          ? "bg-slate-50/40 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800 border-dashed text-slate-400 dark:text-slate-500"
+          : "bg-slate-50 dark:bg-slate-900/70 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400";
         const barCls = hasPaid
           ? "bg-emerald-500"
           : isFuture
-          ? "bg-slate-200/70"
-          : "bg-amber-300/70";
+          ? "bg-slate-200/70 dark:bg-slate-800"
+          : "bg-amber-300/70 dark:bg-amber-600/60";
         const statusIcon = hasPaid
-          ? '<i class="fas fa-check text-emerald-600 text-[9px]"></i>'
+          ? '<i class="fas fa-check text-emerald-700 dark:text-emerald-400 text-[9px]"></i>'
           : isFuture
-          ? '<span class="text-[9px] text-slate-300">—</span>'
-          : '<span class="text-[9px] text-amber-600 font-bold">0</span>';
+          ? '<span class="text-[9px] text-slate-400 dark:text-slate-500">—</span>'
+          : '<span class="text-[9px] text-amber-700 dark:text-amber-400 font-bold">0</span>';
         const titleAttr = mLabel + " " + targetYear + ": " + (hasPaid ? formatMoney(amt) : (isFuture ? "Upcoming" : "No deposit recorded"));
 
         return (
@@ -283,16 +283,16 @@
     document.getElementById("pf-contrib-count").textContent = contribs.length + " entries";
 
     if (contribs.length === 0) {
-      cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-400">No contribution records found.</td></tr>';
+      cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-slate-500 dark:text-slate-400">No contribution records found.</td></tr>';
     } else {
       cTbody.innerHTML = contribs
         .map(function (c) {
           return (
-            '<tr class="hover:bg-slate-50/50">' +
-            '<td class="py-2.5 font-mono tabular-nums font-medium text-slate-600">' + (c.date || "—") + '</td>' +
-            '<td class="py-2.5 text-slate-500">' + (c.type || "Monthly Contribution") + '</td>' +
-            '<td class="py-2.5"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 font-semibold text-slate-600">' + (c.mode || "Cash") + '</span></td>' +
-            '<td class="py-2.5 text-right font-mono tabular-nums font-bold text-slate-900">' + (c.amountFormatted || "KES 0") + '</td>' +
+            '<tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">' +
+            '<td class="py-2.5 font-mono tabular-nums font-medium text-slate-600 dark:text-slate-400">' + (c.date || "—") + '</td>' +
+            '<td class="py-2.5 text-slate-600 dark:text-slate-300">' + (c.type || "Monthly Contribution") + '</td>' +
+            '<td class="py-2.5"><span class="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-slate-800 font-semibold text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">' + (c.mode || "Cash") + '</span></td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">' + (c.amountFormatted || "KES 0") + '</td>' +
             '</tr>'
           );
         })
@@ -305,24 +305,25 @@
     document.getElementById("pf-loan-count").textContent = loans.length + " records";
 
     if (loans.length === 0) {
-      lTbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">No active or past loans.</td></tr>';
+      lTbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500 dark:text-slate-400">No active or past loans.</td></tr>';
     } else {
       lTbody.innerHTML = loans
         .map(function (l) {
-          const statusClass =
-            l.status === "Settled"
-              ? "bg-emerald-50 text-emerald-700"
-              : l.status === "Active"
-              ? "bg-amber-50 text-amber-700"
-              : "bg-slate-100 text-slate-700";
+          const balNum = Number(l.balance) || 0;
+          const statusPill = typeof renderStatusPill === "function"
+            ? renderStatusPill(l.status || "Pending")
+            : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">' + escapePfHtml(l.status || "Pending") + '</span>';
+          const balCls = balNum > 0
+            ? (String(l.status || "").toLowerCase().indexOf("arrears") !== -1 ? "text-rose-700 dark:text-rose-400" : "text-amber-700 dark:text-amber-400")
+            : "text-slate-500 dark:text-slate-400";
 
           return (
-            '<tr class="hover:bg-slate-50/50">' +
-            '<td class="py-2.5 font-mono tabular-nums font-bold text-slate-800">' + (l.id || "—") + '</td>' +
-            '<td class="py-2.5 text-right font-mono tabular-nums font-medium text-slate-700">' + (l.requestedAmountFormatted || "KES 0") + '</td>' +
-            '<td class="py-2.5 text-right font-mono tabular-nums text-emerald-600 font-medium">' + (l.paidFormatted || "KES 0") + '</td>' +
-            '<td class="py-2.5 text-right font-mono tabular-nums font-bold text-amber-600">' + (l.balanceFormatted || "KES 0") + '</td>' +
-            '<td class="py-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ' + statusClass + '">' + (l.status || "Pending") + '</span></td>' +
+            '<tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">' +
+            '<td class="py-2.5 font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">' + (l.id || "—") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums font-medium text-slate-700 dark:text-slate-300">' + (l.requestedAmountFormatted || "KES 0") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-medium">' + (l.paidFormatted || "KES 0") + '</td>' +
+            '<td class="py-2.5 text-right font-mono tabular-nums font-bold ' + balCls + '">' + (l.balanceFormatted || "KES 0") + '</td>' +
+            '<td class="py-2.5 text-center">' + statusPill + '</td>' +
             '</tr>'
           );
         })

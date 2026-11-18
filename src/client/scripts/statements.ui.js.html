@@ -78,10 +78,10 @@ function renderMonthlyStatementsView(data) {
 
   if (elBadge && data.settings) {
     if (data.settings.autoEmailReceipts) {
-      elBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+      elBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30";
       elBadge.innerHTML = '<i class="fas fa-check-circle mr-1 text-[10px]"></i> ACTIVE (ON)';
     } else {
-      elBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200";
+      elBadge.className = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700";
       elBadge.innerHTML = '<i class="fas fa-pause-circle mr-1 text-[10px]"></i> PAUSED (OFF)';
     }
   }
@@ -95,7 +95,7 @@ function renderStatementMembersTable(members) {
   if (!tableBody) return;
 
   if (!members || members.length === 0) {
-    tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">No members found matching filter.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-500 dark:text-slate-400">No members found matching filter.</td></tr>';
     if (renderedCount) renderedCount.innerText = "0";
     return;
   }
@@ -104,42 +104,42 @@ function renderStatementMembersTable(members) {
 
   tableBody.innerHTML = members.map(function (m) {
     const emailCell = m.hasEmail
-      ? '<span class="text-slate-700 font-mono text-[11px]">' + escapeHtmlAttr(m.email) + '</span>'
-      : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-rose-50 text-rose-600 font-medium border border-rose-100"><i class="fas fa-exclamation-triangle mr-1 text-[9px]"></i> No email</span>';
+      ? '<span class="text-slate-700 dark:text-slate-300 font-mono text-[11px]">' + escapeHtmlAttr(m.email) + '</span>'
+      : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 font-medium border border-rose-200 dark:border-rose-500/30"><i class="fas fa-exclamation-triangle mr-1 text-[9px]"></i> No email</span>';
 
     const phoneCell = m.hasPhone
-      ? '<span class="text-slate-700 font-mono text-[11px]">' + escapeHtmlAttr(m.phone) + '</span>'
-      : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-amber-50 text-amber-700 font-medium border border-amber-100"><i class="fas fa-phone-slash mr-1 text-[9px]"></i> No phone</span>';
+      ? '<span class="text-slate-700 dark:text-slate-300 font-mono tabular-nums text-[11px]">' + escapeHtmlAttr(m.phone) + '</span>'
+      : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 font-medium border border-amber-200 dark:border-amber-500/30"><i class="fas fa-phone-slash mr-1 text-[9px]"></i> No phone</span>';
 
-    const loanBalClass = m.loanBalance > 0 ? "text-amber-600 font-bold" : "text-slate-400";
+    const loanBalClass = m.loanBalance > 0 ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-500 dark:text-slate-400";
 
     return (
-      '<tr class="hover:bg-slate-50/80 transition-colors">' +
+      '<tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">' +
         '<td class="py-3 px-3 text-center">' +
-          '<input type="checkbox" class="stmt-member-checkbox rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer" ' +
+          '<input type="checkbox" class="stmt-member-checkbox rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer" ' +
             'value="' + escapeHtmlAttr(m.id) + '" data-has-email="' + m.hasEmail + '" data-name="' + escapeHtmlAttr(m.name) + '" onchange="updateSelectedStatementCount()" />' +
         '</td>' +
         '<td class="py-3 px-3">' +
-          '<div class="font-bold text-slate-900">' + escapeHtmlAttr(m.name) + '</div>' +
-          '<div class="text-[10px] font-mono text-slate-400">' + escapeHtmlAttr(m.id) + '</div>' +
+          '<div class="font-bold text-slate-900 dark:text-white">' + escapeHtmlAttr(m.name) + '</div>' +
+          '<div class="text-[10px] font-mono text-slate-500 dark:text-slate-400">' + escapeHtmlAttr(m.id) + '</div>' +
         '</td>' +
         '<td class="py-3 px-3">' + emailCell + '</td>' +
         '<td class="py-3 px-3">' + phoneCell + '</td>' +
-        '<td class="py-3 px-3 text-right font-mono font-bold text-emerald-700">' + formatKshStmt(m.savings) + '</td>' +
-        '<td class="py-3 px-3 text-right font-mono ' + loanBalClass + '">' + (m.loanBalance > 0 ? formatKshStmt(m.loanBalance) : '—') + '</td>' +
+        '<td class="py-3 px-3 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">' + formatKshStmt(m.savings) + '</td>' +
+        '<td class="py-3 px-3 text-right font-mono tabular-nums ' + loanBalClass + '">' + (m.loanBalance > 0 ? formatKshStmt(m.loanBalance) : '—') + '</td>' +
         '<td class="py-3 px-3 text-center">' +
           '<div class="flex items-center justify-center gap-1.5">' +
             '<button type="button" onclick="previewMemberStatement(\'' + escapeHtmlAttr(m.id) + '\')" title="Preview Statement" ' +
-              'class="p-1 px-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[10px] transition-colors flex items-center gap-1">' +
-              '<i class="fas fa-eye text-slate-500"></i> Preview' +
+              'class="p-1 px-2 rounded bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-[10px] transition-colors flex items-center gap-1">' +
+              '<i class="fas fa-eye text-slate-500 dark:text-slate-400"></i> Preview' +
             '</button>' +
             '<button type="button" onclick="sendSingleMemberStatement(\'' + escapeHtmlAttr(m.id) + '\')" title="Send Email Statement" ' +
-              'class="p-1 px-2 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium text-[10px] transition-colors flex items-center gap-1 ' + (!m.hasEmail ? 'opacity-50 cursor-not-allowed' : '') + '">' +
-              '<i class="fas fa-envelope text-emerald-600"></i> Email' +
+              'class="p-1 px-2 rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[10px] transition-colors flex items-center gap-1 ' + (!m.hasEmail ? 'opacity-50 cursor-not-allowed' : '') + '">' +
+              '<i class="fas fa-envelope text-emerald-700 dark:text-emerald-400"></i> Email' +
             '</button>' +
             '<button type="button" onclick="sendSingleMemberWhatsApp(\'' + escapeHtmlAttr(m.id) + '\')" title="Send WhatsApp Statement" ' +
-              'class="p-1 px-2 rounded bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-medium text-[10px] transition-colors flex items-center gap-1 ' + (!m.hasPhone ? 'opacity-50 cursor-not-allowed' : '') + '">' +
-              '<i class="fab fa-whatsapp text-green-600"></i> WhatsApp' +
+              'class="p-1 px-2 rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[10px] transition-colors flex items-center gap-1 ' + (!m.hasPhone ? 'opacity-50 cursor-not-allowed' : '') + '">' +
+              '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> WhatsApp' +
             '</button>' +
           '</div>' +
         '</td>' +
@@ -195,13 +195,13 @@ function previewMemberStatement(memberId) {
 
   if (modal) modal.classList.remove("hidden");
   if (container) {
-    container.innerHTML = '<div class="p-8 text-center text-slate-500"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><br>Generating official statement...</div>';
+    container.innerHTML = '<div class="p-8 text-center text-slate-500 dark:text-slate-400"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><br>Generating official statement...</div>';
   }
 
   google.script.run
     .withSuccessHandler(function (res) {
       if (!res || !res.success) {
-        if (container) container.innerHTML = '<div class="p-6 text-center text-rose-600 font-semibold">' + ((res && res.error) || 'Failed to generate statement.') + '</div>';
+        if (container) container.innerHTML = '<div class="p-6 text-center text-rose-700 dark:text-rose-400 font-semibold">' + ((res && res.error) || 'Failed to generate statement.') + '</div>';
         return;
       }
 
@@ -243,7 +243,7 @@ function previewMemberStatement(memberId) {
       }
     })
     .withFailureHandler(function (err) {
-      if (container) container.innerHTML = '<div class="p-6 text-center text-rose-600 font-semibold">' + escapeHtmlAttr(err.message) + '</div>';
+      if (container) container.innerHTML = '<div class="p-6 text-center text-rose-700 dark:text-rose-400 font-semibold">' + escapeHtmlAttr(err.message) + '</div>';
       handleErr(err);
     })
     .sendMemberMonthlyStatement({
@@ -263,7 +263,7 @@ async function sendSingleMemberStatement(memberId) {
     title: "Send Monthly Statement",
     message: "Send certified monthly statement to member " + memberId + " via email?",
     confirmText: "Send Email",
-    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-semibold",
     iconType: "info"
   });
   if (!confirmed) return;
@@ -371,7 +371,7 @@ async function sendBulkStatements() {
     title: "Confirm Bulk Dispatch",
     message: "Dispatch monthly financial statements by email to " + withEmail + " selected member(s)?",
     confirmText: "Send Statements",
-    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-semibold",
     iconType: "info"
   });
   if (confirmed) {

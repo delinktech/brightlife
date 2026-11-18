@@ -28,7 +28,7 @@ function copyTextToClipboard(text, btnElement) {
   const markCopied = function () {
     if (btnElement) {
       const orig = btnElement.innerHTML;
-      btnElement.innerHTML = '<i class="fas fa-check text-emerald-600"></i> Copied';
+      btnElement.innerHTML = '<i class="fas fa-check text-emerald-700 dark:text-emerald-400"></i> Copied';
       setTimeout(function () {
         btnElement.innerHTML = orig;
       }, 1500);
@@ -75,7 +75,7 @@ function switchAccountsTab(tabName) {
 
   [btnRecon, btnGuides].forEach(function (btn) {
     if (btn) {
-      btn.className = "pb-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 flex items-center gap-2 transition-colors";
+      btn.className = "pb-3 text-xs font-semibold border-b-2 border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700 flex items-center gap-2 transition-colors";
     }
   });
 
@@ -83,10 +83,10 @@ function switchAccountsTab(tabName) {
   if (paneGuides) paneGuides.classList.add("hidden");
 
   if (tabName === "reconciliation") {
-    if (btnRecon) btnRecon.className = "pb-3 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 flex items-center gap-2 transition-colors";
+    if (btnRecon) btnRecon.className = "pb-3 text-xs font-semibold border-b-2 border-sky-600 text-sky-700 dark:border-sky-400 dark:text-sky-400 flex items-center gap-2 transition-colors";
     if (paneRecon) paneRecon.classList.remove("hidden");
   } else if (tabName === "guides") {
-    if (btnGuides) btnGuides.className = "pb-3 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 flex items-center gap-2 transition-colors";
+    if (btnGuides) btnGuides.className = "pb-3 text-xs font-semibold border-b-2 border-sky-600 text-sky-700 dark:border-sky-400 dark:text-sky-400 flex items-center gap-2 transition-colors";
     if (paneGuides) paneGuides.classList.remove("hidden");
   }
 }
@@ -109,62 +109,62 @@ function paymentGuideHtml(account) {
   const instructions = String((account && account.instructions) || "").trim();
 
   const badgeText = paymentMode || "Payment Channel";
-  let badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">' + escapeAcctHtml(badgeText) + '</span>';
-  let icon = '<i class="fas fa-building-columns text-sky-600"></i>';
+  let badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">' + escapeAcctHtml(badgeText) + '</span>';
+  let icon = '<i class="fas fa-building-columns text-sky-700 dark:text-sky-400"></i>';
 
   if (channel.indexOf("mpesa") !== -1 || channel.indexOf("m-pesa") !== -1 || channel.indexOf("paybill") !== -1 || channel.indexOf("till") !== -1) {
-    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">' + escapeAcctHtml(badgeText) + '</span>';
-    icon = '<i class="fas fa-mobile-screen text-emerald-600"></i>';
+    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30">' + escapeAcctHtml(badgeText) + '</span>';
+    icon = '<i class="fas fa-mobile-screen text-emerald-700 dark:text-emerald-400"></i>';
   } else if (channel.indexOf("cash") !== -1 || channel.indexOf("petty") !== -1) {
-    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">' + escapeAcctHtml(badgeText) + '</span>';
-    icon = '<i class="fas fa-coins text-amber-600"></i>';
+    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">' + escapeAcctHtml(badgeText) + '</span>';
+    icon = '<i class="fas fa-coins text-amber-700 dark:text-amber-400"></i>';
   } else if (channel.indexOf("cic") !== -1 || channel.indexOf("mmf") !== -1 || channel.indexOf("mansa") !== -1) {
-    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-100">' + escapeAcctHtml(badgeText) + '</span>';
-    icon = '<i class="fas fa-chart-line text-sky-600"></i>';
+    badge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30">' + escapeAcctHtml(badgeText) + '</span>';
+    icon = '<i class="fas fa-chart-line text-sky-700 dark:text-sky-400"></i>';
   }
 
   const accCopyBtn = accNum
-    ? '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(accNum) + '\', this)" class="text-[10px] text-sky-600 hover:text-sky-700 p-1 rounded hover:bg-sky-50" title="Copy Account Number"><i class="fas fa-copy"></i></button>'
+    ? '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(accNum) + '\', this)" class="text-[10px] text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 p-1 rounded hover:bg-sky-50 dark:hover:bg-sky-950/60" title="Copy Account Number"><i class="fas fa-copy"></i></button>'
     : '';
   const paybillRow = paybill
-    ? '<div class="flex items-center justify-between text-xs pt-1 border-t border-slate-200/50">' +
-        '<span class="text-slate-500 text-[11px]">Paybill / Till:</span>' +
-        '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800">' +
+    ? '<div class="flex items-center justify-between text-xs pt-1 border-t border-slate-200/70 dark:border-slate-700/70">' +
+        '<span class="text-slate-500 dark:text-slate-400 text-[11px]">Paybill / Till:</span>' +
+        '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800 dark:text-slate-100">' +
           '<span>' + escapeAcctHtml(paybill) + '</span>' +
-          '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(paybill) + '\', this)" class="text-[10px] text-sky-600 hover:text-sky-700 p-1 rounded hover:bg-sky-50" title="Copy Paybill / Till"><i class="fas fa-copy"></i></button>' +
+          '<button type="button" onclick="copyTextToClipboard(\'' + escapeHtmlAttr(paybill) + '\', this)" class="text-[10px] text-sky-700 dark:text-sky-400 hover:text-sky-800 dark:hover:text-sky-300 p-1 rounded hover:bg-sky-50 dark:hover:bg-sky-950/60" title="Copy Paybill / Till"><i class="fas fa-copy"></i></button>' +
         '</div>' +
       '</div>'
     : '';
   const dateRow = balanceDate
-    ? '<div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-200/50">' +
+    ? '<div class="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/70 dark:border-slate-700/70">' +
         '<span>Statement / Balance Date:</span>' +
-        '<span class="font-mono tabular-nums text-slate-600">' + escapeAcctHtml(balanceDate) + '</span>' +
+        '<span class="font-mono tabular-nums text-slate-700 dark:text-slate-300">' + escapeAcctHtml(balanceDate) + '</span>' +
       '</div>'
     : '';
 
   return (
-    '<div class="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-shadow space-y-3">' +
+    '<div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 shadow-sm hover:shadow-md transition-shadow space-y-3">' +
       '<div class="flex items-center justify-between gap-2">' +
         '<div class="flex items-center gap-2.5 min-w-0">' +
-          '<div class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-sm shrink-0">' + icon + '</div>' +
+          '<div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sm shrink-0">' + icon + '</div>' +
           '<div class="min-w-0">' +
-            '<h4 class="font-bold text-slate-900 text-xs truncate">' + escapeAcctHtml(orgName || "—") + '</h4>' +
-            '<p class="text-[10px] text-slate-500 truncate">' + escapeAcctHtml(paymentMode || "Official Payment Channel") + '</p>' +
+            '<h4 class="font-bold text-slate-900 dark:text-white text-xs truncate">' + escapeAcctHtml(orgName || "—") + '</h4>' +
+            '<p class="text-[10px] text-slate-500 dark:text-slate-400 truncate">' + escapeAcctHtml(paymentMode || "Official Payment Channel") + '</p>' +
           '</div>' +
         '</div>' +
         badge +
       '</div>' +
-      '<div class="p-2.5 bg-slate-50/70 rounded-lg border border-slate-100 space-y-1.5">' +
+      '<div class="p-2.5 bg-slate-50/70 dark:bg-slate-900/70 rounded-lg border border-slate-200/70 dark:border-slate-800 space-y-1.5">' +
         '<div class="flex items-center justify-between text-xs">' +
-          '<span class="text-slate-500 text-[11px]">Account Number:</span>' +
-          '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800">' +
+          '<span class="text-slate-500 dark:text-slate-400 text-[11px]">Account Number:</span>' +
+          '<div class="flex items-center gap-1.5 font-mono tabular-nums font-bold text-slate-800 dark:text-slate-100">' +
             '<span>' + escapeAcctHtml(accNum || "—") + '</span>' +
             accCopyBtn +
           '</div>' +
         '</div>' +
         paybillRow +
         dateRow +
-        (instructions ? '<p class="text-[10px] text-slate-500 pt-1 border-t border-slate-200/50">' + escapeAcctHtml(instructions) + '</p>' : '') +
+        (instructions ? '<p class="text-[10px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/70 dark:border-slate-700/70">' + escapeAcctHtml(instructions) + '</p>' : '') +
       '</div>' +
     '</div>'
   );
@@ -174,7 +174,7 @@ function renderPaymentGuideCards(rows) {
   const container = document.getElementById("accounts-card-list");
   if (!container) return;
   if (!rows || !rows.length) {
-    container.innerHTML = '<div class="col-span-full p-6 text-center text-slate-400 text-xs">No active payment accounts listed.</div>';
+    container.innerHTML = '<div class="col-span-full p-6 text-center text-slate-500 dark:text-slate-400 text-xs">No active payment accounts listed.</div>';
     return;
   }
   container.innerHTML = rows.map(paymentGuideHtml).join("");
@@ -201,27 +201,27 @@ function renderReconciliationDashboard(data) {
   if (elVar) {
     elVar.textContent = formatKsh(Math.abs(s.netVariance));
     if (s.isBalanced) {
-      elVar.className = "text-lg sm:text-xl font-extrabold text-emerald-600 mt-2 font-mono tabular-nums";
+      elVar.className = "text-lg sm:text-xl font-extrabold text-emerald-700 dark:text-emerald-400 mt-2 font-mono tabular-nums";
       if (elVarStat) {
         elVarStat.textContent = "✓ Reconciled & Balanced (0 Variance)";
-        elVarStat.className = "text-[11px] mt-1 font-semibold text-emerald-600";
+        elVarStat.className = "text-[11px] mt-1 font-semibold text-emerald-700 dark:text-emerald-400";
       }
-      if (elVarIcon) elVarIcon.className = "w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs";
+      if (elVarIcon) elVarIcon.className = "w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs";
       if (badge) {
-        badge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+        badge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30";
         badge.textContent = "Accounts Balanced";
         badge.classList.remove("hidden");
       }
     } else {
       const isPositive = s.netVariance > 0;
-      elVar.className = "text-lg sm:text-xl font-extrabold text-rose-600 mt-2 font-mono tabular-nums";
+      elVar.className = "text-lg sm:text-xl font-extrabold text-rose-700 dark:text-rose-400 mt-2 font-mono tabular-nums";
       if (elVarStat) {
         elVarStat.textContent = isPositive ? "Physical Bank exceeds System Ledger" : "System Ledger exceeds Physical Bank";
-        elVarStat.className = "text-[11px] mt-1 font-semibold text-rose-600";
+        elVarStat.className = "text-[11px] mt-1 font-semibold text-rose-700 dark:text-rose-400";
       }
-      if (elVarIcon) elVarIcon.className = "w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs";
+      if (elVarIcon) elVarIcon.className = "w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-xs";
       if (badge) {
-        badge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200";
+        badge.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30";
         badge.textContent = "Variance Detected";
         badge.classList.remove("hidden");
       }
@@ -232,35 +232,39 @@ function renderReconciliationDashboard(data) {
   if (!tbody) return;
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">No accounts configured for reconciliation.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-500 dark:text-slate-400 font-sans">No accounts configured for reconciliation.</td></tr>';
     return;
   }
 
   tbody.innerHTML = rows.map(function (row) {
     const isBalanced = row.isBalanced;
-    const varClass = isBalanced ? "text-slate-400 font-normal" : (row.variance > 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold");
-    const statusPill = isBalanced
-      ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">Matched</span>'
-      : '<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-semibold">Variance</span>';
+    const varClass = isBalanced
+      ? "text-slate-500 dark:text-slate-400 font-normal"
+      : (row.variance > 0 ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-rose-700 dark:text-rose-400 font-bold");
+    const statusPill = typeof renderStatusPill === "function"
+      ? renderStatusPill(isBalanced ? "Balanced" : "Variance", isBalanced ? "Matched" : "Variance")
+      : (isBalanced
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10px] font-semibold">Matched</span>'
+          : '<span class="px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 text-[10px] font-semibold">Variance</span>');
 
     const accRowJson = escapeHtmlAttr(JSON.stringify(row));
 
     return (
-      '<tr class="hover:bg-slate-50/70 transition-colors">' +
+      '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
       '  <td class="py-3 px-4 font-sans">' +
-      '    <div class="font-bold text-slate-900 text-xs">' + row.name + '</div>' +
-      '    <div class="text-[10px] text-slate-400">' + (row.institution || "—") + '</div>' +
+      '    <div class="font-bold text-slate-900 dark:text-white text-xs">' + escapeAcctHtml(row.name) + '</div>' +
+      '    <div class="text-[10px] text-slate-500 dark:text-slate-400">' + escapeAcctHtml(row.institution || "—") + '</div>' +
       '  </td>' +
-      '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-medium">' + row.type + '</span></td>' +
-      '  <td class="py-3 px-4 text-slate-600 tabular-nums">' + escapeAcctHtml(row.accountNumber || "—") + '</td>' +
-      '  <td class="py-3 px-4 text-right font-medium text-slate-900 tabular-nums">' + formatKsh(row.physicalBalance) + '</td>' +
-      '  <td class="py-3 px-4 text-right text-slate-700 tabular-nums">' + formatKsh(row.systemBalance) + '</td>' +
+      '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-medium">' + escapeAcctHtml(row.type) + '</span></td>' +
+      '  <td class="py-3 px-4 text-slate-600 dark:text-slate-300 tabular-nums">' + escapeAcctHtml(row.accountNumber || "—") + '</td>' +
+      '  <td class="py-3 px-4 text-right font-medium text-slate-900 dark:text-white tabular-nums">' + formatKsh(row.physicalBalance) + '</td>' +
+      '  <td class="py-3 px-4 text-right text-slate-700 dark:text-slate-300 tabular-nums">' + formatKsh(row.systemBalance) + '</td>' +
       '  <td class="py-3 px-4 text-right tabular-nums ' + varClass + '">' + (row.variance !== 0 ? formatKsh(row.variance) : formatKsh(0)) + '</td>' +
       '  <td class="py-3 px-4 text-center font-sans">' + statusPill + '</td>' +
-      '  <td class="py-3 px-4 text-center font-sans text-[10px] text-slate-500">' + (row.statementDate || "—") + '</td>' +
+      '  <td class="py-3 px-4 text-center font-sans text-[10px] text-slate-500 dark:text-slate-400">' + escapeAcctHtml(row.statementDate || "—") + '</td>' +
       '  <td class="py-3 px-4 text-center font-sans">' +
       '    <button type="button" onclick="openReconcileModal(' + accRowJson + ')"' +
-      '      class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-md text-[11px] font-medium transition-colors">' +
+      '      class="inline-flex items-center gap-1 px-2.5 py-1 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 dark:hover:bg-sky-900/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 rounded-md text-[11px] font-medium transition-colors">' +
       '      <i class="fas fa-file-pen text-[10px]"></i> <span>Reconcile</span>' +
       '    </button>' +
       '  </td>' +
@@ -272,15 +276,15 @@ function renderReconciliationDashboard(data) {
 function renderReconciliationErrorRow(message) {
   return (
     '<tr><td colspan="9" class="py-8 px-4">' +
-      '<div class="max-w-md mx-auto p-5 rounded-xl bg-rose-50/70 border border-rose-200 text-center space-y-3 font-sans">' +
-        '<div class="w-10 h-10 mx-auto rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-sm">' +
+      '<div class="max-w-md mx-auto p-5 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-500/30 text-center space-y-3 font-sans">' +
+        '<div class="w-10 h-10 mx-auto rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-sm">' +
           '<i class="fas fa-triangle-exclamation"></i>' +
         '</div>' +
         '<div>' +
-          '<h4 class="text-xs font-bold text-rose-900">Unable to Load Reconciliation Data</h4>' +
-          '<p class="text-[11px] text-rose-700 mt-1">' + escapeAcctHtml(message || "Could not retrieve bank account reconciliation balances.") + '</p>' +
+          '<h4 class="text-xs font-bold text-rose-900 dark:text-rose-200">Unable to Load Reconciliation Data</h4>' +
+          '<p class="text-[11px] text-rose-700 dark:text-rose-300 mt-1">' + escapeAcctHtml(message || "Could not retrieve bank account reconciliation balances.") + '</p>' +
         '</div>' +
-        '<button type="button" onclick="loadAccounts(true)" class="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
+        '<button type="button" onclick="loadAccounts(true)" class="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
           '<i class="fas fa-arrows-rotate text-[11px]"></i> <span>Retry Reconciliation</span>' +
         '</button>' +
       '</div>' +

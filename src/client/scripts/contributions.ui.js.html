@@ -7,32 +7,35 @@
   let currentReceiptData = null;
 
   function renderStatusBadge(status) {
+    if (typeof renderStatusPill === "function") {
+      return renderStatusPill(status);
+    }
     const s = String(status || "").toLowerCase().trim();
     if (s === "approved") {
-      return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80"><i class="fas fa-check-circle mr-1 text-[9px]"></i> Approved</span>';
+      return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">Approved</span>';
     }
     if (s === "pending") {
-      return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"><i class="fas fa-clock mr-1 text-[9px]"></i> Pending</span>';
+      return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">Pending</span>';
     }
     if (s === "rejected") {
-      return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/80"><i class="fas fa-times-circle mr-1 text-[9px]"></i> Rejected</span>';
+      return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60">Rejected</span>';
     }
-    return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-50 text-slate-600 border border-slate-200">' + (status || "—") + '</span>';
+    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">' + (status || "—") + '</span>';
   }
 
   function renderTreasurerActions(c) {
     const isPrivileged = window.APP_PERMS && (window.APP_PERMS.role === "admin" || window.APP_PERMS.role === "treasurer" || window.APP_PERMS.contributionsWrite);
     const s = String(c.status || "").toLowerCase().trim();
     if (!isPrivileged) {
-      return '<span class="text-slate-300 text-[10px]">—</span>';
+      return '<span class="text-slate-400 dark:text-slate-500 text-[10px]">—</span>';
     }
     if (s === "pending") {
       return (
         '<div class="flex items-center justify-center gap-1.5">' +
-        '<button type="button" onclick="verifyContributionStatus(\'' + escapeHtmlAttr(c.tid) + '\', ' + c.rowNumber + ', \'Approved\')" title="Approve & Verify Funds" class="p-1 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs transition-colors">' +
+        '<button type="button" onclick="verifyContributionStatus(\'' + escapeHtmlAttr(c.tid) + '\', ' + c.rowNumber + ', \'Approved\')" title="Approve & Verify Funds" class="p-1.5 rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-xs transition-colors">' +
         '<i class="fas fa-check text-[10px]"></i>' +
         '</button>' +
-        '<button type="button" onclick="verifyContributionStatus(\'' + escapeHtmlAttr(c.tid) + '\', ' + c.rowNumber + ', \'Rejected\')" title="Reject Transaction" class="p-1 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs transition-colors">' +
+        '<button type="button" onclick="verifyContributionStatus(\'' + escapeHtmlAttr(c.tid) + '\', ' + c.rowNumber + ', \'Rejected\')" title="Reject Transaction" class="p-1.5 rounded bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 text-xs transition-colors">' +
         '<i class="fas fa-times text-[10px]"></i>' +
         '</button>' +
         '</div>'
@@ -41,13 +44,13 @@
     if (s === "approved") {
       return (
         '<div class="flex items-center justify-center gap-1.5">' +
-        '<button type="button" onclick="shareContributionWhatsApp(' + c.rowNumber + ')" title="Open WhatsApp Receipt" class="p-1 px-1.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10px] font-medium transition-colors inline-flex items-center gap-1">' +
-        '<i class="fab fa-whatsapp text-emerald-600"></i> Receipt' +
+        '<button type="button" onclick="shareContributionWhatsApp(' + c.rowNumber + ')" title="Open WhatsApp Receipt" class="p-1 px-2 rounded bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px] font-medium transition-colors inline-flex items-center gap-1">' +
+        '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> Receipt' +
         '</button>' +
         '</div>'
       );
     }
-    return '<span class="text-slate-400 text-[10px] font-mono"><i class="fas fa-shield-alt text-emerald-600 text-[9px]"></i> Verified</span>';
+    return '<span class="text-slate-500 dark:text-slate-400 text-[10px] font-mono"><i class="fas fa-shield-alt text-emerald-700 dark:text-emerald-400 text-[9px]"></i> Verified</span>';
   }
 
   async function verifyContributionStatus(tid, rowNumber, status) {
@@ -194,17 +197,17 @@
     let html = "";
     (data || []).forEach((c) => {
       html +=
-        '<tr class="hover:bg-slate-50/70 transition-colors">' +
-        '<td class="col-c-date px-4 py-3 font-mono text-xs text-slate-500">' +
+        '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
+        '<td class="col-c-date px-4 py-3 font-mono text-xs text-slate-500 dark:text-slate-400">' +
         c.date +
         "</td>" +
-        '<td class="col-c-member px-4 py-3 font-semibold text-xs text-slate-900">' +
+        '<td class="col-c-member px-4 py-3 font-semibold text-xs text-slate-900 dark:text-white">' +
         c.name +
         "</td>" +
-        '<td class="col-c-type px-4 py-3 text-xs text-slate-500">' +
+        '<td class="col-c-type px-4 py-3 text-xs text-slate-600 dark:text-slate-300">' +
         c.type +
         "</td>" +
-        '<td class="col-c-amount px-4 py-3 text-right font-mono font-semibold text-xs text-slate-900">' +
+        '<td class="col-c-amount px-4 py-3 text-right font-mono tabular-nums font-semibold text-xs text-slate-900 dark:text-slate-100">' +
         c.amount +
         "</td>" +
         '<td class="col-c-mode px-4 py-3 text-center"><span class="' +
@@ -221,7 +224,7 @@
     });
     container.innerHTML =
       html ||
-      '<tr><td colspan="7" class="p-8 text-center text-slate-500">' +
+      '<tr><td colspan="7" class="p-8 text-center text-slate-500 dark:text-slate-400">' +
       (loadedContributions.length > 0
         ? "No contributions match your search or filter criteria."
         : "No transactions found.") +

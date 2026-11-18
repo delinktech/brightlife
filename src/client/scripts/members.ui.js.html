@@ -160,6 +160,9 @@
   }
 
   function getUserAccountStatusBadge(status) {
+    if (typeof renderStatusPill === "function") {
+      return renderStatusPill(status || "Active");
+    }
     const s = String(status || "Active").toLowerCase().trim();
     if (s === "active") {
       return '<span class="badge-success">Active</span>';
@@ -176,7 +179,7 @@
 
     if (!list || !list.length) {
       container.innerHTML =
-        '<tr><td colspan="11" class="text-center py-8 text-slate-400">No members found matching your search or filter criteria.</td></tr>';
+        '<tr><td colspan="11" class="text-center py-8 text-slate-500 dark:text-slate-400">No members found matching your search or filter criteria.</td></tr>';
       return;
     }
 
@@ -187,33 +190,33 @@
       const guaranteed = Number(m.guaranteed) || 0;
       const availGuar = Number(m.availableToGuarantee) || 0;
       const maxLoan = Number(m.maxLoanEligibility) || 0;
-      const balClass = bal > 0 ? "text-amber-600 font-bold" : "text-slate-400 font-normal";
-      const takenClass = taken > 0 ? "text-slate-800 font-bold" : "text-slate-400 font-normal";
-      const gtrClass = guaranteed > 0 ? "text-purple-600 font-bold" : "text-slate-400 font-normal";
-      const availClass = availGuar > 0 ? "text-emerald-600 font-bold" : "text-slate-400 font-normal";
-      const maxLoanClass = maxLoan > 0 ? "text-sky-700 font-bold" : "text-slate-400 font-normal";
+      const balClass = bal > 0 ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-500 dark:text-slate-400 font-normal";
+      const takenClass = taken > 0 ? "text-slate-800 dark:text-slate-200 font-bold" : "text-slate-500 dark:text-slate-400 font-normal";
+      const gtrClass = guaranteed > 0 ? "text-purple-700 dark:text-purple-400 font-bold" : "text-slate-500 dark:text-slate-400 font-normal";
+      const availClass = availGuar > 0 ? "text-emerald-700 dark:text-emerald-400 font-bold" : "text-slate-500 dark:text-slate-400 font-normal";
+      const maxLoanClass = maxLoan > 0 ? "text-sky-700 dark:text-sky-400 font-bold" : "text-slate-500 dark:text-slate-400 font-normal";
 
       const contactLine = [
-        m.phone ? '<span class="inline-flex items-center gap-1 text-slate-500"><i class="fas fa-phone text-[9px] text-slate-400"></i>' + m.phone + '</span>' : '',
-        m.email ? '<span class="inline-flex items-center gap-1 text-slate-500"><i class="fas fa-envelope text-[9px] text-slate-400"></i>' + m.email + '</span>' : ''
+        m.phone ? '<span class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><i class="fas fa-phone text-[9px] text-slate-400"></i>' + m.phone + '</span>' : '',
+        m.email ? '<span class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400"><i class="fas fa-envelope text-[9px] text-slate-400"></i>' + m.email + '</span>' : ''
       ].filter(Boolean).join(' • ');
 
       html +=
-        '<tr class="hover:bg-slate-50/70 transition-colors">' +
+        '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
         '<td class="col-m-name px-4 py-3">' +
         '<div class="flex items-center gap-3">' +
         getMemberInitialAvatar(m.name) +
         '<div>' +
         '<div class="flex items-center">' +
-        '<span class="font-semibold text-slate-900 text-xs">' + (m.name || "Member") + '</span>' +
+        '<span class="font-semibold text-slate-900 dark:text-white text-xs">' + (m.name || "Member") + '</span>' +
         getGenderChip(m.gender) +
         '</div>' +
-        '<div class="text-[10px] text-slate-400 font-mono mt-0.5">' + m.id + ' • NID: ' + (m.nationalId || "-") + '</div>' +
-        (contactLine ? '<div class="text-[10px] font-mono mt-0.5 text-slate-500">' + contactLine + '</div>' : '') +
+        '<div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">' + m.id + ' • NID: ' + (m.nationalId || "-") + '</div>' +
+        (contactLine ? '<div class="text-[10px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">' + contactLine + '</div>' : '') +
         '</div>' +
         '</div>' +
         '</td>' +
-        '<td class="col-m-savings px-4 py-3 text-right font-mono tabular-nums font-semibold text-slate-900">' + formatMoney(m.savings) + '</td>' +
+        '<td class="col-m-savings px-4 py-3 text-right font-mono tabular-nums font-semibold text-slate-900 dark:text-white">' + formatMoney(m.savings) + '</td>' +
         '<td class="col-m-shares px-3 py-3 text-center">' +
         '<span class="badge-info font-mono tabular-nums">' + (m.sharesPercent || "0.00") + '%</span>' +
         '</td>' +
@@ -226,10 +229,10 @@
         '<td class="col-m-accountstatus px-3 py-3 text-center">' + getUserAccountStatusBadge(m.status) + '</td>' +
         '<td class="col-m-actions px-3 py-3 text-center">' +
         '<div class="flex items-center justify-center gap-1.5">' +
-        '<button type="button" onclick="openPrintMemberStatement(\'' + m.id + '\')" title="Print Member Statement" class="text-slate-400 hover:text-slate-900 transition-colors p-1"><i class="fas fa-print"></i></button>' +
-        '<button type="button" onclick="openMemberEmailStatement(\'' + m.id + '\')" title="Email Monthly Statement" class="text-slate-400 hover:text-emerald-700 transition-colors p-1"><i class="fas fa-envelope"></i></button>' +
-        '<button type="button" onclick="openMemberWhatsAppStatement(\'' + m.id + '\')" title="Send WhatsApp Statement" class="text-slate-400 hover:text-green-600 transition-colors p-1"><i class="fab fa-whatsapp"></i></button>' +
-        '<button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' + m.id + '\')" title="Edit Member Profile" class="text-slate-400 hover:text-slate-900 transition-colors p-1 hidden"><i class="fas fa-pen"></i></button>' +
+        '<button type="button" onclick="openPrintMemberStatement(\'' + m.id + '\')" title="Print Member Statement" class="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-1"><i class="fas fa-print"></i></button>' +
+        '<button type="button" onclick="openMemberEmailStatement(\'' + m.id + '\')" title="Email Monthly Statement" class="text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors p-1"><i class="fas fa-envelope"></i></button>' +
+        '<button type="button" onclick="openMemberWhatsAppStatement(\'' + m.id + '\')" title="Send WhatsApp Statement" class="text-slate-400 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors p-1"><i class="fab fa-whatsapp"></i></button>' +
+        '<button type="button" data-require-perm="membersWrite" onclick="openMemberModal(\'' + m.id + '\')" title="Edit Member Profile" class="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-1 hidden"><i class="fas fa-pen"></i></button>' +
         '</div>' +
         '</td>' +
         '</tr>';

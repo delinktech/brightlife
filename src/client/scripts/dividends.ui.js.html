@@ -87,22 +87,22 @@ function renderFundStatementsTable(list) {
   if (!tbody) return;
 
   if (!list || !list.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">No fund statements recorded yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-500 dark:text-slate-400 font-sans">No fund statements recorded yet.</td></tr>';
     return;
   }
 
   tbody.innerHTML = list.map(function(item) {
     return (
-      '<tr class="hover:bg-slate-50/70 transition-colors">' +
-      '  <td class="py-3 px-4 font-sans text-slate-700">' + (item.date || "—") + '</td>' +
-      '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold">' + item.fund + '</span></td>' +
-      '  <td class="py-3 px-4 text-right text-slate-600">' + formatKshDiv(item.opening) + '</td>' +
-      '  <td class="py-3 px-4 text-right text-slate-600">' + formatKshDiv(item.deposits) + '</td>' +
-      '  <td class="py-3 px-4 text-right font-medium text-slate-800">' + formatKshDiv(item.grossInterest) + '</td>' +
-      '  <td class="py-3 px-4 text-right text-rose-600 font-medium">(' + formatKshDiv(item.wht) + ')</td>' +
-      '  <td class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/40">' + formatKshDiv(item.netYield) + '</td>' +
-      '  <td class="py-3 px-4 text-right font-bold text-slate-900">' + formatKshDiv(item.closing) + '</td>' +
-      '  <td class="py-3 px-4 text-center font-mono text-[10px] text-slate-400">' + (item.ref || "—") + '</td>' +
+      '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
+      '  <td class="py-3 px-4 font-sans text-slate-700 dark:text-slate-300">' + (item.date || "—") + '</td>' +
+      '  <td class="py-3 px-4 font-sans"><span class="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 text-[10px] font-semibold">' + item.fund + '</span></td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums text-slate-600 dark:text-slate-300">' + formatKshDiv(item.opening) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums text-slate-600 dark:text-slate-300">' + formatKshDiv(item.deposits) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums font-medium text-slate-800 dark:text-slate-200">' + formatKshDiv(item.grossInterest) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums text-rose-700 dark:text-rose-400 font-medium">(' + formatKshDiv(item.wht) + ')</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50/40 dark:bg-emerald-950/30">' + formatKshDiv(item.netYield) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums font-bold text-slate-900 dark:text-white">' + formatKshDiv(item.closing) + '</td>' +
+      '  <td class="py-3 px-4 text-center font-mono text-[10px] text-slate-500 dark:text-slate-400">' + (item.ref || "—") + '</td>' +
       '</tr>'
     );
   }).join("");
@@ -254,19 +254,19 @@ function renderDividendPreview(res) {
   tbody.innerHTML = items.map(function(item) {
     const hasOffset = item.loanOffset > 0;
     return (
-      '<tr class="hover:bg-slate-50/70 transition-colors">' +
+      '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
       '  <td class="py-3 px-4 font-sans">' +
-      '    <div class="font-bold text-slate-900 text-xs">' + item.fullName + '</div>' +
-      '    <div class="text-[10px] font-mono text-slate-400">' + item.memberId + '</div>' +
+      '    <div class="font-bold text-slate-900 dark:text-white text-xs">' + item.fullName + '</div>' +
+      '    <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400">' + item.memberId + '</div>' +
       '  </td>' +
-      '  <td class="py-3 px-4 text-right text-slate-700">' + formatKshDiv(item.savings) + '</td>' +
-      '  <td class="py-3 px-4 text-center font-sans font-semibold text-slate-600">' + item.sharePercent.toFixed(2) + '%</td>' +
-      '  <td class="py-3 px-4 text-right font-bold text-slate-900">' + formatKshDiv(item.grossDividend) + '</td>' +
-      '  <td class="py-3 px-4 text-right text-slate-600">' + (item.loanBalance > 0 ? formatKshDiv(item.loanBalance) : "—") + '</td>' +
-      '  <td class="py-3 px-4 text-right font-bold ' + (hasOffset ? "text-amber-700 bg-amber-50/50" : "text-slate-400") + '">' +
+      '  <td class="py-3 px-4 text-right tabular-nums text-slate-700 dark:text-slate-300">' + formatKshDiv(item.savings) + '</td>' +
+      '  <td class="py-3 px-4 text-center font-sans font-semibold tabular-nums text-slate-600 dark:text-slate-300">' + item.sharePercent.toFixed(2) + '%</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums font-bold text-slate-900 dark:text-white">' + formatKshDiv(item.grossDividend) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums text-slate-600 dark:text-slate-300">' + (item.loanBalance > 0 ? formatKshDiv(item.loanBalance) : "—") + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums font-bold ' + (hasOffset ? "text-amber-700 dark:text-amber-400 bg-amber-50/50 dark:bg-amber-950/30" : "text-slate-500 dark:text-slate-400") + '">' +
       (hasOffset ? formatKshDiv(item.loanOffset) : "—") +
       '  </td>' +
-      '  <td class="py-3 px-4 text-right font-bold text-emerald-700 bg-emerald-50/50">' + formatKshDiv(item.savingsCredit) + '</td>' +
+      '  <td class="py-3 px-4 text-right tabular-nums font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30">' + formatKshDiv(item.savingsCredit) + '</td>' +
       '</tr>'
     );
   }).join("");
@@ -311,15 +311,15 @@ async function submitDividendAllocation() {
   const year = document.getElementById("div-sim-year").value || String(new Date().getFullYear());
   const details =
     '<div class="flex justify-between"><span>Gross Pool:</span><strong class="font-mono">' + formatKshDiv(s.poolAmount) + '</strong></div>' +
-    '<div class="flex justify-between"><span>Loan Offset:</span><strong class="font-mono text-amber-700">' + formatKshDiv(s.totalLoanOffset) + '</strong></div>' +
-    '<div class="flex justify-between"><span>Credited to Savings:</span><strong class="font-mono text-emerald-700">' + formatKshDiv(s.totalSavingsCredited) + '</strong></div>';
+    '<div class="flex justify-between"><span>Loan Offset:</span><strong class="font-mono text-amber-700 dark:text-amber-400">' + formatKshDiv(s.totalLoanOffset) + '</strong></div>' +
+    '<div class="flex justify-between"><span>Credited to Savings:</span><strong class="font-mono text-emerald-700 dark:text-emerald-400">' + formatKshDiv(s.totalSavingsCredited) + '</strong></div>';
 
   const confirmed = await showConfirmDialog({
     title: "Confirm Dividend Distribution",
     message: "Post FY " + year + " dividend allocations across " + sim.preview.length + " qualifying members? This updates loan balances and member savings.",
     detailsHtml: details,
     confirmText: "Post to Member Savings",
-    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-semibold",
     iconType: "success"
   });
   if (confirmed) {

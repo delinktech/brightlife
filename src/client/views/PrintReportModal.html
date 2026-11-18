@@ -1,30 +1,30 @@
 <!-- Printable PDF Report Modal & Official BLG Letterhead Component -->
-<div id="printReportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden overflow-y-auto p-4">
-  <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-slate-100 transition-all transform my-auto max-h-[90vh] overflow-y-auto">
+<div id="printReportModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm hidden overflow-y-auto p-4">
+  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700/80 transition-all transform my-auto max-h-[90vh] overflow-y-auto">
     
     <!-- Modal Control Header (Hidden when printing) -->
-    <div class="no-print flex justify-between items-center pb-4 border-b border-slate-100 mb-6">
+    <div class="no-print flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-slate-200 dark:border-slate-800 mb-6">
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center">
           <i class="fas fa-print"></i>
         </div>
         <div>
-          <h3 class="text-base font-bold text-slate-800">Print Preview / Save PDF</h3>
-          <p class="text-xs text-slate-500">Official BLG formatted document ready for printing or PDF download.</p>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">Print Preview / Save PDF</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Official BLG formatted document ready for printing or PDF download.</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <button type="button" onclick="closePrintModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors">
+        <button type="button" onclick="closePrintModal()" class="min-h-[38px] px-4 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl transition-colors">
           Cancel
         </button>
-        <button type="button" onclick="triggerBrowserPrint()" class="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
+        <button type="button" onclick="triggerBrowserPrint()" class="min-h-[38px] inline-flex items-center gap-2 px-5 py-2 bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">
           <i class="fas fa-file-pdf"></i> Print / Save PDF
         </button>
       </div>
     </div>
 
-    <!-- Printable Report Container with Official BLG Letterhead -->
-    <div id="blg-printable-area" class="relative bg-white pl-8 pr-4 py-2">
+    <!-- Printable Report Container with Official BLG Letterhead (Always Pure Light for Official PDF Fidelity) -->
+    <div id="blg-printable-area" class="relative bg-white text-slate-900 rounded-xl pl-8 pr-4 py-4">
       
       <!-- Faded Left Margin Vertical Line (Intersecting) -->
       <div class="blg-vertical-line absolute left-2 top-0 bottom-0 w-[1.5px] bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>

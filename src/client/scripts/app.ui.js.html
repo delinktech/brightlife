@@ -318,10 +318,10 @@
     const rppHandler = safeGlobalCallbackExpr(onRowsPerPageChangeName, "Number(this.value)");
     const selectHtml =
       '<div class="flex items-center gap-1.5">' +
-        '<label for="' + escapePaginationHtml(containerId) + '-rpp" class="text-[11px] font-medium text-slate-500 whitespace-nowrap">Rows:</label>' +
+        '<label for="' + escapePaginationHtml(containerId) + '-rpp" class="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">Rows:</label>' +
         '<select id="' + escapePaginationHtml(containerId) + '-rpp" aria-label="Rows per page" ' +
           (rppHandler ? 'onchange="' + rppHandler + '" ' : "") +
-          'class="pl-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg font-mono tabular-nums min-h-[44px] sm:min-h-[34px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">' +
+          'class="pl-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg font-mono tabular-nums min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500 cursor-pointer">' +
           sizeOptions
             .map(function (n) {
               return '<option value="' + n + '"' + (n === rowsPerPage ? " selected" : "") + ">" + n + "</option>";
@@ -351,7 +351,7 @@
     const pageButtonsHtml = pages
       .map(function (p) {
         if (p === "...") {
-          return '<span class="px-1.5 text-xs text-slate-400 font-mono select-none">&hellip;</span>';
+          return '<span class="px-1.5 text-xs text-slate-400 dark:text-slate-500 font-mono select-none">&hellip;</span>';
         }
         const isActive = p === currentPage;
         const clickExpr = isActive ? "" : safeGlobalCallbackExpr(onPageChangeName, String(p));
@@ -359,10 +359,10 @@
           '<button type="button" ' +
             (isActive ? 'aria-current="page" ' : "") +
             (clickExpr ? 'onclick="' + clickExpr + '" ' : "") +
-            'class="min-h-[44px] min-w-[44px] sm:min-h-[34px] sm:min-w-[34px] px-2.5 py-1 text-xs font-mono tabular-nums rounded-lg border transition-colors inline-flex items-center justify-center ' +
+            'class="min-h-[44px] min-w-[44px] sm:min-h-[38px] sm:min-w-[38px] px-2.5 py-1 text-xs font-mono tabular-nums rounded-lg border transition-colors inline-flex items-center justify-center ' +
             (isActive
-              ? "bg-emerald-700 text-white border-emerald-700 font-bold shadow-xs"
-              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 font-medium") +
+              ? "bg-slate-900 text-white border-slate-900 dark:bg-sky-500 dark:text-slate-950 dark:border-sky-500 font-bold shadow-xs"
+              : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 font-medium") +
           '">' +
           p +
           "</button>"
@@ -371,12 +371,12 @@
       .join("");
 
     container.innerHTML =
-      '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-3 bg-white border-t border-slate-100">' +
+      '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 py-3 bg-white dark:bg-[#0b1320] border-t border-slate-100 dark:border-slate-800/80">' +
         '<div class="flex flex-wrap items-center justify-between sm:justify-start gap-3">' +
-          '<p class="text-xs text-slate-500">' +
-            'Showing <span class="font-bold text-slate-900 font-mono tabular-nums">' + start + "</span> to " +
-            '<span class="font-bold text-slate-900 font-mono tabular-nums">' + end + "</span> of " +
-            '<span class="font-bold text-slate-900 font-mono tabular-nums">' + totalRows + "</span> " +
+          '<p class="text-xs text-slate-500 dark:text-slate-400">' +
+            'Showing <span class="font-bold text-slate-900 dark:text-slate-100 font-mono tabular-nums">' + start + "</span> to " +
+            '<span class="font-bold text-slate-900 dark:text-slate-100 font-mono tabular-nums">' + end + "</span> of " +
+            '<span class="font-bold text-slate-900 dark:text-slate-100 font-mono tabular-nums">' + totalRows + "</span> " +
             entityLabel +
           "</p>" +
           selectHtml +
@@ -386,7 +386,7 @@
             (prevDisabled ? "disabled " : "") +
             (prevExpr ? 'onclick="' + prevExpr + '" ' : "") +
             'aria-label="Previous page" ' +
-            'class="min-h-[44px] sm:min-h-[34px] px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1">' +
+            'class="min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1">' +
             '<i class="fas fa-chevron-left text-[10px]"></i><span>Prev</span>' +
           "</button>" +
           '<div class="flex items-center gap-1">' +
@@ -396,11 +396,150 @@
             (nextDisabled ? "disabled " : "") +
             (nextExpr ? 'onclick="' + nextExpr + '" ' : "") +
             'aria-label="Next page" ' +
-            'class="min-h-[44px] sm:min-h-[34px] px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1">' +
+            'class="min-h-[44px] sm:min-h-[38px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors inline-flex items-center gap-1">' +
             '<span>Next</span><i class="fas fa-chevron-right text-[10px]"></i>' +
           "</button>" +
         "</div>" +
       "</div>";
+  };
+
+  function resolveThemePreference(pref) {
+    const mode = String(pref || "light").toLowerCase().trim();
+    if (mode === "dark") return true;
+    if (mode === "system") {
+      return Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+    return false;
+  }
+
+  function syncThemeControls(storedPref, isDark) {
+    const pref = storedPref || "light";
+    const themeBtn = document.getElementById("header-theme-btn");
+    const themeIcon = document.getElementById("header-theme-icon");
+    if (themeBtn) {
+      themeBtn.setAttribute("aria-pressed", isDark ? "true" : "false");
+      themeBtn.setAttribute("title", isDark ? "Switch to Light Mode" : "Switch to Dark Mode");
+    }
+    if (themeIcon) {
+      themeIcon.className = isDark
+        ? "fas fa-sun text-amber-300 text-xs"
+        : "fas fa-moon text-slate-500 text-xs";
+    }
+    document.querySelectorAll("[data-theme-opt]").forEach(function (btn) {
+      const opt = btn.getAttribute("data-theme-opt");
+      const active = opt === pref;
+      btn.className =
+        "px-2.5 py-1.5 min-h-[32px] rounded-md text-[11px] font-semibold transition-colors " +
+        (active
+          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white");
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
+  function applyThemeState(pref) {
+    const clean = pref === "dark" || pref === "system" ? pref : "light";
+    const isDark = resolveThemePreference(clean);
+    const root = document.documentElement;
+    if (root) {
+      root.classList.toggle("dark", isDark);
+      root.classList.toggle("light", !isDark);
+      if (root.style) root.style.colorScheme = isDark ? "dark" : "light";
+    }
+    syncThemeControls(clean, isDark);
+    if (typeof window.syncChartsTheme === "function") {
+      window.syncChartsTheme();
+    }
+    return isDark;
+  }
+
+  function setTheme(theme) {
+    const clean = theme === "dark" || theme === "system" ? theme : "light";
+    try {
+      localStorage.setItem("bl_theme", clean);
+    } catch (_) {}
+    applyThemeState(clean);
+  }
+  window.setTheme = setTheme;
+
+  function toggleTheme() {
+    const currentlyDark = Boolean(document.documentElement && document.documentElement.classList.contains("dark"));
+    setTheme(currentlyDark ? "light" : "dark");
+  }
+  window.toggleTheme = toggleTheme;
+
+  function initTheme() {
+    let stored = "light";
+    try {
+      stored = localStorage.getItem("bl_theme") || "light";
+    } catch (_) {}
+    applyThemeState(stored);
+
+    if (!window._blThemeMediaBound && window.matchMedia) {
+      window._blThemeMediaBound = true;
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      const onMediaChange = function () {
+        let cur = "light";
+        try {
+          cur = localStorage.getItem("bl_theme") || "light";
+        } catch (_) {}
+        if (cur === "system") {
+          applyThemeState("system");
+        }
+      };
+      if (typeof mq.addEventListener === "function") {
+        mq.addEventListener("change", onMediaChange);
+      } else if (typeof mq.addListener === "function") {
+        mq.addListener(onMediaChange);
+      }
+    }
+  }
+  window.initTheme = initTheme;
+
+  window.renderStatusPill = function (status, labelOverride) {
+    const raw = String(labelOverride !== undefined ? labelOverride : (status || "—")).trim() || "—";
+    const s = String(status || "").toLowerCase().trim();
+    const safeLabel = escapePaginationHtml(raw);
+
+    let cls = "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700";
+    if (
+      s === "active" ||
+      s === "approved" ||
+      s === "disbursed" ||
+      s === "balanced" ||
+      s === "matched" ||
+      s === "surplus" ||
+      s === "completed" ||
+      s === "healthy" ||
+      s === "well capitalized" ||
+      s === "zero arrears"
+    ) {
+      cls = "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60";
+    } else if (
+      s === "pending" ||
+      s === "under review" ||
+      s === "paused" ||
+      s === "tight liquidity" ||
+      s === "low risk"
+    ) {
+      cls = "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60";
+    } else if (
+      s === "in arrears" ||
+      s === "arrears" ||
+      s === "deficit" ||
+      s === "rejected" ||
+      s === "defaulted" ||
+      s === "overdue" ||
+      s === "variance" ||
+      s === "elevated arrears" ||
+      s === "capital constrained"
+    ) {
+      cls = "bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60";
+    } else if (s === "planning" || s === "healthy buffer") {
+      cls = "bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30";
+    }
+
+    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ' + cls + '">' + safeLabel + "</span>";
   };
 
   let activeConfirmResolver = null;
@@ -427,19 +566,19 @@
     const iconType = String(opts.iconType || "warning").toLowerCase();
     const iconConfigs = {
       danger: {
-        cls: "w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center text-base shrink-0",
+        cls: "w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 flex items-center justify-center text-base shrink-0",
         icon: '<i class="fas fa-circle-exclamation"></i>'
       },
       success: {
-        cls: "w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center text-base shrink-0",
+        cls: "w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center text-base shrink-0",
         icon: '<i class="fas fa-circle-check"></i>'
       },
       info: {
-        cls: "w-10 h-10 rounded-xl bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center text-base shrink-0",
+        cls: "w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 flex items-center justify-center text-base shrink-0",
         icon: '<i class="fas fa-circle-info"></i>'
       },
       warning: {
-        cls: "w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center text-base shrink-0",
+        cls: "w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center text-base shrink-0",
         icon: '<i class="fas fa-triangle-exclamation"></i>'
       }
     };
@@ -465,13 +604,13 @@
     if (cancelBtn) cancelBtn.textContent = opts.cancelText || "Cancel";
     if (confirmBtn) {
       confirmBtn.textContent = opts.confirmText || "Confirm Action";
-      const baseBtnCls = "min-h-[44px] px-4 py-2 text-xs font-semibold rounded-xl shadow-sm transition-colors ";
+      const baseBtnCls = "min-h-[44px] sm:min-h-[38px] px-4 py-2 text-xs font-semibold rounded-xl shadow-sm transition-colors ";
       const customCls = opts.confirmClass || (
         iconType === "danger"
           ? "bg-rose-600 hover:bg-rose-700 text-white"
           : iconType === "success"
-          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-          : "bg-slate-900 hover:bg-slate-800 text-white"
+          ? "bg-emerald-700 hover:bg-emerald-800 text-white"
+          : "bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950"
       );
       confirmBtn.className = baseBtnCls + customCls;
     }
@@ -576,18 +715,18 @@
       }
     }
 
-    let borderClass = "border-slate-200 bg-white text-slate-900";
-    let iconClass = "fas fa-circle-info text-sky-500 text-sm shrink-0 mt-0.5";
+    let borderClass = "border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0b1320] text-slate-900 dark:text-slate-100";
+    let iconClass = "fas fa-circle-info text-sky-600 dark:text-sky-400 text-sm shrink-0 mt-0.5";
 
     if (toastType === "success") {
-      borderClass = "border-emerald-200 bg-emerald-50/95 text-emerald-950";
-      iconClass = "fas fa-check-circle text-emerald-600 text-sm shrink-0 mt-0.5";
+      borderClass = "border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/95 dark:bg-emerald-950/95 text-emerald-950 dark:text-emerald-100";
+      iconClass = "fas fa-check-circle text-emerald-700 dark:text-emerald-400 text-sm shrink-0 mt-0.5";
     } else if (toastType === "error") {
-      borderClass = "border-rose-200 bg-rose-50/95 text-rose-950";
-      iconClass = "fas fa-circle-exclamation text-rose-600 text-sm shrink-0 mt-0.5";
+      borderClass = "border-rose-200 dark:border-rose-800/80 bg-rose-50/95 dark:bg-rose-950/95 text-rose-950 dark:text-rose-100";
+      iconClass = "fas fa-circle-exclamation text-rose-700 dark:text-rose-400 text-sm shrink-0 mt-0.5";
     } else if (toastType === "warning") {
-      borderClass = "border-amber-200 bg-amber-50/95 text-amber-950";
-      iconClass = "fas fa-triangle-exclamation text-amber-600 text-sm shrink-0 mt-0.5";
+      borderClass = "border-amber-200 dark:border-amber-800/80 bg-amber-50/95 dark:bg-amber-950/95 text-amber-950 dark:text-amber-100";
+      iconClass = "fas fa-triangle-exclamation text-amber-700 dark:text-amber-400 text-sm shrink-0 mt-0.5";
     }
 
     const toast = document.createElement("div");
@@ -773,10 +912,10 @@
       const button = document.getElementById("range-" + token);
       if (!button) return;
       button.className =
-        "home-range-btn px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors " +
+        "home-range-btn px-3 py-1.5 min-h-[34px] text-xs font-semibold rounded-lg transition-colors " +
         (rangeKey === token.replace("-", "_")
-          ? "bg-slate-900 text-white shadow-sm font-bold"
-          : "bg-transparent text-slate-600 hover:text-slate-900 font-medium");
+          ? "bg-slate-900 text-white dark:bg-sky-500 dark:text-slate-950 shadow-sm font-bold"
+          : "bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-medium");
     });
   }
 
@@ -1417,6 +1556,9 @@
     }
 
     modal.classList.remove("hidden");
+    let storedThemePref = "light";
+    try { storedThemePref = localStorage.getItem("bl_theme") || "light"; } catch (_) {}
+    syncThemeControls(storedThemePref, resolveThemePreference(storedThemePref));
     const sbBlock = document.getElementById("sidebar-user-block");
     const hdrBtn = document.getElementById("header-user-btn");
     if (sbBlock) sbBlock.setAttribute("aria-expanded", "true");
@@ -1717,6 +1859,7 @@
   }
 
   window.onload = function () {
+    initTheme();
     applyRolePermissions({ isMemberOnly: true });
     initShadcnSelects();
     initFlatpickrInputs();

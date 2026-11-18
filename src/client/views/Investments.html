@@ -1,16 +1,16 @@
 <section id="investments" class="space-y-4 sm:space-y-6">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
-      <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">Investments</h2>
-      <p class="text-xs text-slate-500 mt-0.5">Track group capital placements, revenue yields, and expenditures. Tap any row to view ledger.</p>
+      <h2 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Investments</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Track group capital placements, revenue yields, and expenditures. Tap any row to view ledger.</p>
     </div>
 
     <!-- Right Controls: View Column Toggle -->
     <div class="flex items-center gap-2">
       <div class="relative" id="investments-col-view-wrapper">
         <button type="button" onclick="toggleColumnMenu('investments-col-view-menu')"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-2xs transition-colors">
-          <i class="fas fa-sliders text-slate-500 text-xs"></i> <span>View</span>
+          class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-3.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+          <i class="fas fa-sliders text-slate-500 dark:text-slate-400 text-xs"></i> <span>View</span>
         </button>
         <div id="investments-col-view-menu" class="column-view-menu hidden">
           <div class="column-view-header">Toggle columns</div>
@@ -34,18 +34,18 @@
     </div>
   </div>
 
-  <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+  <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden">
     <!-- Filter Toolbar -->
-    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center gap-2.5">
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center gap-2.5">
       <div class="relative flex-1 min-w-0">
         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
         <input type="text" id="inv-search-input" oninput="filterInvestmentsTable()"
           placeholder="Search by Investment ID or Name..."
-          class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600" />
+          class="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500" />
       </div>
       <div class="flex items-center gap-2">
         <select id="inv-status-filter" onchange="filterInvestmentsTable()" aria-label="Filter investments by status"
-          class="w-full sm:w-44 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          class="w-full sm:w-44 pl-3 py-2 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500 cursor-pointer">
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="closed">Closed</option>
@@ -67,7 +67,7 @@
             <th class="col-inv-status text-center">Status</th>
           </tr>
         </thead>
-        <tbody id="investments-table-body" class="divide-y divide-slate-100 cursor-pointer">
+        <tbody id="investments-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/70 cursor-pointer">
         </tbody>
       </table>
     </div>
@@ -79,49 +79,49 @@
 <div id="investmentLedgerModal" class="hidden fixed inset-0 z-50 overflow-y-auto">
   <div class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
   <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="relative bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden max-h-[90vh] flex flex-col">
-      <div class="bg-slate-900 px-5 py-4 flex justify-between items-center shrink-0">
+    <div class="relative bg-white dark:bg-[#0b1320] w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700/80 overflow-hidden max-h-[90vh] flex flex-col">
+      <div class="bg-slate-900 dark:bg-[#090d16] px-5 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
         <div>
           <h3 id="inv-ledger-title" class="text-base font-bold text-white">Investment Ledger</h3>
           <p id="inv-ledger-subtitle" class="text-xs text-slate-400 mt-0.5 font-mono"></p>
         </div>
         <button onclick="closeInvestmentLedgerModal()" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times text-sm"></i></button>
       </div>
-      <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/70 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs shrink-0">
-        <div class="bg-white rounded-xl border border-emerald-200/80 px-4 py-3 shadow-2xs">
-          <p class="text-[10px] font-bold text-emerald-700 uppercase tracking-wide flex items-center gap-1.5">
-            <i class="fas fa-arrow-down text-emerald-500"></i> Revenue
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs shrink-0">
+        <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-emerald-200/80 dark:border-emerald-800/60 px-4 py-3 shadow-2xs">
+          <p class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
+            <i class="fas fa-arrow-down text-emerald-600 dark:text-emerald-400"></i> Revenue
           </p>
-          <p id="inv-revenue" class="font-bold text-lg text-emerald-900 mt-1 font-mono">—</p>
-          <div id="inv-revenue-breakdown" class="mt-2 pt-2 border-t border-emerald-50 space-y-1 text-[10px]"></div>
+          <p id="inv-revenue" class="font-bold text-lg text-emerald-900 dark:text-emerald-300 mt-1 font-mono tabular-nums">—</p>
+          <div id="inv-revenue-breakdown" class="mt-2 pt-2 border-t border-emerald-50 dark:border-emerald-900/50 space-y-1 text-[10px]"></div>
         </div>
-        <div class="bg-white rounded-xl border border-rose-200/80 px-4 py-3 shadow-2xs">
-          <p class="text-[10px] font-bold text-rose-700 uppercase tracking-wide flex items-center gap-1.5">
-            <i class="fas fa-arrow-up text-rose-500"></i> Expenditures
+        <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-rose-200/80 dark:border-rose-800/60 px-4 py-3 shadow-2xs">
+          <p class="text-[10px] font-bold text-rose-700 dark:text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
+            <i class="fas fa-arrow-up text-rose-600 dark:text-rose-400"></i> Expenditures
           </p>
-          <p id="inv-total-expenditures" class="font-bold text-lg text-rose-900 mt-1 font-mono">—</p>
-          <div class="mt-2 pt-2 border-t border-rose-50 space-y-1 text-[10px]">
-            <div class="flex justify-between gap-2 text-slate-600">
+          <p id="inv-total-expenditures" class="font-bold text-lg text-rose-900 dark:text-rose-300 mt-1 font-mono tabular-nums">—</p>
+          <div class="mt-2 pt-2 border-t border-rose-50 dark:border-rose-900/50 space-y-1 text-[10px]">
+            <div class="flex justify-between gap-2 text-slate-600 dark:text-slate-300">
               <span>OpEx</span>
-              <span id="inv-opex" class="font-semibold font-mono text-slate-800">—</span>
+              <span id="inv-opex" class="font-semibold font-mono text-slate-800 dark:text-slate-200">—</span>
             </div>
-            <div class="flex justify-between gap-2 text-slate-600">
-              <span>CapEx <span class="text-slate-400">(Capital in)</span></span>
-              <span id="inv-capex" class="font-semibold font-mono text-slate-800">—</span>
+            <div class="flex justify-between gap-2 text-slate-600 dark:text-slate-300">
+              <span>CapEx <span class="text-slate-400 dark:text-slate-500">(Capital in)</span></span>
+              <span id="inv-capex" class="font-semibold font-mono text-slate-800 dark:text-slate-200">—</span>
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-xl border border-amber-200/80 px-4 py-3 shadow-2xs">
-          <p class="text-[10px] font-bold text-amber-800 uppercase tracking-wide flex items-center gap-1.5">
-            <i class="fas fa-arrow-up text-amber-600"></i> Withdrawals
+        <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-amber-200/80 dark:border-amber-800/60 px-4 py-3 shadow-2xs">
+          <p class="text-[10px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+            <i class="fas fa-arrow-up text-amber-600 dark:text-amber-400"></i> Withdrawals
           </p>
-          <p id="inv-sum-withdrawals" class="font-bold text-lg text-amber-950 mt-1 font-mono">—</p>
-          <div id="inv-withdrawal-breakdown" class="mt-2 pt-2 border-t border-amber-50 space-y-1 text-[10px]"></div>
+          <p id="inv-sum-withdrawals" class="font-bold text-lg text-amber-950 dark:text-amber-300 mt-1 font-mono tabular-nums">—</p>
+          <div id="inv-withdrawal-breakdown" class="mt-2 pt-2 border-t border-amber-50 dark:border-amber-900/50 space-y-1 text-[10px]"></div>
         </div>
       </div>
       <div class="overflow-y-auto flex-1 p-0">
         <table class="w-full text-left border-collapse text-xs">
-          <thead class="bg-slate-50/75 border-b border-slate-200/60 sticky top-0 font-semibold text-slate-500 uppercase tracking-wider text-[10px]">
+          <thead class="bg-slate-50/75 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800 sticky top-0 font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
             <tr>
               <th class="px-4 py-3">Date</th>
               <th class="px-4 py-3">Type</th>
@@ -131,7 +131,7 @@
               <th class="px-4 py-3 text-right">Fee</th>
             </tr>
           </thead>
-          <tbody id="inv-ledger-body" class="divide-y divide-slate-100 text-slate-700">
+          <tbody id="inv-ledger-body" class="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-700 dark:text-slate-300">
           </tbody>
         </table>
       </div>

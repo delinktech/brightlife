@@ -2,48 +2,48 @@
 <section id="home" class="space-y-4 sm:space-y-6">
 
   <!-- Top Dashboard Banner & Range Bar -->
-  <div class="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div class="flex items-center gap-3.5">
-      <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-900 flex items-center justify-center text-white text-lg font-bold shadow-sm shrink-0">
+      <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-900 dark:bg-slate-800/80 border border-transparent dark:border-slate-700/60 flex items-center justify-center text-white text-lg font-bold shadow-sm shrink-0">
         <i class="fas fa-piggy-bank text-sky-400"></i>
       </div>
       <div>
         <div class="flex items-center gap-2 flex-wrap">
-          <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">BRIGHT LIFE SHG</h1>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-tight">BRIGHT LIFE SHG</h1>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Active
           </span>
         </div>
-        <p class="text-[11px] text-slate-500 font-medium mt-0.5">
-          A/C: <span class="font-mono text-slate-700 font-semibold">0020164001424</span> • Executive Chama Overview
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+          A/C: <span class="font-mono text-slate-700 dark:text-slate-200 font-semibold">0020164001424</span> • Executive Chama Overview
         </p>
       </div>
     </div>
 
     <!-- Right Controls: Date Range Selector Pills & Quick Action Buttons -->
     <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
-      <div class="bg-slate-100 p-0.5 rounded-lg flex items-center gap-0.5 border border-slate-200/60 text-xs">
+      <div class="bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg flex items-center gap-0.5 border border-slate-200/60 dark:border-slate-800 text-xs">
         <button id="range-this-month" onclick="setHomeRange('this_month')"
-          class="home-range-btn px-2.5 py-1 text-[11px] font-medium rounded-md bg-transparent text-slate-600 hover:text-slate-900 transition-colors">
+          class="home-range-btn px-2.5 py-1.5 min-h-[34px] text-[11px] font-medium rounded-md bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
           Month
         </button>
         <button id="range-quarter" onclick="setHomeRange('quarter')"
-          class="home-range-btn px-2.5 py-1 text-[11px] font-medium rounded-md bg-transparent text-slate-600 hover:text-slate-900 transition-colors">
+          class="home-range-btn px-2.5 py-1.5 min-h-[34px] text-[11px] font-medium rounded-md bg-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
           Quarter
         </button>
         <button id="range-year" onclick="setHomeRange('year')"
-          class="home-range-btn px-2.5 py-1 text-[11px] font-medium rounded-md bg-slate-900 text-white shadow-sm transition-colors">
+          class="home-range-btn px-2.5 py-1.5 min-h-[34px] text-[11px] font-semibold rounded-md bg-slate-900 text-white dark:bg-sky-500 dark:text-slate-950 shadow-sm transition-colors">
           Year
         </button>
       </div>
 
       <button type="button" onclick="openPrintContributionsReport()"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm transition-colors">
-        <i class="fas fa-print text-slate-400"></i> <span class="hidden sm:inline">Print</span>
+        class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+        <i class="fas fa-print text-slate-500 dark:text-slate-400"></i> <span class="hidden sm:inline">Print</span>
       </button>
 
       <button type="button" onclick="openMemberModal()" data-require-perm="membersWrite"
-        class="hidden inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+        class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
         <i class="fas fa-plus text-xs"></i> <span>Add Member</span>
       </button>
     </div>
@@ -53,24 +53,24 @@
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
 
     <!-- Card 1: TOTAL CAPITAL SAVED -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors relative">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors relative">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Savings</span>
-        <div class="w-7 h-7 bg-sky-50 rounded-lg flex items-center justify-center text-sky-600 text-xs shrink-0">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Savings</span>
+        <div class="w-7 h-7 bg-sky-50 dark:bg-sky-950/70 rounded-lg flex items-center justify-center text-sky-700 dark:text-sky-400 text-xs shrink-0">
           <i class="fas fa-vault"></i>
         </div>
       </div>
       <div>
-        <h3 id="home-savings" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">KES 0</h3>
+        <h3 id="home-savings" class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h3>
         <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
-          <span class="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-mono tabular-nums">
+          <span class="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60 px-1.5 py-0.5 rounded font-mono tabular-nums">
             <i class="fas fa-arrow-up text-[8px]"></i> <span id="home-growth-mom">0%</span>
           </span>
-          <span class="text-[10px] text-slate-400 font-medium truncate">by <strong id="home-membercount" class="text-slate-600 tabular-nums">0</strong> members</span>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">by <strong id="home-membercount" class="text-slate-700 dark:text-slate-200 tabular-nums">0</strong> members</span>
         </div>
         <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
-          <span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/60">
-            YTD Contrib: <strong id="home-ytd-contrib" class="font-mono tabular-nums text-slate-800">KES 0</strong>
+          <span class="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200/60 dark:border-slate-700">
+            YTD Contrib: <strong id="home-ytd-contrib" class="font-mono tabular-nums text-slate-800 dark:text-slate-100">KES 0</strong>
           </span>
         </div>
         <div class="hidden">
@@ -80,49 +80,49 @@
     </div>
 
     <!-- Card 2: LOANS DISBURSED -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors relative">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors relative">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">Loans Active</span>
-        <div class="w-7 h-7 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 text-xs shrink-0">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Loans Active</span>
+        <div class="w-7 h-7 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center text-indigo-700 dark:text-indigo-400 text-xs shrink-0">
           <i class="fas fa-hand-holding-dollar"></i>
         </div>
       </div>
       <div>
-        <h3 id="home-loans" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">KES 0</h3>
-        <p class="text-[10px] text-slate-400 font-medium mt-1.5 truncate">
+        <h3 id="home-loans" class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h3>
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1.5 truncate">
           Active loan capital deployed
         </p>
       </div>
     </div>
 
     <!-- Card 3: RECOVERY RATE -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors relative">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors relative">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">Recovery Rate</span>
-        <div class="w-7 h-7 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 text-xs shrink-0">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Recovery Rate</span>
+        <div class="w-7 h-7 bg-emerald-50 dark:bg-emerald-950/60 rounded-lg flex items-center justify-center text-emerald-700 dark:text-emerald-400 text-xs shrink-0">
           <i class="fas fa-circle-check"></i>
         </div>
       </div>
       <div>
-        <h3 id="home-repayment-rate" class="text-lg sm:text-2xl font-bold text-emerald-600 tracking-tight font-mono tabular-nums">0%</h3>
-        <p class="text-[10px] text-slate-400 font-medium mt-1.5 truncate">
+        <h3 id="home-repayment-rate" class="text-lg sm:text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">0%</h3>
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1.5 truncate">
           Repayment recovery rate
         </p>
       </div>
     </div>
 
     <!-- Card 4: OUTSTANDING LOAN BALANCE & PAR -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm hover:border-slate-300 transition-colors relative">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm hover:border-slate-300 dark:hover:border-slate-600 transition-colors relative">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 uppercase tracking-wider">Outstanding Loans</span>
-        <div class="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center text-amber-600 text-xs shrink-0">
+        <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Outstanding Loans</span>
+        <div class="w-7 h-7 bg-amber-50 dark:bg-amber-950/60 rounded-lg flex items-center justify-center text-amber-700 dark:text-amber-400 text-xs shrink-0">
           <i class="fas fa-clock"></i>
         </div>
       </div>
       <div>
-        <h3 id="home-outstanding" class="text-lg sm:text-2xl font-bold text-amber-600 tracking-tight font-mono tabular-nums">KES 0</h3>
+        <h3 id="home-outstanding" class="text-lg sm:text-2xl font-bold text-amber-700 dark:text-amber-400 tracking-tight font-mono tabular-nums">KES 0</h3>
         <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
-          <span class="text-[10px] text-slate-400 font-medium truncate">PAR: <strong id="home-par-rate" class="text-amber-700 font-semibold font-mono tabular-nums">0%</strong></span>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">PAR: <strong id="home-par-rate" class="text-amber-700 dark:text-amber-400 font-semibold font-mono tabular-nums">0%</strong></span>
         </div>
       </div>
     </div>
@@ -133,13 +133,13 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
     <!-- Left 2/3: Historical Annual Contributions -->
-    <div class="lg:col-span-2 bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+    <div class="lg:col-span-2 bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
-          <h3 class="text-sm font-semibold text-slate-900">Historical Annual Contributions</h3>
-          <p class="text-[11px] text-slate-400 mt-0.5">Total member savings pooled per period</p>
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Historical Annual Contributions</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Total member savings pooled per period</p>
         </div>
-        <div class="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[11px] font-mono tabular-nums font-medium border border-slate-200">
+        <div class="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md text-[11px] font-mono tabular-nums font-medium border border-slate-200 dark:border-slate-700">
           Peak: <span id="home-peak-label">—</span>
         </div>
       </div>
@@ -152,13 +152,13 @@
     </div>
 
     <!-- Right 1/3: Available Balances & Ownership Distribution Donut -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-3">
         <div>
-          <h3 class="text-sm font-semibold text-slate-900">Ownership & Account Balances</h3>
-          <p class="text-[11px] text-slate-400 mt-0.5">Liquid cash distribution across accounts</p>
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Ownership & Account Balances</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Liquid cash distribution across accounts</p>
         </div>
-        <div class="w-6 h-6 bg-slate-100 rounded-md flex items-center justify-center text-slate-400">
+        <div class="w-6 h-6 bg-slate-100 dark:bg-slate-800 rounded-md flex items-center justify-center text-slate-500 dark:text-slate-400">
           <i class="fas fa-chart-pie text-xs"></i>
         </div>
       </div>
@@ -176,7 +176,7 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
 
     <!-- Dark Slate Navy Highlight Card (Liquid Bank Position) -->
-    <div class="bg-slate-900 p-5 rounded-xl shadow-md border border-slate-800 text-white flex flex-col justify-between relative overflow-hidden">
+    <div class="bg-slate-900 dark:bg-[#0b1320] p-5 rounded-xl shadow-md border border-slate-800 dark:border-slate-700/80 text-white flex flex-col justify-between relative overflow-hidden">
       <div class="flex items-center justify-between mb-3">
         <span class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Bank Balance per Records</span>
         <div class="w-7 h-7 rounded-lg bg-slate-800 text-emerald-400 flex items-center justify-center text-xs border border-slate-700">
@@ -192,14 +192,14 @@
     </div>
 
     <!-- Investment Inflows Card -->
-    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+    <div class="bg-white dark:bg-[#0b1320] p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Investment Inflows</span>
-        <i class="fas fa-arrow-up-right-from-square text-sky-500 text-xs"></i>
+        <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Investment Inflows</span>
+        <i class="fas fa-arrow-up-right-from-square text-sky-600 dark:text-sky-400 text-xs"></i>
       </div>
       <div>
-        <h3 id="home-investment-inflows" class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">KES 0</h3>
-        <p id="home-investment-inflows-sub" class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+        <h3 id="home-investment-inflows" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h3>
+        <p id="home-investment-inflows-sub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
           No cashflow records
         </p>
       </div>
@@ -209,14 +209,14 @@
     </div>
 
     <!-- Operating Outflows Card -->
-    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between">
+    <div class="bg-white dark:bg-[#0b1320] p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Operating Outflows</span>
-        <i class="fas fa-arrow-down-right-from-square text-rose-500 text-xs"></i>
+        <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Operating Outflows</span>
+        <i class="fas fa-arrow-down-right-from-square text-rose-600 dark:text-rose-400 text-xs"></i>
       </div>
       <div>
-        <h3 id="home-operating-outflows" class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight font-mono tabular-nums">KES 0</h3>
-        <p id="home-operating-outflows-sub" class="text-[11px] text-slate-400 mt-1 leading-relaxed">
+        <h3 id="home-operating-outflows" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h3>
+        <p id="home-operating-outflows-sub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
           No cashflow records
         </p>
       </div>
@@ -228,67 +228,67 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
 
     <!-- Card A: Chama Liquidity Ratio & Solvency -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between space-y-3">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-3">
       <div class="flex items-start justify-between gap-2">
         <div>
-          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Liquidity Ratio &amp; Solvency</span>
+          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Liquidity Ratio &amp; Solvency</span>
           <div class="flex items-baseline gap-2.5 mt-1">
-            <h3 id="home-liquidity-ratio" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono tabular-nums">0.0%</h3>
-            <span id="home-solvency-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            <h3 id="home-liquidity-ratio" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-mono tabular-nums">0.0%</h3>
+            <span id="home-solvency-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
               Checking...
             </span>
           </div>
         </div>
-        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0">
           <i class="fas fa-droplet"></i>
         </div>
       </div>
 
       <div>
-        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
           <div id="home-liquidity-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
         </div>
-        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
-          <span>Liquid Cash: <strong id="home-liq-cash" class="font-mono tabular-nums text-slate-800">KES 0</strong></span>
-          <span>Member Savings: <strong id="home-liq-savings" class="font-mono tabular-nums text-slate-800">KES 0</strong></span>
+        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 flex-wrap gap-2">
+          <span>Liquid Cash: <strong id="home-liq-cash" class="font-mono tabular-nums text-slate-800 dark:text-slate-200">KES 0</strong></span>
+          <span>Member Savings: <strong id="home-liq-savings" class="font-mono tabular-nums text-slate-800 dark:text-slate-200">KES 0</strong></span>
         </div>
       </div>
     </div>
 
     <!-- Card B: Portfolio Risk & Health Breakdown -->
-    <div class="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200/80 flex flex-col justify-between space-y-3">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between space-y-3">
       <div class="flex items-start justify-between gap-2">
         <div>
-          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Portfolio Risk &amp; Health</span>
+          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Portfolio Risk &amp; Health</span>
           <div class="flex items-center gap-2 mt-1 flex-wrap">
-            <span id="home-risk-health-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span id="home-risk-health-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
               Healthy Book
             </span>
-            <span class="text-[11px] text-slate-500 font-mono tabular-nums">
-              Active: <strong id="home-risk-active-count" class="text-slate-800">0</strong> • Pending: <strong id="home-risk-pending-count" class="text-slate-800">0</strong> • Settled: <strong id="home-risk-settled-count" class="text-slate-800">0</strong>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+              Active: <strong id="home-risk-active-count" class="text-slate-800 dark:text-slate-200">0</strong> • Pending: <strong id="home-risk-pending-count" class="text-slate-800 dark:text-slate-200">0</strong> • Settled: <strong id="home-risk-settled-count" class="text-slate-800 dark:text-slate-200">0</strong>
             </span>
           </div>
         </div>
-        <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs shrink-0">
+        <div class="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xs shrink-0">
           <i class="fas fa-shield-halved"></i>
         </div>
       </div>
 
       <div>
-        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex" title="Active On-Time vs In Arrears (PAR) vs Settled">
+        <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex" title="Active On-Time vs In Arrears (PAR) vs Settled">
           <div id="home-risk-bar-performing" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%"></div>
           <div id="home-risk-bar-par" class="h-full bg-rose-500 transition-all duration-500" style="width: 0%"></div>
-          <div id="home-risk-bar-settled" class="h-full bg-slate-400 transition-all duration-500" style="width: 0%"></div>
+          <div id="home-risk-bar-settled" class="h-full bg-slate-400 dark:bg-slate-600 transition-all duration-500" style="width: 0%"></div>
         </div>
-        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
+        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 flex-wrap gap-2">
           <span class="inline-flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            On-Time: <strong id="home-risk-performing-amt" class="font-mono tabular-nums text-slate-800">KES 0</strong>
+            On-Time: <strong id="home-risk-performing-amt" class="font-mono tabular-nums text-slate-800 dark:text-slate-200">KES 0</strong>
           </span>
           <span class="inline-flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-rose-500"></span>
-            PAR / Arrears: <strong id="home-risk-par-amt" class="font-mono tabular-nums text-rose-700">KES 0</strong>
-            (<span id="home-risk-par-pct" class="font-mono tabular-nums text-rose-600">0.0%</span>)
+            PAR / Arrears: <strong id="home-risk-par-amt" class="font-mono tabular-nums text-rose-700 dark:text-rose-400">KES 0</strong>
+            (<span id="home-risk-par-pct" class="font-mono tabular-nums text-rose-700 dark:text-rose-400">0.0%</span>)
           </span>
         </div>
       </div>
@@ -300,19 +300,19 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
     <!-- Left 2/3 Column: Ranked Top Contributors Table -->
-    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200/80 overflow-hidden flex flex-col">
-      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+    <div class="lg:col-span-2 bg-white dark:bg-[#0b1320] rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h3 class="text-sm font-semibold text-slate-900">Top Contributing Members</h3>
-          <p class="text-[11px] text-slate-400 mt-0.5">Leading shareholders driving group capital</p>
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Top Contributing Members</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Leading shareholders driving group capital</p>
         </div>
-        <span id="home-range-label" class="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-semibold uppercase tracking-wider">
+        <span id="home-range-label" class="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-md text-[10px] font-semibold uppercase tracking-wider">
           Year
         </span>
       </div>
       <div class="overflow-x-auto flex-1">
         <table class="w-full text-left border-collapse text-xs">
-          <thead class="bg-slate-50/75 border-b border-slate-200/60 font-semibold text-slate-500 uppercase tracking-wider text-[10px]">
+          <thead class="bg-slate-50/75 dark:bg-slate-900/60 border-b border-slate-200/60 dark:border-slate-800/80 font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-[10px]">
             <tr>
               <th class="px-4 py-3 text-center w-10">#</th>
               <th class="px-4 py-3">Member Name</th>
@@ -320,7 +320,7 @@
               <th class="px-4 py-3 text-right">Shares %</th>
             </tr>
           </thead>
-          <tbody id="home-top-contributors" class="divide-y divide-slate-100 text-slate-700">
+          <tbody id="home-top-contributors" class="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-700 dark:text-slate-300">
             <!-- Injected via JavaScript -->
           </tbody>
         </table>
@@ -328,21 +328,21 @@
     </div>
 
     <!-- Right 1/3 Column: Bank Account Balances Summary Table -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
-      <div class="px-6 py-5 border-b border-slate-100">
-        <h3 class="text-base font-bold text-slate-900">Account Balances Summary</h3>
-        <p class="text-xs text-slate-400 mt-0.5">Name, masked account, date & amount</p>
+    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80 overflow-hidden flex flex-col">
+      <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800/80">
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">Account Balances Summary</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Name, masked account, date & amount</p>
       </div>
       <div class="overflow-x-auto flex-1">
         <table class="w-full text-left border-collapse text-xs">
-          <thead class="bg-slate-50 border-b border-slate-100 font-bold text-slate-500 uppercase tracking-wider">
+          <thead class="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800/80 font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             <tr>
               <th class="px-4 py-3.5">Bank / Inst.</th>
               <th class="px-4 py-3.5">Account</th>
               <th class="px-4 py-3.5 text-right">Balance (KES)</th>
             </tr>
           </thead>
-          <tbody id="home-accounts-table-body" class="divide-y divide-slate-100 text-slate-700">
+          <tbody id="home-accounts-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/70 text-slate-700 dark:text-slate-300">
             <!-- Injected via JavaScript -->
           </tbody>
         </table>
@@ -352,21 +352,21 @@
   </div>
 
   <!-- Investment Performance & Loan Status Section -->
-  <div class="border-t border-slate-200/80 pt-6">
-    <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-      <i class="fas fa-chart-column text-blue-600"></i> Investment & Loan Risk Performance
+  <div class="border-t border-slate-200/80 dark:border-slate-800 pt-6">
+    <h3 class="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+      <i class="fas fa-chart-column text-sky-600 dark:text-sky-400"></i> Investment & Loan Risk Performance
     </h3>
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h4 class="font-bold text-slate-900 mb-4 text-sm">Money Invested vs Revenue (per Investment)</h4>
+      <div class="bg-white dark:bg-[#0b1320] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80">
+        <h4 class="font-bold text-slate-900 dark:text-white mb-4 text-sm">Money Invested vs Revenue (per Investment)</h4>
         <div class="h-64 w-full">
           <canvas id="invVsRevChart"></canvas>
         </div>
       </div>
 
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h4 class="font-bold text-slate-900 mb-4 text-sm">Loans Portfolio by Status</h4>
+      <div class="bg-white dark:bg-[#0b1320] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80">
+        <h4 class="font-bold text-slate-900 dark:text-white mb-4 text-sm">Loans Portfolio by Status</h4>
         <div class="h-64 w-full">
           <canvas id="loanStatusChart"></canvas>
         </div>
@@ -374,15 +374,15 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h4 class="font-bold text-slate-900 mb-4 text-sm">Ledger: Monthly Revenue vs Expenditures</h4>
+      <div class="bg-white dark:bg-[#0b1320] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80">
+        <h4 class="font-bold text-slate-900 dark:text-white mb-4 text-sm">Ledger: Monthly Revenue vs Expenditures</h4>
         <div class="h-64 w-full">
           <canvas id="invMonthlyChart"></canvas>
         </div>
       </div>
 
-      <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-        <h4 class="font-bold text-slate-900 mb-4 text-sm">Revenue by Category</h4>
+      <div class="bg-white dark:bg-[#0b1320] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80">
+        <h4 class="font-bold text-slate-900 dark:text-white mb-4 text-sm">Revenue by Category</h4>
         <div class="h-64 w-full max-w-sm mx-auto">
           <canvas id="invRevenueCatChart"></canvas>
         </div>
@@ -402,6 +402,39 @@
 
 <script>
   let charts = {}; // Global object to track chart instances
+
+  function getChartThemeTokens() {
+    const isDark = Boolean(document.documentElement && document.documentElement.classList.contains('dark'));
+    return {
+      isDark: isDark,
+      gridColor: isDark ? '#1e293b' : '#f1f5f9',
+      tickColor: isDark ? '#94a3b8' : '#64748b',
+      pointBorderColor: isDark ? '#0b1320' : '#ffffff'
+    };
+  }
+
+  window.syncChartsTheme = function () {
+    const t = getChartThemeTokens();
+    Object.keys(charts || {}).forEach(function (key) {
+      const ch = charts[key];
+      if (!ch || !ch.options) return;
+      if (ch.options.scales) {
+        ['x', 'y'].forEach(function (axis) {
+          const sc = ch.options.scales[axis];
+          if (!sc) return;
+          if (sc.ticks) sc.ticks.color = t.tickColor;
+          if (sc.grid && sc.grid.display !== false) sc.grid.color = t.gridColor;
+        });
+      }
+      if (ch.options.plugins && ch.options.plugins.legend && ch.options.plugins.legend.labels) {
+        ch.options.plugins.legend.labels.color = t.tickColor;
+      }
+      if (key === 'monthlyContribChart' && ch.data && ch.data.datasets && ch.data.datasets[0]) {
+        ch.data.datasets[0].pointBorderColor = t.pointBorderColor;
+      }
+      try { ch.update('none'); } catch (_) {}
+    });
+  };
 
   function escapeHtmlHome(str) {
     return String(str || "")
@@ -427,9 +460,9 @@
       if (!existingEmpty) {
         const emptyDiv = document.createElement("div");
         emptyDiv.setAttribute("data-chart-empty-for", canvasId);
-        emptyDiv.className = "h-full w-full flex flex-col items-center justify-center text-center text-slate-400 text-xs gap-1.5 px-4";
+        emptyDiv.className = "h-full w-full flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-400 text-xs gap-1.5 px-4";
         emptyDiv.innerHTML =
-          '<i class="fas fa-chart-simple text-slate-300 text-lg"></i>' +
+          '<i class="fas fa-chart-simple text-slate-300 dark:text-slate-600 text-lg"></i>' +
           '<span>' + escapeHtmlHome(message || "No data for selected period") + '</span>';
         container.appendChild(emptyDiv);
       } else {
@@ -449,7 +482,7 @@
     if (!container) return;
     const items = rows || [];
     if (!items.length) {
-      container.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-400">No contribution records in selected date range.</td></tr>';
+      container.innerHTML = '<tr><td colspan="4" class="px-6 py-6 text-center text-slate-500 dark:text-slate-400">No contribution records in selected date range.</td></tr>';
       return;
     }
 
@@ -458,18 +491,20 @@
     container.innerHTML = items.map((row, idx) => {
       const amt = Number(row.amount) || 0;
       const sharePct = ((amt / totalSavings) * 100).toFixed(2);
-      const rankBadge = idx === 0 ? 'bg-blue-600 text-white' : (idx === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700');
+      const rankBadge = idx === 0
+        ? 'bg-sky-700 dark:bg-sky-500 text-white dark:text-slate-950'
+        : (idx === 1 ? 'bg-indigo-600 dark:bg-indigo-400 text-white dark:text-slate-950' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300');
 
       return `
-        <tr class="hover:bg-slate-50/60 transition-colors">
+        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
           <td class="px-4 py-3 text-center">
             <span class="w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] font-black tabular-nums ${rankBadge}">
               ${idx + 1}
             </span>
           </td>
-          <td class="px-4 py-3 font-semibold text-slate-900">${escapeHtmlHome(row.name || 'Member')}</td>
-          <td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-900">${formatMoney(amt)}</td>
-          <td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-blue-600">${sharePct}%</td>
+          <td class="px-4 py-3 font-semibold text-slate-900 dark:text-white">${escapeHtmlHome(row.name || 'Member')}</td>
+          <td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-slate-200">${formatMoney(amt)}</td>
+          <td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-sky-700 dark:text-sky-400">${sharePct}%</td>
         </tr>
       `;
     }).join('');
@@ -487,14 +522,14 @@
     if (!container) return;
     const items = rows || [];
     if (!items.length) {
-      container.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-400">No account balances listed.</td></tr>';
+      container.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400">No account balances listed.</td></tr>';
       return;
     }
     container.innerHTML = items.map((a) => `
-      <tr class="hover:bg-slate-50/60 transition-colors">
-        <td class="px-4 py-3 font-semibold text-slate-800">${escapeHtmlHome(a.orgName || '-')}</td>
-        <td class="px-4 py-3 text-slate-500 font-mono tabular-nums text-[11px]">${escapeHtmlHome(maskAccountForHome(a.accountNumber))}</td>
-        <td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-900">${formatMoney(a.balance)}</td>
+      <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+        <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200">${escapeHtmlHome(a.orgName || '-')}</td>
+        <td class="px-4 py-3 text-slate-500 dark:text-slate-400 font-mono tabular-nums text-[11px]">${escapeHtmlHome(maskAccountForHome(a.accountNumber))}</td>
+        <td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">${formatMoney(a.balance)}</td>
       </tr>
     `).join('');
   }
@@ -535,19 +570,19 @@
     }
     if (badgeEl) {
       if (savings <= 0) {
-        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200';
+        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
         badgeEl.textContent = 'No Savings Base';
       } else if (liqRatio >= 25) {
-        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
         badgeEl.textContent = 'Well Capitalized';
       } else if (liqRatio >= 10) {
-        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200';
+        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30';
         badgeEl.textContent = 'Healthy Buffer';
       } else if (liqRatio > 0) {
-        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60';
         badgeEl.textContent = 'Tight Liquidity';
       } else {
-        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200';
+        badgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
         badgeEl.textContent = 'Capital Constrained';
       }
     }
@@ -600,16 +635,16 @@
 
     if (riskBadgeEl) {
       if (totalCount === 0 && totalOutstanding === 0) {
-        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200';
+        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
         riskBadgeEl.textContent = 'No Active Book';
       } else if (parRate === 0) {
-        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200';
+        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
         riskBadgeEl.textContent = 'Zero Arrears';
       } else if (parRate <= 5) {
-        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200';
+        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60';
         riskBadgeEl.textContent = 'Low Risk (' + parRate.toFixed(1) + '% PAR)';
       } else {
-        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200';
+        riskBadgeEl.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
         riskBadgeEl.textContent = 'Elevated Arrears (' + parRate.toFixed(1) + '% PAR)';
       }
     }
@@ -617,6 +652,7 @@
 
   function renderMainCharts(data) {
     renderPortfolioAndLiquidityHealth(data);
+    const theme = getChartThemeTokens();
     // 1. Contributions Trend Chart
     const ctxMonthly = document.getElementById('monthlyContribChart');
     if (ctxMonthly) {
@@ -662,7 +698,7 @@
               fill: true,
               tension: 0.4,
               pointBackgroundColor: '#2563eb',
-              pointBorderColor: '#ffffff',
+              pointBorderColor: theme.pointBorderColor,
               pointBorderWidth: 2,
               pointRadius: 4,
               pointHoverRadius: 6
@@ -683,14 +719,14 @@
             scales: {
               x: {
                 grid: { display: false },
-                ticks: { font: { size: 10 }, color: '#64748b' }
+                ticks: { font: { size: 10 }, color: theme.tickColor }
               },
               y: {
                 beginAtZero: true,
-                grid: { color: '#f1f5f9' },
+                grid: { color: theme.gridColor },
                 ticks: {
                   font: { size: 10 },
-                  color: '#64748b',
+                  color: theme.tickColor,
                   callback: function(value) {
                     return formatMoneyCompactK(value);
                   }
@@ -737,7 +773,7 @@
               legend: {
                 display: true,
                 position: 'bottom',
-                labels: { font: { size: 11 }, boxWidth: 10 }
+                labels: { font: { size: 11 }, boxWidth: 10, color: theme.tickColor }
               },
               tooltip: {
                 callbacks: {
@@ -794,8 +830,8 @@
               }
             },
             scales: {
-              x: { grid: { display: false } },
-              y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } }
+              x: { grid: { display: false }, ticks: { color: theme.tickColor } },
+              y: { beginAtZero: true, ticks: { precision: 0, color: theme.tickColor }, grid: { color: theme.gridColor } }
             }
           }
         });
@@ -835,6 +871,7 @@
   }
 
   function renderInvestmentCharts(inv) {
+    const theme = getChartThemeTokens();
     const safe = inv || {};
     const ivr = Array.isArray(safe.investedVsRevenue) ? safe.investedVsRevenue : [];
     const monthly = safe.monthlyInvestmentTrend || {};
@@ -873,17 +910,19 @@
           options: {
             maintainAspectRatio: false,
             scales: {
+              x: { grid: { display: false }, ticks: { font: { size: 10 }, color: theme.tickColor } },
               y: {
                 beginAtZero: true,
+                grid: { color: theme.gridColor },
                 ticks: {
                   font: { size: 10 },
-                  color: '#64748b',
+                  color: theme.tickColor,
                   callback: function(value) { return formatMoneyCompactK(value); }
                 }
               }
             },
             plugins: {
-              legend: { position: "bottom" },
+              legend: { position: "bottom", labels: { color: theme.tickColor } },
               tooltip: {
                 callbacks: {
                   label: function(ctx) {
@@ -927,17 +966,19 @@
           options: {
             maintainAspectRatio: false,
             scales: {
+              x: { grid: { display: false }, ticks: { font: { size: 10 }, color: theme.tickColor } },
               y: {
                 beginAtZero: true,
+                grid: { color: theme.gridColor },
                 ticks: {
                   font: { size: 10 },
-                  color: '#64748b',
+                  color: theme.tickColor,
                   callback: function(value) { return formatMoneyCompactK(value); }
                 }
               }
             },
             plugins: {
-              legend: { position: "bottom" },
+              legend: { position: "bottom", labels: { color: theme.tickColor } },
               tooltip: {
                 callbacks: {
                   label: function(ctx) {
@@ -971,7 +1012,7 @@
           options: {
             maintainAspectRatio: false,
             plugins: {
-              legend: { position: "bottom" },
+              legend: { position: "bottom", labels: { color: theme.tickColor } },
               tooltip: {
                 callbacks: {
                   label: function(ctx) {

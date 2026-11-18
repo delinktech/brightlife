@@ -2,15 +2,15 @@
   <!-- Top Header Controls & Action Bar -->
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
     <div>
-      <h2 class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">Loan Portfolio</h2>
-      <p class="text-xs text-slate-500 mt-0.5">View and manage member loan applications, repayments, and balances.</p>
+      <h2 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Loan Portfolio</h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">View and manage member loan applications, repayments, and balances.</p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <!-- Column Visibility Toggle Dropdown -->
       <div class="relative" id="loans-col-view-wrapper">
         <button type="button" onclick="toggleColumnMenu('loans-col-view-menu')"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-2xs transition-colors">
-          <i class="fas fa-sliders text-slate-500 text-xs"></i> <span>View</span>
+          class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-3.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+          <i class="fas fa-sliders text-slate-500 dark:text-slate-400 text-xs"></i> <span>View</span>
         </button>
         <div id="loans-col-view-menu" class="column-view-menu hidden">
           <div class="column-view-header">Toggle columns</div>
@@ -35,31 +35,31 @@
         </div>
       </div>
 
-      <button type="button" onclick="openPrintLoansReport()" class="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 shadow-sm transition-colors">
-        <i class="fas fa-print text-slate-400"></i> <span>Print Report</span>
+      <button type="button" onclick="openPrintLoansReport()" class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-4 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+        <i class="fas fa-print text-slate-500 dark:text-slate-400"></i> <span>Print Report</span>
       </button>
-      <button type="button" onclick="openPayLoanModal()" data-require-perm="loanPayment" class="hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+      <button type="button" onclick="openPayLoanModal()" data-require-perm="loanPayment" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
         <i class="fas fa-hand-holding-dollar text-xs"></i> <span>Pay Loan</span>
       </button>
-      <button type="button" onclick="openRequestLoanModal()" data-require-perm="loanRequest" class="hidden inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+      <button type="button" onclick="openRequestLoanModal()" data-require-perm="loanRequest" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-sky-700 hover:bg-sky-800 dark:bg-slate-800/80 dark:hover:bg-slate-700/80 text-white dark:text-sky-300 border border-transparent dark:border-sky-500/30 text-xs font-semibold rounded-lg shadow-sm transition-colors">
         <i class="fas fa-plus text-xs"></i> <span>Request Loan</span>
       </button>
     </div>
   </div>
 
   <!-- Loan Portfolio Table Container -->
-  <div class="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+  <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden">
     <!-- Filter Toolbar -->
-    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center gap-2.5">
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col sm:flex-row sm:items-center gap-2.5">
       <div class="relative flex-1 min-w-0">
         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
         <input type="text" id="loan-search-input" oninput="filterLoansTable()"
           placeholder="Search by Loan ID or Borrower name..."
-          class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600" />
+          class="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500" />
       </div>
       <div class="flex items-center gap-2">
         <select id="loan-status-filter" onchange="filterLoansTable()" aria-label="Filter loans by status"
-          class="w-full sm:w-44 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          class="w-full sm:w-44 pl-3 py-2 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500 cursor-pointer">
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="settled">Settled</option>
@@ -83,7 +83,7 @@
             <th class="col-l-status text-center">Status</th>
           </tr>
         </thead>
-        <tbody id="loan-table-body" class="divide-y divide-slate-100">
+        <tbody id="loan-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/70">
         </tbody>
       </table>
     </div>
@@ -91,40 +91,40 @@
   </div>
 
   <!-- Dedicated Loan Repayments Sub-Ledger Stream -->
-  <div class="mt-8 bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
-    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+  <div class="mt-8 bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm overflow-hidden">
+    <div class="px-4 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <div>
-        <h3 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <i class="fas fa-receipt text-sky-600 text-xs"></i>
+        <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <i class="fas fa-receipt text-sky-600 dark:text-sky-400 text-xs"></i>
           <span>Loan Repayments Sub-Ledger</span>
         </h3>
-        <p class="text-xs text-slate-500 mt-0.5">Audit log of all individual payment transactions showing principal, interest & fee breakdown.</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Audit log of all individual payment transactions showing principal, interest & fee breakdown.</p>
       </div>
       <div class="flex items-center gap-2">
-        <button type="button" onclick="loadLoanRepayments(1)" class="px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors">
+        <button type="button" onclick="loadLoanRepayments(1)" class="min-h-[38px] px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-lg transition-colors">
           <i class="fas fa-rotate mr-1 text-[10px]"></i> Refresh Ledger
         </button>
       </div>
     </div>
 
     <!-- Repayments Filter Toolbar -->
-    <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-2.5">
+    <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col lg:flex-row lg:items-center gap-2.5">
       <div class="relative flex-1 min-w-0">
         <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
         <input type="text" id="rep-search-input" oninput="filterRepaymentsTable()"
           placeholder="Search by Receipt #, Loan ID, Borrower, or Transaction ID..."
-          class="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600" />
+          class="w-full pl-9 pr-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500" />
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center gap-2">
         <select id="rep-status-filter" onchange="filterRepaymentsTable()" aria-label="Filter repayments by status"
-          class="w-full lg:w-40 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          class="w-full lg:w-40 pl-3 py-2 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500 cursor-pointer">
           <option value="all">All Statuses</option>
           <option value="approved">Approved</option>
           <option value="pending">Pending</option>
           <option value="rejected">Rejected</option>
         </select>
         <select id="rep-channel-filter" onchange="filterRepaymentsTable()" aria-label="Filter repayments by channel"
-          class="w-full lg:w-48 pl-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-lg text-slate-700 min-h-[44px] sm:min-h-[36px] focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600 cursor-pointer">
+          class="w-full lg:w-48 pl-3 py-2 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500 cursor-pointer">
           <option value="all">All Channels</option>
           <option value="Cash">Cash</option>
           <option value="Equity Bank">Equity Bank</option>
@@ -153,9 +153,9 @@
             <th class="text-center">Action</th>
           </tr>
         </thead>
-        <tbody id="loan-repayments-body" class="divide-y divide-slate-100">
+        <tbody id="loan-repayments-body" class="divide-y divide-slate-100 dark:divide-slate-800/70">
           <tr>
-            <td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400">Loading repayment transactions...</td>
+            <td colspan="12" class="px-4 py-6 text-center text-xs text-slate-500 dark:text-slate-400">Loading repayment transactions...</td>
           </tr>
         </tbody>
       </table>
@@ -166,19 +166,19 @@
 
 <!-- Pay Loan Modal -->
 <div id="payLoanModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-  <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-5 sm:p-6 max-h-[90vh] overflow-y-auto my-auto">
-    <div class="flex justify-between items-center pb-3 border-b border-slate-100 mb-4">
-      <h3 class="text-base font-bold text-slate-900">Record Loan Payment</h3>
-      <button type="button" onclick="closePayLoanModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+  <div class="bg-white dark:bg-[#0b1320] w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700/80 p-5 sm:p-6 max-h-[90vh] overflow-y-auto my-auto">
+    <div class="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800 mb-4">
+      <h3 class="text-base font-bold text-slate-900 dark:text-white">Record Loan Payment</h3>
+      <button type="button" onclick="closePayLoanModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
         <i class="fas fa-times text-sm"></i>
       </button>
     </div>
     <form id="payLoanForm" class="space-y-4">
       <div>
-        <label class="block text-xs font-semibold text-slate-700 mb-1">Borrower</label>
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Borrower</label>
         <div class="relative">
           <input type="text" id="pl-member-search" placeholder="Search borrower name or ID..."
-            class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none" required autocomplete="off" />
+            class="w-full pl-3 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none" required autocomplete="off" />
           <input type="hidden" id="pl-member" />
           <input type="hidden" id="pl-member-id" />
           <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
@@ -191,51 +191,51 @@
 
       <!-- Dynamic Loan Selector Field (Appears when borrower is selected) -->
       <div id="pl-loan-select-wrapper" class="hidden">
-        <label class="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+        <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
           <span>Select Loan</span>
-          <span id="pl-loan-count-badge" class="text-[10px] text-sky-600 font-mono font-normal"></span>
+          <span id="pl-loan-count-badge" class="text-[10px] text-sky-700 dark:text-sky-400 font-mono font-normal"></span>
         </label>
         <select id="pl-loan-id" required
-          class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+          class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
           <option value="">-- Choose Loan --</option>
         </select>
-        <div id="pl-loan-details-card" class="mt-2 p-2.5 bg-slate-50 border border-slate-200/80 rounded-lg text-xs text-slate-600 hidden">
+        <div id="pl-loan-details-card" class="mt-2 p-2.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800 rounded-lg text-xs text-slate-600 dark:text-slate-300 hidden">
           <div class="flex justify-between items-center text-[11px] mb-1">
-            <span class="text-slate-500">Repayment Total:</span>
-            <span id="pl-card-repayment" class="font-mono font-semibold text-slate-800">KSh 0.00</span>
+            <span class="text-slate-500 dark:text-slate-400">Repayment Total:</span>
+            <span id="pl-card-repayment" class="font-mono font-semibold text-slate-800 dark:text-slate-200">KSh 0.00</span>
           </div>
           <div class="flex justify-between items-center text-[11px] mb-1">
-            <span class="text-slate-500">Paid to Date:</span>
-            <span id="pl-card-paid" class="font-mono text-emerald-700">KSh 0.00</span>
+            <span class="text-slate-500 dark:text-slate-400">Paid to Date:</span>
+            <span id="pl-card-paid" class="font-mono text-emerald-700 dark:text-emerald-400">KSh 0.00</span>
           </div>
-          <div class="flex justify-between items-center text-[11px] pt-1 border-t border-slate-200">
-            <span class="font-medium text-slate-700">Outstanding Balance:</span>
-            <span id="pl-card-balance" class="font-mono font-bold text-amber-600">KSh 0.00</span>
+          <div class="flex justify-between items-center text-[11px] pt-1 border-t border-slate-200 dark:border-slate-800">
+            <span class="font-medium text-slate-700 dark:text-slate-300">Outstanding Balance:</span>
+            <span id="pl-card-balance" class="font-mono font-bold text-amber-700 dark:text-amber-400">KSh 0.00</span>
           </div>
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Transaction Date</label>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Transaction Date</label>
           <div class="relative">
             <input type="text" id="pl-date" placeholder="Select date" required
-              class="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
+              class="w-full pl-3 pr-8 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
             <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none text-slate-400">
               <i class="fas fa-calendar-alt text-xs"></i>
             </div>
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Repayment Amount (KSh)</label>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Repayment Amount (KSh)</label>
           <input type="number" id="pl-amount" placeholder="0.00" required
-            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono font-medium focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
         </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Deposit Channel</label>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Deposit Channel</label>
           <div id="select-plmode-wrapper" data-shadcn-select class="relative">
             <input type="hidden" id="pl-mode" value="Equity Bank" />
             <button type="button" class="shadcn-select-trigger">
@@ -267,25 +267,25 @@
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Reference / Receipt No.</label>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Reference / Receipt No.</label>
           <input type="text" id="pl-tid" placeholder="e.g. QX938472 or Receipt #"
-            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
+            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none">
         </div>
       </div>
 
       <!-- Verification Info Box -->
-      <div class="p-2.5 bg-amber-50/70 border border-amber-200/60 rounded-lg text-[11px] text-amber-800 flex items-start gap-2">
-        <i class="fas fa-shield-alt text-amber-600 mt-0.5 text-xs"></i>
+      <div class="p-2.5 bg-amber-50/70 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-800/60 rounded-lg text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
+        <i class="fas fa-shield-alt text-amber-600 dark:text-amber-400 mt-0.5 text-xs"></i>
         <span>Submitted repayments are marked <strong>Pending</strong> until verified and confirmed by the Treasurer against official bank/statement records.</span>
       </div>
 
-      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 mt-4">
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800 mt-4">
         <button type="button" onclick="closePayLoanModal()"
-          class="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-lg border border-slate-200 transition-colors">
+          class="min-h-[38px] px-4 py-2 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
           Cancel
         </button>
         <button type="submit" id="pl-submit-btn"
-          class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg shadow-sm transition-colors">
+          class="min-h-[38px] px-5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
           Submit Loan Payment
         </button>
       </div>
