@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v97** | `@98` | `AKfycbx4........wRCA` | `13ae02d` | **Production** | 2026-11-18 | Designer & Sentinel: Task 1.C - Unified brand palette (#004D40 teal, #D97706 warm amber, emerald accents), zero-flash CSS variable dark/light mode engine, and semantic status badge mapping across all 22 client views. |
+| **v98** | `@99` | `AKfycbx4........wRCA` | `549946f` | **Production** | 2026-11-18 | Designer & Sentinel: Task 1.C Refinements - Full light mode sidebar styling, print report modal dark/light theme alignment, and dynamic reference tag template fix. |
+| **v97** | `@98` | `AKfycbx4........wRCA` | `13ae02d` | Archived | 2026-11-18 | Designer & Sentinel: Task 1.C - Unified brand palette (#004D40 teal, #D97706 warm amber, emerald accents), zero-flash CSS variable dark/light mode engine, and semantic status badge mapping across all 22 client views. |
 | **v96** | `@97` | `AKfycbx4........wRCA` | `e9460b5` | Archived | 2026-11-18 | Designer & Fixer: Task 1.A - Interactive search, multi-criteria filtering, and 10-records-per-page pagination across all ledgers (Members, Contributions, Loans, Investments, Roles). |
 | **v95** | `@96` | `AKfycbx4........wRCA` | `51f9c57` | Archived | 2026-11-18 | Designer & Sentinel: Task 1.B - Shimmer skeleton loaders, in-app confirmation modal (#blg-confirm-modal), zero browser-native alert/confirm/prompt, and inline table error recovery. |
 | **v94** | `@95` | `AKfycbx4........wRCA` | `73c2534` | Archived | 2026-11-18 | Designer & Sentinel: Tier 3 Strategic Upgrades (SWR client cache with owner isolation, liquidity & portfolio health cards, personal loan progress & consistency tracker, dynamic mobile bottom bar, and session popover). |
