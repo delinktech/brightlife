@@ -1,5 +1,5 @@
 # Brightlife SHG — System Contract & Shared State
-*Maintained and synchronized by specialist sub-agents (`@shipper`, `@ledger`, `@fixer`, `@migrator`, `@messenger`, `@designer`).*
+*Maintained and synchronized by specialist sub-agents (`@shipper`, `@ledger`, `@fixer`, `@migrator`, `@messenger`, `@designer`, `@sentinel`).*
 
 ---
 
@@ -69,3 +69,12 @@ Client-server contracts called via `google.script.run`:
   - **Statement Reconciled Closing Balance:** `KES 899,551.62` (as of 31 Jul 2026) / `KES 976,564.16` (as of 31 Oct 2026).
   - **Reconciliation Audit:** 100% matched to official CIC statement summary down to the exact cent (Total Purchases: `1,615,130.00`, Gross Interest: `228,731.35`, Withdrawals: `910,000.00`, WHT: `34,309.69`).
   - **Reconciliation Status:** `Balanced`.
+
+---
+
+## 5. Security & Compliance Gate (`@sentinel`)
+* **Pre-Deployment Gate:** Mandatory sign-off required before `@shipper` updates Production.
+* **Secret Sanitization:** All Google Sheet IDs, Script IDs, and Deployment IDs in public/git docs must be masked (`xxxxx........xxxx`). Local `.clasp.json` must remain untracked.
+* **RBAC Enforcement:** All state-modifying RPC methods must enforce `requirePermission_()` server-side.
+* **Input Sanitization:** Client-side DOM insertions must use `escapeHtml()` / `escapeHtmlAttr()`; inputs saved to sheets must be stripped of formula injection prefixes (`=`, `+`, `-`, `@`).
+* **OAuth Scope Minimization:** `src/appsscript.json` must request only explicit, least-privilege scopes.
