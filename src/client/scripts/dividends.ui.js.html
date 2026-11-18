@@ -35,6 +35,13 @@ populateDividendYearOptions();
 
 function loadDividendOverview() {
   populateDividendYearOptions();
+  const stmtTbody = document.getElementById("fund-statements-table-body");
+  if (stmtTbody) {
+    stmtTbody.innerHTML =
+      typeof renderTableSkeleton === "function"
+        ? renderTableSkeleton(9, 4)
+        : '<tr><td colspan="9" class="py-6 text-center text-slate-400">Loading fund statements...</td></tr>';
+  }
   startAppLoader();
   google.script.run
     .withSuccessHandler(function (res) {
@@ -141,7 +148,7 @@ function submitFundStatementForm(event) {
   const refVal = document.getElementById("fstmt-ref").value;
 
   if (!dateVal || !grossVal || !closingVal) {
-    alert("Please provide the statement date, gross interest, and closing balance.");
+    showNotification("Please provide the statement date, gross interest, and closing balance.", "warning", 4500);
     return;
   }
 
@@ -163,7 +170,7 @@ function submitFundStatementForm(event) {
         showNotification("Fund statement recorded successfully! Net yield: " + formatKshDiv(res.entry ? res.entry.netYield : 0), "success");
         loadDividendOverview();
       } else {
-        alert((res && res.error) || "Failed to record fund statement.");
+        showNotification((res && res.error) || "Failed to record fund statement.", "error", 6000);
       }
     })
     .withFailureHandler(function (err) {
@@ -193,7 +200,7 @@ function runDividendSimulation(event) {
   const reservePct = Number(document.getElementById("div-sim-reserve-pct").value) || 0;
 
   if (pool <= 0) {
-    alert("Please enter a valid dividend pool amount greater than zero.");
+    showNotification("Please enter a valid dividend pool amount greater than zero.", "warning", 4500);
     return;
   }
 
@@ -211,7 +218,7 @@ function runDividendSimulation(event) {
       }
 
       if (!res || !res.success) {
-        alert((res && res.error) || "Failed to calculate dividend simulation.");
+        showNotification((res && res.error) || "Failed to calculate dividend simulation.", "error", 6000);
         return;
       }
 
@@ -271,7 +278,7 @@ function renderDividendPreview(res) {
 function openConfirmDividendModal() {
   const sim = dividendsState.simulation;
   if (!sim || !sim.summary || !sim.preview || !sim.preview.length) {
-    alert("Please calculate a dividend preview first.");
+    showNotification("Please calculate a dividend preview first.", "warning", 4000);
     return;
   }
 
@@ -292,6 +299,32 @@ function openConfirmDividendModal() {
 function closeConfirmDividendModal() {
   const modal = document.getElementById("dividend-confirm-modal");
   if (modal) modal.classList.add("hidden");
+}
+
+async function submitDividendAllocation() {
+  const sim = dividendsState.simulation;
+  if (!sim || !sim.summary || !sim.preview || !sim.preview.length) {
+    showNotification("Please calculate a dividend preview first.", "warning", 4000);
+    return;
+  }
+  const s = sim.summary;
+  const year = document.getElementById("div-sim-year").value || String(new Date().getFullYear());
+  const details =
+    '<div class="flex justify-between"><span>Gross Pool:</span><strong class="font-mono">' + formatKshDiv(s.poolAmount) + '</strong></div>' +
+    '<div class="flex justify-between"><span>Loan Offset:</span><strong class="font-mono text-amber-700">' + formatKshDiv(s.totalLoanOffset) + '</strong></div>' +
+    '<div class="flex justify-between"><span>Credited to Savings:</span><strong class="font-mono text-emerald-700">' + formatKshDiv(s.totalSavingsCredited) + '</strong></div>';
+
+  const confirmed = await showConfirmDialog({
+    title: "Confirm Dividend Distribution",
+    message: "Post FY " + year + " dividend allocations across " + sim.preview.length + " qualifying members? This updates loan balances and member savings.",
+    detailsHtml: details,
+    confirmText: "Post to Member Savings",
+    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    iconType: "success"
+  });
+  if (confirmed) {
+    executeDividendPost();
+  }
 }
 
 function executeDividendPost() {
@@ -315,6 +348,11 @@ function executeDividendPost() {
       closeConfirmDividendModal();
 
       if (res && res.success) {
+        if (typeof cacheClear === "function") {
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+          cacheClear("members_list");
+        }
         showNotification(
           "Dividends successfully posted! Settled KES " +
           Math.round(res.totalOffsetAmount).toLocaleString() + " loans & credited KES " +
@@ -327,7 +365,7 @@ function executeDividendPost() {
         if (card) card.classList.add("hidden");
         loadDividendOverview();
       } else {
-        alert((res && res.error) || "Failed to execute dividend distribution.");
+        showNotification((res && res.error) || "Failed to execute dividend distribution.", "error", 6000);
       }
     })
     .withFailureHandler(function (err) {

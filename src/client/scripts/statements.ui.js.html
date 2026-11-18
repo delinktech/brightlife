@@ -19,7 +19,10 @@ function formatKshStmt(val) {
 function loadMonthlyStatementsView(monthKey) {
   const tableBody = document.getElementById("stmt-members-table-body");
   if (tableBody) {
-    tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400"><i class="fas fa-spinner fa-spin mr-2"></i> Loading members for statement dispatch...</td></tr>';
+    tableBody.innerHTML =
+      typeof renderTableSkeleton === "function"
+        ? renderTableSkeleton(7, 5)
+        : '<tr><td colspan="7" class="py-8 text-center text-slate-400">Loading members for statement dispatch...</td></tr>';
   }
 
   startAppLoader();
@@ -227,7 +230,7 @@ function previewMemberStatement(memberId) {
           if (res.whatsAppUrl) {
             window.open(res.whatsAppUrl, "_blank");
           } else {
-            alert("Member does not have a valid phone number for WhatsApp.");
+            showNotification("Member does not have a valid phone number for WhatsApp.", "warning", 5000);
           }
         };
       }
@@ -255,8 +258,15 @@ function closeStatementPreviewModal() {
   if (modal) modal.classList.add("hidden");
 }
 
-function sendSingleMemberStatement(memberId) {
-  if (!confirm("Send certified monthly statement to this member via email?")) return;
+async function sendSingleMemberStatement(memberId) {
+  const confirmed = await showConfirmDialog({
+    title: "Send Monthly Statement",
+    message: "Send certified monthly statement to member " + memberId + " via email?",
+    confirmText: "Send Email",
+    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    iconType: "info"
+  });
+  if (!confirmed) return;
   startAppLoader();
   google.script.run
     .withSuccessHandler(function (res) {
@@ -265,12 +275,12 @@ function sendSingleMemberStatement(memberId) {
         showNotification("Statement successfully emailed to " + (res.recipientEmail || memberId), "success");
       } else if (res && res.emailError) {
         if (res.emailError.indexOf("auth/script.send_mail") !== -1) {
-          alert("Authorization Required: Google requires you to approve email sending permissions for this dashboard. Please refresh your browser (Ctrl+F5) or re-open the web app link in a new tab to complete Google's 1-time authorization prompt.");
+          showNotification("Authorization Required: Google requires you to approve email sending permissions for this dashboard. Please refresh your browser or re-open the web app link to complete Google's 1-time authorization prompt.", "warning", 8000);
         } else {
-          alert("Email could not be delivered: " + res.emailError);
+          showNotification("Email could not be delivered: " + res.emailError, "error", 6000);
         }
       } else {
-        alert((res && res.error) || "Failed to send email statement.");
+        showNotification((res && res.error) || "Failed to send email statement.", "error", 6000);
       }
     })
     .withFailureHandler(function (err) {
@@ -292,7 +302,7 @@ function sendSingleMemberWhatsApp(memberId) {
       if (res && res.whatsAppUrl) {
         window.open(res.whatsAppUrl, "_blank");
       } else {
-        alert("Member does not have a valid phone number. Please update their phone in Members tab.");
+        showNotification("Member does not have a valid phone number. Please update their phone in Members tab.", "warning", 5000);
       }
     })
     .withFailureHandler(function (err) {
@@ -309,7 +319,7 @@ function sendSingleMemberWhatsApp(memberId) {
 function confirmBulkEmailStatements() {
   const cbs = Array.from(document.querySelectorAll(".stmt-member-checkbox:checked"));
   if (cbs.length === 0) {
-    alert("Please select at least one member to send statements to.");
+    showNotification("Please select at least one member to send statements to.", "warning", 4000);
     return;
   }
 
@@ -346,6 +356,29 @@ function closeBulkEmailModal() {
   if (modal) modal.classList.add("hidden");
 }
 
+async function sendBulkStatements() {
+  const cbs = Array.from(document.querySelectorAll(".stmt-member-checkbox:checked"));
+  if (cbs.length === 0) {
+    showNotification("Please select at least one member to send statements to.", "warning", 4000);
+    return;
+  }
+  const withEmail = cbs.filter(function (cb) { return cb.getAttribute("data-has-email") === "true"; }).length;
+  if (withEmail === 0) {
+    showNotification("None of the selected members have an email address on file.", "warning", 4500);
+    return;
+  }
+  const confirmed = await showConfirmDialog({
+    title: "Confirm Bulk Dispatch",
+    message: "Dispatch monthly financial statements by email to " + withEmail + " selected member(s)?",
+    confirmText: "Send Statements",
+    confirmClass: "bg-emerald-600 hover:bg-emerald-700 text-white",
+    iconType: "info"
+  });
+  if (confirmed) {
+    executeBulkEmailDispatch();
+  }
+}
+
 function executeBulkEmailDispatch() {
   const cbs = Array.from(document.querySelectorAll(".stmt-member-checkbox:checked"));
   const memberIds = cbs.map(function (cb) { return cb.value; });
@@ -374,7 +407,7 @@ function executeBulkEmailDispatch() {
             "success"
           );
         } else {
-          alert((res && res.error) || "Bulk dispatch failed.");
+          showNotification((res && res.error) || "Bulk dispatch failed.", "error", 6000);
         }
       }, 800);
     })
@@ -433,7 +466,7 @@ function handleSaveNotificationSettings(e) {
         showNotification("Notification settings saved successfully!", "success");
         loadMonthlyStatementsView(statementsState.selectedMonthKey);
       } else {
-        alert((res && res.error) || "Failed to save notification settings.");
+        showNotification((res && res.error) || "Failed to save notification settings.", "error", 6000);
       }
     })
     .withFailureHandler(function (err) {

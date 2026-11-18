@@ -205,8 +205,190 @@
       showAccessDenied(currentSessionEmail);
       return;
     }
-    alert(msg);
+    showNotification(msg, "error", 6000);
   }
+  window.handleErr = handleErr;
+
+  /* ---------------- Shimmer Skeleton Generators & Confirm Dialog ---------------- */
+  function renderCardSkeleton(count) {
+    const n = Math.max(1, Number(count) || 4);
+    let html = "";
+    for (let i = 0; i < n; i++) {
+      html +=
+        '<div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm space-y-3">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="h-3 w-24 rounded skeleton-shimmer"></div>' +
+            '<div class="h-7 w-7 rounded-lg skeleton-shimmer"></div>' +
+          '</div>' +
+          '<div class="h-7 w-32 rounded-md skeleton-shimmer"></div>' +
+          '<div class="h-3 w-40 rounded skeleton-shimmer"></div>' +
+        '</div>';
+    }
+    return html;
+  }
+  window.renderCardSkeleton = renderCardSkeleton;
+
+  function renderTableSkeleton(columns, rows) {
+    const cols = Math.max(1, Number(columns) || 6);
+    const rowCount = Math.max(1, Number(rows) || 5);
+    const widths = ["78%", "55%", "85%", "45%", "68%", "40%", "72%", "60%"];
+    let html = "";
+    for (let r = 0; r < rowCount; r++) {
+      html += "<tr>";
+      for (let c = 0; c < cols; c++) {
+        const w = widths[(r * 3 + c) % widths.length];
+        const alignClass = c === cols - 1 ? "mx-auto" : (c > 1 && c < cols - 1 ? "ml-auto" : "");
+        html +=
+          '<td class="px-4 py-3">' +
+            '<div class="h-4 rounded skeleton-shimmer ' + alignClass + '" style="width: ' + w + '"></div>' +
+          "</td>";
+      }
+      html += "</tr>";
+    }
+    return html;
+  }
+  window.renderTableSkeleton = renderTableSkeleton;
+
+  function renderChartSkeleton(type) {
+    const kind = String(type || "bar").toLowerCase();
+    if (kind === "doughnut" || kind === "pie") {
+      return (
+        '<div class="h-full w-full flex flex-col items-center justify-center gap-4 p-4">' +
+          '<div class="w-36 h-36 rounded-full border-[18px] border-slate-100 relative flex items-center justify-center">' +
+            '<div class="w-full h-full rounded-full skeleton-shimmer opacity-50"></div>' +
+          '</div>' +
+          '<div class="flex items-center gap-3">' +
+            '<div class="h-3 w-16 rounded skeleton-shimmer"></div>' +
+            '<div class="h-3 w-16 rounded skeleton-shimmer"></div>' +
+            '<div class="h-3 w-16 rounded skeleton-shimmer"></div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+    const barHeights = kind === "line" ? ["35%", "52%", "48%", "68%", "60%", "82%", "74%"] : ["45%", "72%", "58%", "84%", "64%", "50%", "76%"];
+    return (
+      '<div class="h-full w-full flex items-end justify-between gap-2.5 px-4 py-6">' +
+        barHeights.map(function (h) {
+          return '<div class="flex-1 rounded-t-md skeleton-shimmer" style="height: ' + h + '"></div>';
+        }).join("") +
+      '</div>'
+    );
+  }
+  window.renderChartSkeleton = renderChartSkeleton;
+
+  let activeConfirmResolver = null;
+  function showConfirmDialog(options) {
+    const opts = options && typeof options === "object" ? options : {};
+    const modal = document.getElementById("blg-confirm-modal");
+    if (!modal) {
+      return Promise.resolve(false);
+    }
+
+    if (activeConfirmResolver) {
+      const prevResolve = activeConfirmResolver;
+      activeConfirmResolver = null;
+      prevResolve(false);
+    }
+
+    const iconBox = document.getElementById("blg-confirm-icon");
+    const titleEl = document.getElementById("blg-confirm-title");
+    const msgEl = document.getElementById("blg-confirm-msg");
+    const detailsEl = document.getElementById("blg-confirm-details");
+    const cancelBtn = document.getElementById("blg-confirm-cancel");
+    const confirmBtn = document.getElementById("blg-confirm-btn");
+
+    const iconType = String(opts.iconType || "warning").toLowerCase();
+    const iconConfigs = {
+      danger: {
+        cls: "w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center text-base shrink-0",
+        icon: '<i class="fas fa-circle-exclamation"></i>'
+      },
+      success: {
+        cls: "w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center text-base shrink-0",
+        icon: '<i class="fas fa-circle-check"></i>'
+      },
+      info: {
+        cls: "w-10 h-10 rounded-xl bg-sky-50 text-sky-600 border border-sky-200 flex items-center justify-center text-base shrink-0",
+        icon: '<i class="fas fa-circle-info"></i>'
+      },
+      warning: {
+        cls: "w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center text-base shrink-0",
+        icon: '<i class="fas fa-triangle-exclamation"></i>'
+      }
+    };
+    const cfg = iconConfigs[iconType] || iconConfigs.warning;
+    if (iconBox) {
+      iconBox.className = cfg.cls;
+      iconBox.innerHTML = cfg.icon;
+    }
+
+    if (titleEl) titleEl.textContent = opts.title || "Confirm Action";
+    if (msgEl) msgEl.textContent = opts.message || "Are you sure you want to continue?";
+
+    if (detailsEl) {
+      if (opts.detailsHtml) {
+        detailsEl.innerHTML = opts.detailsHtml;
+        detailsEl.classList.remove("hidden");
+      } else {
+        detailsEl.innerHTML = "";
+        detailsEl.classList.add("hidden");
+      }
+    }
+
+    if (cancelBtn) cancelBtn.textContent = opts.cancelText || "Cancel";
+    if (confirmBtn) {
+      confirmBtn.textContent = opts.confirmText || "Confirm Action";
+      const baseBtnCls = "min-h-[44px] px-4 py-2 text-xs font-semibold rounded-xl shadow-sm transition-colors ";
+      const customCls = opts.confirmClass || (
+        iconType === "danger"
+          ? "bg-rose-600 hover:bg-rose-700 text-white"
+          : iconType === "success"
+          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+          : "bg-slate-900 hover:bg-slate-800 text-white"
+      );
+      confirmBtn.className = baseBtnCls + customCls;
+    }
+
+    const prevFocused = document.activeElement;
+    modal.classList.remove("hidden");
+
+    return new Promise(function (resolve) {
+      let settled = false;
+      function cleanup(result) {
+        if (settled) return;
+        settled = true;
+        if (activeConfirmResolver === cleanup) {
+          activeConfirmResolver = null;
+        }
+        modal.classList.add("hidden");
+        if (cancelBtn) cancelBtn.removeEventListener("click", onCancel);
+        if (confirmBtn) confirmBtn.removeEventListener("click", onConfirm);
+        modal.removeEventListener("click", onBackdrop);
+        document.removeEventListener("keydown", onKeydown);
+        if (prevFocused && typeof prevFocused.focus === "function") {
+          try { prevFocused.focus(); } catch (e) {}
+        }
+        resolve(result);
+      }
+
+      function onCancel() { cleanup(false); }
+      function onConfirm() { cleanup(true); }
+      function onBackdrop(e) { if (e.target === modal) cleanup(false); }
+      function onKeydown(e) { if (e.key === "Escape") cleanup(false); }
+
+      activeConfirmResolver = cleanup;
+      if (cancelBtn) cancelBtn.addEventListener("click", onCancel);
+      if (confirmBtn) confirmBtn.addEventListener("click", onConfirm);
+      modal.addEventListener("click", onBackdrop);
+      document.addEventListener("keydown", onKeydown);
+
+      setTimeout(function () {
+        const targetBtn = iconType === "danger" ? cancelBtn : confirmBtn;
+        if (targetBtn && typeof targetBtn.focus === "function") targetBtn.focus();
+      }, 10);
+    });
+  }
+  window.showConfirmDialog = showConfirmDialog;
 
   function showAccessDenied(email) {
     sessionAccessDenied = true;
@@ -530,10 +712,11 @@
     const main = document.getElementById("main-content");
     const sidebar = document.getElementById("sidebar");
     if (!main || !sidebar) return;
-    main.style.pointerEvents = show ? "none" : "auto";
-    main.style.opacity = show ? "0.6" : "1";
-    sidebar.style.pointerEvents = show ? "none" : "auto";
-    sidebar.style.opacity = show ? "0.7" : "1";
+    // Retired full-page opacity dimming and pointer locking in favor of top progress bar + skeletons
+    main.style.pointerEvents = "auto";
+    main.style.opacity = "1";
+    sidebar.style.pointerEvents = "auto";
+    sidebar.style.opacity = "1";
   }
 
   function getInitialsFromName(name, email) {

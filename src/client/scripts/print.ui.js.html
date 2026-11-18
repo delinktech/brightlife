@@ -38,7 +38,9 @@
   function openPrintMemberStatement(memberId) {
     const member = (typeof currentMembers !== "undefined" ? currentMembers : []).find((m) => m.id === memberId);
     if (!member) {
-      alert("Member details not found.");
+      if (typeof showNotification === "function") {
+        showNotification("Member details not found.", "warning");
+      }
       return;
     }
 

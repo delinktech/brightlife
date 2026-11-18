@@ -27,7 +27,9 @@
     if (!container) return;
     startAppLoader();
     container.innerHTML =
-      '<tr><td colspan="5" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+      typeof renderTableSkeleton === "function"
+        ? renderTableSkeleton(5, 5)
+        : '<tr><td colspan="5" class="px-6 py-6 text-center text-slate-400">Loading user roles...</td></tr>';
 
     google.script.run
       .withSuccessHandler((response) => {
@@ -175,7 +177,7 @@
 
   function openRoleModal(email) {
     if (!window.APP_PERMS || !window.APP_PERMS.isAdmin) {
-      alert("Only Administrators can modify user roles.");
+      showNotification("Only Administrators can modify user roles.", "warning");
       return;
     }
     const modal = document.getElementById("roleModal");

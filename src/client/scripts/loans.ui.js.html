@@ -49,8 +49,18 @@
     return '<span class="text-slate-400 text-[10px] font-mono"><i class="fas fa-shield-alt text-emerald-600 text-[9px]"></i> Verified</span>';
   }
 
-  function verifyLoanRepaymentStatus(paymentId, status) {
-    if (!confirm("Are you sure you want to mark repayment #" + paymentId + " as " + status + "?")) return;
+  async function verifyLoanRepaymentStatus(paymentId, status) {
+    const isApprove = String(status || "").toLowerCase() === "approved";
+    const confirmed = await showConfirmDialog({
+      title: "Confirm Repayment " + status,
+      message: "Are you sure you want to mark repayment #" + paymentId + " as " + status + "?",
+      confirmText: status,
+      confirmClass: isApprove
+        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+        : "bg-rose-600 hover:bg-rose-700 text-white",
+      iconType: isApprove ? "success" : "danger"
+    });
+    if (!confirmed) return;
     startAppLoader();
     google.script.run
       .withSuccessHandler(function (res) {
@@ -96,7 +106,7 @@
         if (res && res.whatsAppUrl) {
           window.open(res.whatsAppUrl, "_blank");
         } else {
-          alert("Could not generate WhatsApp receipt: " + ((res && res.error) || "Check member phone number."));
+          showNotification("Could not generate WhatsApp receipt: " + ((res && res.error) || "Check member phone number."), "warning", 5000);
         }
       })
       .withFailureHandler(function (err) {
@@ -142,7 +152,10 @@
     repPage = page || 1;
     const body = document.getElementById("loan-repayments-body");
     if (body) {
-      body.innerHTML = '<tr><td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400"><div class="w-full h-1.5 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+      body.innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(12, 5)
+          : '<tr><td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400">Loading repayments...</td></tr>';
     }
     google.script.run
       .withSuccessHandler(function (res) {
@@ -261,7 +274,9 @@
     loanPage = page || 1;
     startAppLoader();
     document.getElementById("loan-table-body").innerHTML =
-      '<tr><td colspan="10" class="px-4 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
+      typeof renderTableSkeleton === "function"
+        ? renderTableSkeleton(10, 5)
+        : '<tr><td colspan="10" class="px-4 py-6 text-center text-slate-400">Loading loans...</td></tr>';
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
@@ -293,7 +308,7 @@
   }
 
   function openRequestLoanModal() {
-    alert("Loan requests are not available in the app yet. Contact an administrator.");
+    showNotification("Loan requests are not available in the app yet. Contact an administrator.", "info", 5000);
   }
 
   function setupLoanBorrowerCombobox() {
@@ -443,7 +458,7 @@
 
   function openPayLoanModal() {
     if (!window.APP_PERMS || !window.APP_PERMS.loanPayment) {
-      alert("You do not have permission to record loan payments.");
+      showNotification("You do not have permission to record loan payments.", "warning");
       return;
     }
     const input = document.getElementById("pl-member-search");
@@ -488,7 +503,7 @@
   document.getElementById("payLoanForm").addEventListener("submit", function (e) {
     e.preventDefault();
     if (!window.APP_PERMS || !window.APP_PERMS.loanPayment) {
-      alert("You do not have permission to record loan payments.");
+      showNotification("You do not have permission to record loan payments.", "warning");
       return;
     }
     const btn = e.submitter || document.getElementById("pl-submit-btn");

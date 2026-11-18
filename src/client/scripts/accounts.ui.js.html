@@ -25,18 +25,42 @@ function maskAccountNumber(value) {
 
 function copyTextToClipboard(text, btnElement) {
   if (!text) return;
+  const markCopied = function () {
+    if (btnElement) {
+      const orig = btnElement.innerHTML;
+      btnElement.innerHTML = '<i class="fas fa-check text-emerald-600"></i> Copied';
+      setTimeout(function () {
+        btnElement.innerHTML = orig;
+      }, 1500);
+    }
+    if (typeof showNotification === "function") {
+      showNotification("Copied to clipboard: " + text, "success", 2000);
+    }
+  };
   if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(function () {
-      if (btnElement) {
-        const orig = btnElement.innerHTML;
-        btnElement.innerHTML = '<i class="fas fa-check text-emerald-600"></i> Copied';
-        setTimeout(function () {
-          btnElement.innerHTML = orig;
-        }, 1500);
+    navigator.clipboard.writeText(text).then(markCopied).catch(function () {
+      if (typeof showNotification === "function") {
+        showNotification("Copy manually: " + text, "info", 4000);
       }
     });
   } else {
-    prompt("Copy account number:", text);
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const copied = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (copied) {
+        markCopied();
+        return;
+      }
+    } catch (e) {}
+    if (typeof showNotification === "function") {
+      showNotification("Copy manually: " + text, "info", 4000);
+    }
   }
 }
 
@@ -245,13 +269,41 @@ function renderReconciliationDashboard(data) {
   }).join("");
 }
 
-function loadAccounts() {
+function renderReconciliationErrorRow(message) {
+  return (
+    '<tr><td colspan="9" class="py-8 px-4">' +
+      '<div class="max-w-md mx-auto p-5 rounded-xl bg-rose-50/70 border border-rose-200 text-center space-y-3 font-sans">' +
+        '<div class="w-10 h-10 mx-auto rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-sm">' +
+          '<i class="fas fa-triangle-exclamation"></i>' +
+        '</div>' +
+        '<div>' +
+          '<h4 class="text-xs font-bold text-rose-900">Unable to Load Reconciliation Data</h4>' +
+          '<p class="text-[11px] text-rose-700 mt-1">' + escapeAcctHtml(message || "Could not retrieve bank account reconciliation balances.") + '</p>' +
+        '</div>' +
+        '<button type="button" onclick="loadAccounts(true)" class="min-h-[40px] inline-flex items-center gap-1.5 px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">' +
+          '<i class="fas fa-arrows-rotate text-[11px]"></i> <span>Retry Reconciliation</span>' +
+        '</button>' +
+      '</div>' +
+    '</td></tr>'
+  );
+}
+
+function loadAccounts(forceRefresh) {
+  const tbody = document.getElementById("reconciliation-table-body");
+  if (tbody) {
+    tbody.innerHTML =
+      typeof renderTableSkeleton === "function"
+        ? renderTableSkeleton(9, 4)
+        : '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">Loading accounts...</td></tr>';
+  }
   startAppLoader();
   google.script.run
     .withSuccessHandler(function (response) {
       stopAppLoader();
-      if (!response) {
-        showNotification("No account data received.", "error");
+      if (!response || response.success === false) {
+        const msg = (response && response.error) || "No account data received.";
+        if (tbody) tbody.innerHTML = renderReconciliationErrorRow(msg);
+        showNotification(msg, "error");
         return;
       }
 
@@ -273,14 +325,30 @@ function loadAccounts() {
         if (tabs) tabs.classList.remove("hidden");
         switchAccountsTab(accountsState.activeTab || "reconciliation");
 
+        if (tbody) {
+          tbody.innerHTML =
+            typeof renderTableSkeleton === "function"
+              ? renderTableSkeleton(9, 4)
+              : '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">Loading reconciliation...</td></tr>';
+        }
+
         // Fetch auto-reconciliation data
         google.script.run
           .withSuccessHandler(function (recData) {
+            if (!recData || recData.success === false) {
+              const errMsg = (recData && recData.error) || "Failed to load reconciliation data.";
+              if (tbody) tbody.innerHTML = renderReconciliationErrorRow(errMsg);
+              showNotification(errMsg, "error");
+              return;
+            }
             accountsState.reconciliation = recData;
             renderReconciliationDashboard(recData);
           })
           .withFailureHandler(function (err) {
             console.error("Auto-reconciliation error:", err);
+            const errMsg = (err && err.message) || "Auto-reconciliation request failed.";
+            if (tbody) tbody.innerHTML = renderReconciliationErrorRow(errMsg);
+            handleErr(err);
           })
           .getAccountsReconciliationData();
       } else {
@@ -290,6 +358,9 @@ function loadAccounts() {
     })
     .withFailureHandler(function (err) {
       stopAppLoader();
+      if (tbody) {
+        tbody.innerHTML = renderReconciliationErrorRow((err && err.message) || "Failed to load accounts.");
+      }
       handleErr(err);
     })
     .getAccountsData();
@@ -300,12 +371,17 @@ function openReconcileModal(acc) {
   const modal = document.getElementById("reconcile-modal");
   if (!modal) return;
 
+  const balInput = document.getElementById("modal-statement-bal");
+  const dateInput = document.getElementById("modal-statement-date");
+  if (balInput) balInput.classList.remove("border-rose-500", "ring-2", "ring-rose-500/20");
+  if (dateInput) dateInput.classList.remove("border-rose-500", "ring-2", "ring-rose-500/20");
+
   document.getElementById("modal-account-name").textContent = acc.name + " (" + (acc.institution || acc.type) + ")";
   document.getElementById("modal-account-num").textContent = acc.accountNumber || "—";
   document.getElementById("modal-system-bal").textContent = formatKsh(acc.systemBalance);
-  document.getElementById("modal-statement-bal").value = acc.physicalBalance || "";
+  if (balInput) balInput.value = acc.physicalBalance || "";
   document.getElementById("modal-row-number").value = acc.rowNumber || "";
-  document.getElementById("modal-statement-date").value = acc.statementDate || new Date().toISOString().split("T")[0];
+  if (dateInput) dateInput.value = acc.statementDate || new Date().toISOString().split("T")[0];
   document.getElementById("modal-notes").value = acc.reconciledNotes || "";
 
   modal.classList.remove("hidden");
@@ -320,12 +396,19 @@ function submitReconcileForm(event) {
   if (event) event.preventDefault();
 
   const rowNumber = document.getElementById("modal-row-number").value;
-  const statementBal = document.getElementById("modal-statement-bal").value;
-  const statementDate = document.getElementById("modal-statement-date").value;
+  const balInput = document.getElementById("modal-statement-bal");
+  const dateInput = document.getElementById("modal-statement-date");
+  const statementBal = balInput ? balInput.value : "";
+  const statementDate = dateInput ? dateInput.value : "";
   const notes = document.getElementById("modal-notes").value;
 
+  if (balInput) balInput.classList.remove("border-rose-500", "ring-2", "ring-rose-500/20");
+  if (dateInput) dateInput.classList.remove("border-rose-500", "ring-2", "ring-rose-500/20");
+
   if (!statementBal || !statementDate) {
-    alert("Please provide both statement balance and statement date.");
+    if (!statementBal && balInput) balInput.classList.add("border-rose-500", "ring-2", "ring-rose-500/20");
+    if (!statementDate && dateInput) dateInput.classList.add("border-rose-500", "ring-2", "ring-rose-500/20");
+    showNotification("Please provide both statement balance and statement date.", "warning", 4500);
     return;
   }
 
@@ -345,9 +428,9 @@ function submitReconcileForm(event) {
 
       if (res && res.success) {
         showNotification("Account statement balance updated successfully!", "success");
-        loadAccounts();
+        loadAccounts(true);
       } else {
-        alert((res && res.error) || "Failed to save reconciliation.");
+        showNotification((res && res.error) || "Failed to save reconciliation.", "error", 6000);
       }
     })
     .withFailureHandler(function (err) {

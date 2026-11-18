@@ -49,8 +49,18 @@
     return '<span class="text-slate-400 text-[10px] font-mono"><i class="fas fa-shield-alt text-emerald-600 text-[9px]"></i> Verified</span>';
   }
 
-  function verifyContributionStatus(tid, rowNumber, status) {
-    if (!confirm("Are you sure you want to mark this transaction as " + status + "?")) return;
+  async function verifyContributionStatus(tid, rowNumber, status) {
+    const isApprove = String(status || "").toLowerCase() === "approved";
+    const confirmed = await showConfirmDialog({
+      title: "Confirm Transaction " + status,
+      message: "Are you sure you want to mark transaction #" + (tid || rowNumber) + " as " + status + "?",
+      confirmText: status,
+      confirmClass: isApprove
+        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+        : "bg-rose-600 hover:bg-rose-700 text-white",
+      iconType: isApprove ? "success" : "danger"
+    });
+    if (!confirmed) return;
     startAppLoader();
     google.script.run
       .withSuccessHandler(function (res) {
@@ -98,7 +108,7 @@
         if (res && res.success) {
           openReceiptWhatsAppModal(res);
         } else {
-          alert("Could not generate receipt: " + ((res && res.error) || "Check member phone number."));
+          showNotification("Could not generate receipt: " + ((res && res.error) || "Check member phone number."), "warning", 5000);
         }
       })
       .withFailureHandler(function (err) {
@@ -229,7 +239,9 @@
     document.getElementById("next-btn").disabled = true;
     startAppLoader();
     document.getElementById("contribution-table-body").innerHTML =
-      '<tr><td colspan="7" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-sky-500 animate-pulse rounded" style="width: 60%"></div></div></td></tr>';
+      typeof renderTableSkeleton === "function"
+        ? renderTableSkeleton(7, 5)
+        : '<tr><td colspan="7" class="px-6 py-6 text-center text-slate-400">Loading...</td></tr>';
 
     google.script.run
       .withSuccessHandler(function (response) {
@@ -434,7 +446,7 @@
 
   function openContributionModal() {
     if (!window.APP_PERMS || !window.APP_PERMS.contributionsWrite) {
-      alert("You do not have permission to post transactions.");
+      showNotification("You do not have permission to post transactions.", "warning");
       return;
     }
     const modal = document.getElementById("contributionModal");

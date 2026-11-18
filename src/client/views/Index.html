@@ -70,6 +70,17 @@
       }
     }
 
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton-shimmer {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
     /* Shadcn Themed Flatpickr Calendar */
     .flatpickr-calendar {
       background: #ffffff !important;
@@ -998,6 +1009,35 @@
             Close
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Confirmation Modal (replaces native confirm()) -->
+  <div id="blg-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="blg-confirm-title"
+    class="no-print fixed inset-0 z-[60] hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="max-w-md w-full p-6 bg-white rounded-2xl shadow-2xl border border-slate-100 max-h-[90vh] overflow-y-auto my-auto space-y-4">
+      <div class="flex items-start gap-3.5">
+        <div id="blg-confirm-icon" class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center text-base shrink-0">
+          <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 id="blg-confirm-title" class="text-sm sm:text-base font-bold text-slate-900 leading-snug">Confirm Action</h3>
+          <p id="blg-confirm-msg" class="text-xs text-slate-600 mt-1 leading-relaxed"></p>
+        </div>
+      </div>
+
+      <div id="blg-confirm-details" class="hidden p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 space-y-1.5"></div>
+
+      <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-slate-100">
+        <button type="button" id="blg-confirm-cancel"
+          class="min-h-[44px] px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium rounded-xl border border-slate-200 transition-colors">
+          Cancel
+        </button>
+        <button type="button" id="blg-confirm-btn"
+          class="min-h-[44px] px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl shadow-sm transition-colors">
+          Confirm Action
+        </button>
       </div>
     </div>
   </div>
