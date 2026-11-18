@@ -213,6 +213,10 @@ function getHomeAnalyticsByRange_(rangeKey) {
   let totalPaid = 0;
   let totalOutstanding = 0;
   let parAmount = 0;
+  let aging = { current: 0, par30: 0, par60: 0, par90: 0 };
+  let totalGuaranteed = 0;
+  let totalShortfall = 0;
+  let underGuaranteedCount = 0;
 
   if (loanRows.length > 1) {
     const loanHeaders = loanRows[0];
@@ -223,14 +227,25 @@ function getHomeAnalyticsByRange_(rangeKey) {
       SHEETS.LOANS
     );
 
+    const dueDateCol = loanCol["Due Date"] !== undefined ? loanCol["Due Date"] : loanCol["Maturity Date"];
+    const approvedDateCol = loanCol["Approved Date"] !== undefined ? loanCol["Approved Date"] : loanCol["Request Date"];
+    const loanTermCol = loanCol["Loan Term (Months)"] !== undefined ? loanCol["Loan Term (Months)"] : loanCol["Term"];
+    const guaranteedCol = loanCol["Total Guaranteed"];
+
     for (let k = 1; k < loanRows.length; k++) {
       const status = String(loanRows[k][loanCol["Status"]] || "").trim();
+      const statusLower = status.toLowerCase();
+      const isDelinquentStatus =
+        statusLower.indexOf("arrear") !== -1 ||
+        statusLower.indexOf("default") !== -1 ||
+        statusLower.indexOf("overdue") !== -1;
+
       const repaymentAmount = Number(loanRows[k][loanCol["Repayment Amount"]]) || 0;
       const paidAmount = Number(loanRows[k][loanCol["Total Paid"]]) || 0;
       const balanceAmount = Number(loanRows[k][loanCol["Balance"]]) || 0;
       const shortfallAmount = Number(loanRows[k][loanCol["Shortfall Amount"]]) || 0;
 
-      if (status === LOAN_STATUS.ACTIVE) activeLoanCount++;
+      if (status === LOAN_STATUS.ACTIVE || isDelinquentStatus) activeLoanCount++;
       if (status === LOAN_STATUS.PENDING) pendingLoanCount++;
       if (status === LOAN_STATUS.SETTLED) settledLoanCount++;
 
@@ -239,10 +254,67 @@ function getHomeAnalyticsByRange_(rangeKey) {
         totalPaid += paidAmount;
       }
 
-      if (status === LOAN_STATUS.ACTIVE && balanceAmount > 0) {
+      if ((status === LOAN_STATUS.ACTIVE || isDelinquentStatus) && balanceAmount > 0) {
         totalOutstanding += balanceAmount;
+
+        // Track collateral coverage & shortfall separately from repayment arrears
+        if (guaranteedCol !== undefined) totalGuaranteed += Number(loanRows[k][guaranteedCol]) || 0;
         if (shortfallAmount > 0) {
-          parAmount += shortfallAmount;
+          totalShortfall += shortfallAmount;
+          underGuaranteedCount++;
+        }
+
+        // 3-Tier Delinquency Waterfall
+        let isOverdue = false;
+        let daysPastDue = 0;
+
+        // Tier 1: Explicit Delinquency Status
+        if (isDelinquentStatus) {
+          isOverdue = true;
+          daysPastDue = statusLower.indexOf("default") !== -1 ? 91 : 31;
+        }
+
+        // Tier 2: Explicit Due Date column
+        let hasExplicitDueDate = false;
+        if (!isOverdue && dueDateCol !== undefined && loanRows[k][dueDateCol]) {
+          const dVal = loanRows[k][dueDateCol];
+          const dueDate = dVal instanceof Date ? dVal : new Date(dVal);
+          if (!isNaN(dueDate.getTime())) {
+            hasExplicitDueDate = true;
+            const diffDays = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+              isOverdue = true;
+              daysPastDue = diffDays;
+            }
+          }
+        }
+
+        // Tier 3: Inferred Due Date from Approved Date + Tenor (Default 3 months)
+        if (!isOverdue && !hasExplicitDueDate && approvedDateCol !== undefined && loanRows[k][approvedDateCol]) {
+          const aVal = loanRows[k][approvedDateCol];
+          const approvedDate = aVal instanceof Date ? aVal : new Date(aVal);
+          if (!isNaN(approvedDate.getTime())) {
+            let tenorMonths = 3;
+            if (loanTermCol !== undefined && Number(loanRows[k][loanTermCol]) > 0) {
+              tenorMonths = Number(loanRows[k][loanTermCol]);
+            }
+            const inferredDueDate = new Date(approvedDate.getFullYear(), approvedDate.getMonth() + tenorMonths, approvedDate.getDate());
+            const diffDays = Math.floor((now.getTime() - inferredDueDate.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays > 0) {
+              isOverdue = true;
+              daysPastDue = diffDays;
+            }
+          }
+        }
+
+        // Classify into PAR & SASRA aging buckets
+        if (isOverdue) {
+          parAmount += balanceAmount;
+          if (daysPastDue <= 30) aging.par30 += balanceAmount;
+          else if (daysPastDue <= 90) aging.par60 += balanceAmount;
+          else aging.par90 += balanceAmount;
+        } else {
+          aging.current += balanceAmount;
         }
       }
     }
@@ -250,6 +322,9 @@ function getHomeAnalyticsByRange_(rangeKey) {
 
   const repaymentRate = totalRepaymentDue > 0 ? (totalPaid / totalRepaymentDue) * 100 : 0;
   const parRate = totalOutstanding > 0 ? (parAmount / totalOutstanding) * 100 : 0;
+  const performingAmount = Math.max(0, totalOutstanding - parAmount);
+  const performingRate = totalOutstanding > 0 ? (performingAmount / totalOutstanding) * 100 : 0;
+  const recommendedProvision = (0.01 * aging.current) + (0.05 * aging.par30) + (0.25 * aging.par60) + (0.50 * aging.par90);
 
   const monthLabels = [];
   const monthValues = [];
@@ -334,6 +409,16 @@ function getHomeAnalyticsByRange_(rangeKey) {
       parRate: parRate,
       totalOutstanding: totalOutstanding,
       parAmount: parAmount,
+      performingAmount: performingAmount,
+      performingRate: performingRate,
+      aging: aging,
+      recommendedProvision: recommendedProvision,
+    },
+    collateralRisk: {
+      totalGuaranteed: totalGuaranteed,
+      totalShortfall: totalShortfall,
+      underGuaranteedLoansCount: underGuaranteedCount,
+      collateralCoverageRatio: totalOutstanding > 0 ? (totalGuaranteed / totalOutstanding) * 100 : 100,
     },
     monthlyContributionsTrend: {
       labels: monthLabels,
