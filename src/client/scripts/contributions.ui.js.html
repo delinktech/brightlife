@@ -59,8 +59,13 @@
           handleErr(res && res.error ? { message: res.error } : { message: "Failed to update status." });
           return;
         }
+        if (typeof cacheClear === "function") {
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+          cacheClear("members_list");
+        }
         loadContributions(currentPage);
-        if (typeof refreshDashboard === "function") refreshDashboard();
+        if (typeof refreshDashboard === "function") refreshDashboard(true);
 
         if (res.receipt) {
           if (res.receipt.emailSent) {
@@ -471,6 +476,9 @@
       });
     }
 
+    if (typeof ensureMembersLoaded === "function") {
+      ensureMembersLoaded().catch(function () {});
+    }
     setupContributionMemberCombobox();
     modal.classList.remove("hidden");
   }
@@ -508,11 +516,16 @@
             handleErr(res && res.error ? { message: res.error } : { message: "Loan payment failed." });
             return;
           }
+          if (typeof cacheClear === "function") {
+            cacheClear("home_analytics");
+            cacheClear("personal_financials");
+            cacheClear("members_list");
+          }
           closeContributionModal();
           loadContributions();
           if (typeof loadLoans === "function") loadLoans(1);
           if (typeof loadLoanRepayments === "function") loadLoanRepayments(1);
-          if (typeof refreshDashboard === "function") refreshDashboard();
+          if (typeof refreshDashboard === "function") refreshDashboard(true);
         })
         .withFailureHandler(function (err) {
           btn.disabled = false;
@@ -540,9 +553,14 @@
             handleErr(res && res.error ? { message: res.error } : { message: "Transaction failed." });
             return;
           }
+          if (typeof cacheClear === "function") {
+            cacheClear("home_analytics");
+            cacheClear("personal_financials");
+            cacheClear("members_list");
+          }
           closeContributionModal();
           loadContributions();
-          if (typeof refreshDashboard === "function") refreshDashboard();
+          if (typeof refreshDashboard === "function") refreshDashboard(true);
         })
         .withFailureHandler(function (err) {
           btn.disabled = false;

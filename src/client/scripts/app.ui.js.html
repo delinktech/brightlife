@@ -22,17 +22,178 @@
 
   let currentSessionEmail = "";
   let sessionAccessDenied = false;
+  let currentActivePageId = "session-loading";
 
-  const ADMIN_RESTRICTED_PAGES = [
+  const STAFF_ONLY_PAGES = [
     "members",
     "contributions",
-    "loans",
     "investments",
-    "accounts",
     "dividends",
     "statements",
     "roles",
   ];
+  const ADMIN_RESTRICTED_PAGES = STAFF_ONLY_PAGES;
+
+  /* ---------------- Stale-While-Revalidate (SWR) Client Cache ---------------- */
+  const BL_CACHE_PREFIX = "bl_swr_v1_";
+  const BL_CACHE_OWNER_KEY = BL_CACHE_PREFIX + "owner";
+  let lastGlobalSyncAt = 0;
+  let currentSyncStatus = "ready";
+  let membersLoadPromise = null;
+
+  function getNormalizedSessionOwner() {
+    return String(currentSessionEmail || "").trim().toLowerCase();
+  }
+
+  function cacheSet(key, data, ttlMs) {
+    const owner = getNormalizedSessionOwner();
+    if (!key || !owner || sessionAccessDenied) return;
+    const now = Date.now();
+    const ttl = Number(ttlMs) > 0 ? Number(ttlMs) : 5 * 60 * 1000;
+    try {
+      sessionStorage.setItem(BL_CACHE_OWNER_KEY, owner);
+      sessionStorage.setItem(
+        BL_CACHE_PREFIX + key,
+        JSON.stringify({ owner: owner, data: data, timestamp: now, ttlMs: ttl })
+      );
+      lastGlobalSyncAt = now;
+    } catch (e) {
+      // Ignore quota / privacy mode errors cleanly
+    }
+  }
+  window.cacheSet = cacheSet;
+
+  function cacheGetEntry(key) {
+    if (!key) return null;
+    const owner = getNormalizedSessionOwner();
+    if (!owner || sessionAccessDenied) {
+      try {
+        sessionStorage.removeItem(BL_CACHE_PREFIX + key);
+      } catch (e) {}
+      return null;
+    }
+    try {
+      const storedOwner = String(sessionStorage.getItem(BL_CACHE_OWNER_KEY) || "").trim().toLowerCase();
+      if (storedOwner && storedOwner !== owner) {
+        cacheClear();
+        return null;
+      }
+      const raw = sessionStorage.getItem(BL_CACHE_PREFIX + key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        !parsed.timestamp ||
+        String(parsed.owner || "").trim().toLowerCase() !== owner
+      ) {
+        sessionStorage.removeItem(BL_CACHE_PREFIX + key);
+        return null;
+      }
+      const age = Date.now() - Number(parsed.timestamp);
+      const ttl = Number(parsed.ttlMs) || 0;
+      if (ttl > 0 && age > ttl) {
+        sessionStorage.removeItem(BL_CACHE_PREFIX + key);
+        return null;
+      }
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function cacheGet(key) {
+    const entry = cacheGetEntry(key);
+    return entry ? entry.data : null;
+  }
+  window.cacheGet = cacheGet;
+
+  function cacheClear(keyOrPrefix) {
+    try {
+      if (!keyOrPrefix) {
+        const toDelete = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i);
+          if (k && k.indexOf(BL_CACHE_PREFIX) === 0) toDelete.push(k);
+        }
+        toDelete.forEach((k) => sessionStorage.removeItem(k));
+        return;
+      }
+      const exactKey = BL_CACHE_PREFIX + keyOrPrefix;
+      sessionStorage.removeItem(exactKey);
+      const prefixMatch = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (k && k.indexOf(exactKey) === 0) prefixMatch.push(k);
+      }
+      prefixMatch.forEach((k) => sessionStorage.removeItem(k));
+    } catch (e) {}
+  }
+  window.cacheClear = cacheClear;
+
+  function cacheCount() {
+    let count = 0;
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const k = sessionStorage.key(i);
+        if (k && k.indexOf(BL_CACHE_PREFIX) === 0 && k !== BL_CACHE_OWNER_KEY) count++;
+      }
+    } catch (e) {}
+    return count;
+  }
+
+  function formatRelativeSyncTime(ts) {
+    if (!ts) return "Not synced yet";
+    const diffSec = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+    if (diffSec < 15) return "Synced just now";
+    if (diffSec < 60) return "Synced " + diffSec + "s ago";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return "Synced " + diffMin + "m ago";
+    const diffHr = Math.floor(diffMin / 60);
+    return "Synced " + diffHr + "h ago";
+  }
+
+  function setHeaderSyncState(state, customLabel) {
+    currentSyncStatus = state || "synced";
+    if (state === "synced") {
+      lastGlobalSyncAt = Date.now();
+    }
+    const dot = document.getElementById("header-sync-dot");
+    const spinner = document.getElementById("header-sync-spinner");
+    const text = document.getElementById("header-sync-text");
+    const refreshIcon = document.getElementById("header-refresh-icon");
+
+    if (state === "revalidating") {
+      if (dot) dot.classList.add("hidden");
+      if (spinner) spinner.classList.remove("hidden");
+      if (refreshIcon) refreshIcon.classList.add("fa-spin");
+      if (text) text.textContent = customLabel || "Syncing...";
+    } else if (state === "cached") {
+      if (dot) {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0";
+        dot.classList.remove("hidden");
+      }
+      if (spinner) spinner.classList.add("hidden");
+      if (refreshIcon) refreshIcon.classList.remove("fa-spin");
+      if (text) text.textContent = customLabel || formatRelativeSyncTime(lastGlobalSyncAt);
+    } else {
+      if (dot) {
+        dot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0";
+        dot.classList.remove("hidden");
+      }
+      if (spinner) spinner.classList.add("hidden");
+      if (refreshIcon) refreshIcon.classList.remove("fa-spin");
+      if (text) text.textContent = customLabel || formatRelativeSyncTime(lastGlobalSyncAt);
+    }
+  }
+  window.setHeaderSyncState = setHeaderSyncState;
+
+  setInterval(function () {
+    if (currentSyncStatus === "synced" && lastGlobalSyncAt > 0) {
+      const text = document.getElementById("header-sync-text");
+      if (text) text.textContent = formatRelativeSyncTime(lastGlobalSyncAt);
+    }
+  }, 30000);
 
   function handleErr(err) {
     console.error(err);
@@ -51,6 +212,11 @@
     sessionAccessDenied = true;
     window.currentUser = null;
     window.session = null;
+    window.latestPersonalFinancials = null;
+    if (typeof currentMembers !== "undefined") {
+      currentMembers = [];
+    }
+    cacheClear();
     applyRolePermissions({ isMemberOnly: true });
 
     const sidebarEmailEl = document.getElementById("sidebar-email") || document.getElementById("session-email");
@@ -206,16 +372,30 @@
     const effectivePerms = perms && typeof perms === "object" ? perms : { isMemberOnly: true };
     window.APP_PERMS = effectivePerms;
 
+    const isAuthenticated = Boolean(window.currentUser && window.currentUser.hasAccess !== false && !sessionAccessDenied);
     // Check if user is member-only (fail-closed if isMemberOnly is not explicitly false)
     const isMemberOnly = effectivePerms.isMemberOnly !== false;
+
     const adminSection = document.getElementById("sidebar-admin-section");
     if (adminSection) {
-      adminSection.classList.toggle("hidden", isMemberOnly);
+      adminSection.classList.toggle("hidden", !isAuthenticated || isMemberOnly);
     }
+
+    const memberLinks = document.getElementById("sidebar-member-links");
+    if (memberLinks) {
+      memberLinks.classList.toggle("hidden", !isAuthenticated || !isMemberOnly);
+    }
+
+    document.querySelectorAll("[data-require-staff]").forEach(function (el) {
+      const allowed = isAuthenticated && !isMemberOnly;
+      el.classList.toggle("hidden", !allowed);
+      if (allowed) el.removeAttribute("aria-hidden");
+      else el.setAttribute("aria-hidden", "true");
+    });
 
     document.querySelectorAll("[data-require-perm]").forEach(function (el) {
       var key = el.getAttribute("data-require-perm");
-      var allowed = effectivePerms[key] === true;
+      var allowed = isAuthenticated && effectivePerms[key] === true;
       if (allowed) {
         el.classList.remove("hidden");
         el.removeAttribute("aria-hidden");
@@ -223,6 +403,20 @@
         el.classList.add("hidden");
         el.setAttribute("aria-hidden", "true");
       }
+    });
+
+    // Dynamic role-aware #mobile-bottom-bar (5 slots per persona)
+    document.querySelectorAll("#mobile-bottom-bar [data-mobile-role]").forEach(function (tab) {
+      const roleReq = tab.getAttribute("data-mobile-role");
+      let showTab = false;
+      if (isAuthenticated) {
+        if (roleReq === "authenticated") showTab = true;
+        else if (roleReq === "staff") showTab = !isMemberOnly;
+        else if (roleReq === "member") showTab = isMemberOnly;
+      }
+      tab.classList.toggle("hidden", !showTab);
+      if (showTab) tab.removeAttribute("aria-hidden");
+      else tab.setAttribute("aria-hidden", "true");
     });
   }
 
@@ -305,6 +499,10 @@
     appLoaderActiveRequests = Math.max(0, appLoaderActiveRequests - 1);
     if (appLoaderActiveRequests > 0) return;
 
+    if (currentSyncStatus === "revalidating") {
+      setHeaderSyncState("synced");
+    }
+
     const loader = document.getElementById("app-loader");
     const bar = document.getElementById("app-loader-bar");
     if (!loader || !bar) return;
@@ -383,9 +581,15 @@
     };
 
     const failClosedSessionFallback = (fallbackLabel, reasonMessage) => {
-      applyRolePermissions({ isMemberOnly: true });
+      currentSessionEmail = "";
       window.currentUser = null;
       window.session = null;
+      window.latestPersonalFinancials = null;
+      if (typeof currentMembers !== "undefined") {
+        currentMembers = [];
+      }
+      cacheClear();
+      applyRolePermissions({ isMemberOnly: true });
       applySessionFallback(sNameEl, sEmailEl, fallbackLabel);
       if (!callbackSettled) {
         showSessionErrorNotification(reasonMessage);
@@ -442,7 +646,27 @@
           finishLoader();
 
           if (info && info.success) {
-            currentSessionEmail = info.email || "";
+            const nextEmail = String(info.email || "").trim();
+            const nextOwner = nextEmail.toLowerCase();
+            const prevOwner = getNormalizedSessionOwner();
+            let storedOwner = "";
+            try {
+              storedOwner = String(sessionStorage.getItem(BL_CACHE_OWNER_KEY) || "").trim().toLowerCase();
+            } catch (e) {}
+
+            if ((prevOwner && prevOwner !== nextOwner) || (storedOwner && storedOwner !== nextOwner) || !nextOwner) {
+              cacheClear();
+              if (typeof currentMembers !== "undefined") {
+                currentMembers = [];
+              }
+              window.latestPersonalFinancials = null;
+            }
+            currentSessionEmail = nextEmail;
+            if (nextOwner && info.hasAccess !== false) {
+              try {
+                sessionStorage.setItem(BL_CACHE_OWNER_KEY, nextOwner);
+              } catch (e) {}
+            }
             const name = info.displayName || "User";
             const email = info.email || "";
 
@@ -451,22 +675,45 @@
             if (verEl) verEl.textContent = "v" + String(info.version || "0.0.0");
             if (sInitials) sInitials.textContent = getInitialsFromName(name, email);
 
-            if (sPhoto) {
+            // Sync Header User Trigger
+            const hInitials = document.getElementById("header-user-initials");
+            const hPhoto = document.getElementById("header-user-photo");
+            const hRolePill = document.getElementById("header-role-pill");
+            if (hInitials) hInitials.textContent = getInitialsFromName(name, email);
+            if (hRolePill) hRolePill.textContent = info.roleLabel || name;
+
+            if (sPhoto || hPhoto) {
               const url = info.photoUrl && String(info.photoUrl).trim();
               if (url) {
-                sPhoto.onload = function() {
-                  sPhoto.classList.remove("hidden");
-                  if (sInitials) sInitials.classList.add("hidden");
-                };
-                sPhoto.onerror = function() {
-                  sPhoto.classList.add("hidden");
-                  if (sInitials) sInitials.classList.remove("hidden");
-                  sPhoto.removeAttribute("src");
-                };
-                sPhoto.src = url;
+                if (sPhoto) {
+                  sPhoto.onload = function() {
+                    sPhoto.classList.remove("hidden");
+                    if (sInitials) sInitials.classList.add("hidden");
+                  };
+                  sPhoto.onerror = function() {
+                    sPhoto.classList.add("hidden");
+                    if (sInitials) sInitials.classList.remove("hidden");
+                    sPhoto.removeAttribute("src");
+                  };
+                  sPhoto.src = url;
+                }
+                if (hPhoto) {
+                  hPhoto.onload = function() {
+                    hPhoto.classList.remove("hidden");
+                    if (hInitials) hInitials.classList.add("hidden");
+                  };
+                  hPhoto.onerror = function() {
+                    hPhoto.classList.add("hidden");
+                    if (hInitials) hInitials.classList.remove("hidden");
+                    hPhoto.removeAttribute("src");
+                  };
+                  hPhoto.src = url;
+                }
               } else {
-                sPhoto.classList.add("hidden");
+                if (sPhoto) sPhoto.classList.add("hidden");
                 if (sInitials) sInitials.classList.remove("hidden");
+                if (hPhoto) hPhoto.classList.add("hidden");
+                if (hInitials) hInitials.classList.remove("hidden");
               }
             }
 
@@ -484,6 +731,7 @@
 
             if (info.hasAccess === false) {
               callbackSettled = true;
+              cacheClear();
               dismissSessionErrorNotification();
               showAccessDenied(info.email);
               return;
@@ -587,14 +835,20 @@
 
   function showPage(pageId) {
     let targetPageId = pageId;
+    const isAuthenticated = Boolean(window.currentUser && window.currentUser.hasAccess !== false && !sessionAccessDenied);
+
     if (sessionAccessDenied && targetPageId !== "access-denied") {
       targetPageId = "access-denied";
+    } else if (!isAuthenticated && targetPageId !== "session-loading" && targetPageId !== "access-denied") {
+      targetPageId = "my-financials";
     } else if (
       (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) &&
-      ADMIN_RESTRICTED_PAGES.indexOf(targetPageId) !== -1
+      STAFF_ONLY_PAGES.indexOf(targetPageId) !== -1
     ) {
       targetPageId = "my-financials";
     }
+
+    currentActivePageId = targetPageId;
 
     document.querySelectorAll(".page-wrapper").forEach((container) => {
       container.classList.remove("active");
@@ -612,11 +866,10 @@
       link.classList.remove("active");
       link.removeAttribute("aria-current");
     });
-    const activeLink = document.querySelector('.nav-item[data-page="' + targetPageId + '"]');
-    if (activeLink) {
+    document.querySelectorAll('.nav-item[data-page="' + targetPageId + '"]').forEach((activeLink) => {
       activeLink.classList.add("active");
       activeLink.setAttribute("aria-current", "page");
-    }
+    });
 
     // Synchronize Mobile Bottom Navigation
     document.querySelectorAll(".mobile-tab").forEach((tab) => {
@@ -631,93 +884,297 @@
     if (targetPageId === "my-financials") loadPersonalFinancials();
     if (targetPageId === "members") loadMembers();
     if (targetPageId === "contributions") {
-      if (typeof currentMembers === "undefined" || currentMembers.length === 0) {
-        loadMembers();
-      }
+      ensureMembersLoaded().catch(function () {});
       loadContributions();
     }
-    if (targetPageId === "loans") loadLoans();
+    if (targetPageId === "loans") {
+      ensureMembersLoaded().catch(function () {});
+      loadLoans();
+    }
     if (targetPageId === "investments") loadInvestments();
     if (targetPageId === "accounts") loadAccounts();
     if (targetPageId === "dividends") loadDividendOverview();
     if (targetPageId === "statements") loadMonthlyStatementsView();
-    if (targetPageId === "roles") loadUserRoles();
+    if (targetPageId === "roles") {
+      ensureMembersLoaded().catch(function () {});
+      loadUserRoles();
+    }
   }
 
-  function refreshDashboard() {
-    toggleLoading(true);
-    startAppLoader();
+  function applyDashboardData(data) {
+    if (!data) return;
+    updateRangeButtons(data.range || currentHomeRange);
+    const savingsEl = document.getElementById("home-savings");
+    if (savingsEl) savingsEl.innerText = formatMoney(data.savings);
+    const loansEl = document.getElementById("home-loans");
+    if (loansEl) loansEl.innerText = formatMoney(data.loans);
+    const outstandingEl = document.getElementById("home-outstanding");
+    if (outstandingEl) {
+      const outstandingVal =
+        data.portfolio && data.portfolio.totalOutstanding !== undefined
+          ? data.portfolio.totalOutstanding
+          : (data.loansOutstanding || 0);
+      outstandingEl.innerText = formatMoney(outstandingVal);
+    }
+    const ytdEl = document.getElementById("home-ytd-contrib");
+    if (ytdEl) {
+      ytdEl.innerText = formatMoney(
+        data.yearToDateContributions !== undefined && data.yearToDateContributions !== null
+          ? data.yearToDateContributions
+          : data.yearlyContributions
+      );
+    }
+    const memberCountEl = document.getElementById("home-membercount");
+    if (memberCountEl) memberCountEl.innerText = (data.memberCount || 0).toLocaleString();
+    const cashEl = document.getElementById("home-cash");
+    if (cashEl) cashEl.innerText = formatMoney(data.cash);
+    const monthlyContribEl = document.getElementById("home-monthly-contrib");
+    if (monthlyContribEl) {
+      monthlyContribEl.innerText = formatMoneyCompactK(data.currentMonthContributions);
+    }
+    const prevMonthEl = document.getElementById("home-previous-month-contrib");
+    if (prevMonthEl) {
+      prevMonthEl.innerText = formatMoneyCompactK(data.previousMonthContributions);
+    }
+    const cmp = data.contributionMonthCompare || {};
+    const thisCmp = cmp.thisMonth || {};
+    const lastCmp = cmp.lastMonth || {};
+    renderContributionMomIndicator(
+      document.getElementById("home-monthly-contrib-mom"),
+      thisCmp.percent,
+      thisCmp.delta
+    );
+    renderContributionMomIndicator(
+      document.getElementById("home-previous-month-contrib-mom"),
+      lastCmp.percent,
+      lastCmp.delta
+    );
+    const invCountEl = document.getElementById("home-investment-count");
+    if (invCountEl) invCountEl.innerText = (data.investmentCount || 0).toLocaleString();
+    const growthMomEl = document.getElementById("home-growth-mom");
+    if (growthMomEl) growthMomEl.innerText = formatPercent(data.growth && data.growth.monthOverMonth);
+    const growthYoyEl = document.getElementById("home-growth-yoy-month");
+    if (growthYoyEl) growthYoyEl.innerText = formatPercent(data.growth && data.growth.yearOverYearMonth);
+    const repaymentRateEl = document.getElementById("home-repayment-rate");
+    if (repaymentRateEl) repaymentRateEl.innerText = formatPercent(data.portfolio && data.portfolio.repaymentRate);
+    const parRateEl = document.getElementById("home-par-rate");
+    if (parRateEl) parRateEl.innerText = formatPercent(data.portfolio && data.portfolio.parRate);
+    const rangeLabelEl = document.getElementById("home-range-label");
+    if (rangeLabelEl) rangeLabelEl.innerText = rangeLabel(data.range || currentHomeRange);
+    renderMainCharts(data);
+  }
+
+  function refreshDashboard(forceRefresh) {
+    const cacheKey = "home_analytics_" + currentHomeRange;
+    const cached = !forceRefresh ? cacheGet(cacheKey) : null;
+    const hasCached = Boolean(cached);
+    const isHomeActive = currentActivePageId === "home";
+
+    if (hasCached) {
+      applyDashboardData(cached);
+      setHeaderSyncState("revalidating", "Syncing...");
+    } else {
+      if (isHomeActive) toggleLoading(true);
+      startAppLoader();
+      setHeaderSyncState("revalidating", "Loading...");
+    }
+
     google.script.run
       .withSuccessHandler((data) => {
-        updateRangeButtons(data.range || currentHomeRange);
-        const savingsEl = document.getElementById("home-savings");
-        if (savingsEl) savingsEl.innerText = formatMoney(data.savings);
-        const loansEl = document.getElementById("home-loans");
-        if (loansEl) loansEl.innerText = formatMoney(data.loans);
-        const outstandingEl = document.getElementById("home-outstanding");
-        if (outstandingEl) {
-          const outstandingVal =
-            data.portfolio && data.portfolio.totalOutstanding !== undefined
-              ? data.portfolio.totalOutstanding
-              : (data.loansOutstanding || 0);
-          outstandingEl.innerText = formatMoney(outstandingVal);
+        if (data) {
+          cacheSet(cacheKey, data, 5 * 60 * 1000);
+          applyDashboardData(data);
         }
-        const ytdEl = document.getElementById("home-ytd-contrib");
-        if (ytdEl) {
-          ytdEl.innerText = formatMoney(
-            data.yearToDateContributions !== undefined && data.yearToDateContributions !== null
-              ? data.yearToDateContributions
-              : data.yearlyContributions
-          );
+        setHeaderSyncState("synced");
+        if (!hasCached) {
+          toggleLoading(false);
+          stopAppLoader();
         }
-        const memberCountEl = document.getElementById("home-membercount");
-        if (memberCountEl) memberCountEl.innerText = (data.memberCount || 0).toLocaleString();
-        const cashEl = document.getElementById("home-cash");
-        if (cashEl) cashEl.innerText = formatMoney(data.cash);
-        const monthlyContribEl = document.getElementById("home-monthly-contrib");
-        if (monthlyContribEl) {
-          monthlyContribEl.innerText = formatMoneyCompactK(data.currentMonthContributions);
-        }
-        const prevMonthEl = document.getElementById("home-previous-month-contrib");
-        if (prevMonthEl) {
-          prevMonthEl.innerText = formatMoneyCompactK(data.previousMonthContributions);
-        }
-        const cmp = data.contributionMonthCompare || {};
-        const thisCmp = cmp.thisMonth || {};
-        const lastCmp = cmp.lastMonth || {};
-        renderContributionMomIndicator(
-          document.getElementById("home-monthly-contrib-mom"),
-          thisCmp.percent,
-          thisCmp.delta
-        );
-        renderContributionMomIndicator(
-          document.getElementById("home-previous-month-contrib-mom"),
-          lastCmp.percent,
-          lastCmp.delta
-        );
-        const invCountEl = document.getElementById("home-investment-count");
-        if (invCountEl) invCountEl.innerText = (data.investmentCount || 0).toLocaleString();
-        const growthMomEl = document.getElementById("home-growth-mom");
-        if (growthMomEl) growthMomEl.innerText = formatPercent(data.growth && data.growth.monthOverMonth);
-        const growthYoyEl = document.getElementById("home-growth-yoy-month");
-        if (growthYoyEl) growthYoyEl.innerText = formatPercent(data.growth && data.growth.yearOverYearMonth);
-        const repaymentRateEl = document.getElementById("home-repayment-rate");
-        if (repaymentRateEl) repaymentRateEl.innerText = formatPercent(data.portfolio && data.portfolio.repaymentRate);
-        const parRateEl = document.getElementById("home-par-rate");
-        if (parRateEl) parRateEl.innerText = formatPercent(data.portfolio && data.portfolio.parRate);
-        const rangeLabelEl = document.getElementById("home-range-label");
-        if (rangeLabelEl) rangeLabelEl.innerText = rangeLabel(data.range || currentHomeRange);
-        renderMainCharts(data);
-        toggleLoading(false);
-        stopAppLoader();
       })
       .withFailureHandler((err) => {
-        toggleLoading(false);
-        stopAppLoader();
-        handleErr(err);
+        if (!hasCached) {
+          toggleLoading(false);
+          stopAppLoader();
+          setHeaderSyncState("cached", "Sync error");
+          handleErr(err);
+        } else {
+          setHeaderSyncState("cached", "Offline cache");
+          showNotification("Background sync failed — displaying cached overview.", "warning", 3000);
+        }
       })
       .getHomeAnalytics(currentHomeRange);
   }
+
+  /**
+   * Shared Members Registry loader with 10-min SWR cache and request deduplication.
+   */
+  function ensureMembersLoaded(forceRefresh) {
+    if (!forceRefresh && typeof currentMembers !== "undefined" && Array.isArray(currentMembers) && currentMembers.length > 0) {
+      return Promise.resolve(currentMembers);
+    }
+
+    if (!forceRefresh) {
+      const cached = cacheGet("members_list");
+      if (Array.isArray(cached) && cached.length > 0) {
+        if (typeof currentMembers !== "undefined") {
+          currentMembers = cached;
+        }
+        return Promise.resolve(cached);
+      }
+    }
+
+    if (membersLoadPromise && !forceRefresh) {
+      return membersLoadPromise;
+    }
+
+    membersLoadPromise = new Promise(function (resolve, reject) {
+      google.script.run
+        .withSuccessHandler(function (response) {
+          membersLoadPromise = null;
+          if (!response || !response.success) {
+            reject(new Error((response && response.error) || "Failed to load members."));
+            return;
+          }
+          const list = response.members || [];
+          if (typeof currentMembers !== "undefined") {
+            currentMembers = list;
+          }
+          cacheSet("members_list", list, 10 * 60 * 1000);
+          resolve(list);
+        })
+        .withFailureHandler(function (err) {
+          membersLoadPromise = null;
+          reject(err);
+        })
+        .getMembersData();
+    });
+
+    return membersLoadPromise;
+  }
+  window.ensureMembersLoaded = ensureMembersLoaded;
+
+  function openSessionPopover() {
+    const modal = document.getElementById("session-account-modal");
+    if (!modal) return;
+
+    const u = window.currentUser || {};
+    const name = u.displayName || (document.getElementById("sidebar-display-name") ? document.getElementById("sidebar-display-name").textContent : "User");
+    const email = u.email || currentSessionEmail || "—";
+    const memberId = u.memberId || "Unlinked";
+    const roleLabel = u.roleLabel || "Member";
+    const version = u.version ? ("v" + String(u.version)) : (document.getElementById("sidebar-version") ? document.getElementById("sidebar-version").textContent : "v—");
+
+    const nameEl = document.getElementById("session-modal-name");
+    const emailEl = document.getElementById("session-modal-email");
+    const midEl = document.getElementById("session-modal-member-id");
+    const roleEl = document.getElementById("session-modal-role");
+    const periodEl = document.getElementById("session-modal-period");
+    const verEl = document.getElementById("session-modal-version");
+    const syncEl = document.getElementById("session-modal-sync-time");
+    const countEl = document.getElementById("session-modal-cache-count");
+    const mInit = document.getElementById("session-modal-initials");
+    const mPhoto = document.getElementById("session-modal-photo");
+
+    if (nameEl) nameEl.textContent = name;
+    if (emailEl) emailEl.textContent = email;
+    if (midEl) midEl.textContent = memberId;
+    if (roleEl) roleEl.textContent = roleLabel;
+    if (periodEl) periodEl.textContent = "FY " + new Date().getFullYear() + " • " + rangeLabel(currentHomeRange);
+    if (verEl) verEl.textContent = version;
+    if (syncEl) syncEl.textContent = formatRelativeSyncTime(lastGlobalSyncAt);
+    if (countEl) {
+      const cnt = cacheCount();
+      countEl.textContent = cnt + (cnt === 1 ? " cached item" : " cached items");
+    }
+    if (mInit) mInit.textContent = getInitialsFromName(name, email);
+
+    if (mPhoto) {
+      const url = u.photoUrl && String(u.photoUrl).trim();
+      if (url) {
+        mPhoto.onload = function () {
+          mPhoto.classList.remove("hidden");
+          if (mInit) mInit.classList.add("hidden");
+        };
+        mPhoto.onerror = function () {
+          mPhoto.classList.add("hidden");
+          if (mInit) mInit.classList.remove("hidden");
+        };
+        mPhoto.src = url;
+      } else {
+        mPhoto.classList.add("hidden");
+        if (mInit) mInit.classList.remove("hidden");
+      }
+    }
+
+    modal.classList.remove("hidden");
+    const sbBlock = document.getElementById("sidebar-user-block");
+    const hdrBtn = document.getElementById("header-user-btn");
+    if (sbBlock) sbBlock.setAttribute("aria-expanded", "true");
+    if (hdrBtn) hdrBtn.setAttribute("aria-expanded", "true");
+
+    if (!window._sessionModalEscBound) {
+      window._sessionModalEscBound = true;
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") {
+          const m = document.getElementById("session-account-modal");
+          if (m && !m.classList.contains("hidden")) {
+            closeSessionPopover();
+          }
+        }
+      });
+    }
+  }
+  window.openSessionPopover = openSessionPopover;
+
+  function closeSessionPopover() {
+    const modal = document.getElementById("session-account-modal");
+    if (modal) modal.classList.add("hidden");
+    const sbBlock = document.getElementById("sidebar-user-block");
+    const hdrBtn = document.getElementById("header-user-btn");
+    if (sbBlock) sbBlock.setAttribute("aria-expanded", "false");
+    if (hdrBtn) hdrBtn.setAttribute("aria-expanded", "false");
+  }
+  window.closeSessionPopover = closeSessionPopover;
+
+  function forceRefreshCurrentView() {
+    cacheClear();
+    if (typeof currentMembers !== "undefined") {
+      currentMembers = [];
+    }
+    window.latestPersonalFinancials = null;
+    setHeaderSyncState("revalidating", "Refreshing...");
+
+    const activeWrapper = document.querySelector(".page-wrapper.active");
+    const activeId = activeWrapper ? activeWrapper.id.replace(/-container$/, "") : currentActivePageId;
+
+    refreshSessionInfo(function () {
+      if (activeId === "home") refreshDashboard(true);
+      else if (activeId === "my-financials") loadPersonalFinancials(true);
+      else if (activeId === "members") loadMembers(true);
+      else if (activeId === "contributions") {
+        ensureMembersLoaded(true).catch(function () {});
+        loadContributions(typeof currentPage !== "undefined" ? currentPage : 1);
+      } else if (activeId === "loans") {
+        ensureMembersLoaded(true).catch(function () {});
+        loadLoans(typeof loanPage !== "undefined" ? loanPage : 1);
+      } else if (activeId === "investments") loadInvestments(typeof invPage !== "undefined" ? invPage : 1);
+      else if (activeId === "accounts") loadAccounts();
+      else if (activeId === "dividends") loadDividendOverview();
+      else if (activeId === "statements") loadMonthlyStatementsView();
+      else if (activeId === "roles") {
+        ensureMembersLoaded(true).catch(function () {});
+        loadUserRoles();
+      }
+    });
+  }
+  window.forceRefreshCurrentView = forceRefreshCurrentView;
+
+  function clearCacheAndRefresh() {
+    closeSessionPopover();
+    forceRefreshCurrentView();
+    showNotification("Cache cleared — syncing fresh data from Google Sheets.", "info", 2800);
+  }
+  window.clearCacheAndRefresh = clearCacheAndRefresh;
 
   /**
    * Initializes custom Shadcn-style dropdowns replacing native OS <select> popups.

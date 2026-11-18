@@ -59,9 +59,14 @@
           handleErr(res && res.error ? { message: res.error } : { message: "Failed to update repayment status." });
           return;
         }
+        if (typeof cacheClear === "function") {
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+          cacheClear("members_list");
+        }
         loadLoans(loanPage);
         loadLoanRepayments(repPage);
-        if (typeof refreshDashboard === "function") refreshDashboard();
+        if (typeof refreshDashboard === "function") refreshDashboard(true);
 
         if (res.receipt) {
           if (res.receipt.emailSent) {
@@ -469,6 +474,9 @@
     if (plTidInput) plTidInput.value = "";
     setShadcnSelectValue("select-plmode-wrapper", "Equity Bank");
 
+    if (typeof ensureMembersLoaded === "function") {
+      ensureMembersLoaded().catch(function () {});
+    }
     setupLoanBorrowerCombobox();
     document.getElementById("payLoanModal").classList.remove("hidden");
   }
@@ -498,11 +506,16 @@
           handleErr(res && res.error ? { message: res.error } : { message: "Payment failed." });
           return;
         }
+        if (typeof cacheClear === "function") {
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+          cacheClear("members_list");
+        }
         closePayLoanModal();
         document.getElementById("payLoanForm").reset();
         loadLoans(loanPage);
         loadLoanRepayments(1);
-        if (typeof refreshDashboard === "function") refreshDashboard();
+        if (typeof refreshDashboard === "function") refreshDashboard(true);
       })
       .withFailureHandler(function (err) {
         if (btn) {

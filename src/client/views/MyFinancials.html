@@ -24,7 +24,7 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <button type="button" onclick="loadPersonalFinancials()"
+        <button type="button" onclick="loadPersonalFinancials(true)"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition-colors">
           <i class="fas fa-arrows-rotate text-[11px]"></i> <span>Refresh</span>
         </button>
@@ -103,6 +103,87 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Personal Credit & Repayment Health -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+
+    <!-- Borrowing Capacity (3x Personal Savings - Active Loans) -->
+    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-3">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Available Borrowing Capacity</span>
+          <div class="flex items-baseline gap-2 mt-1 flex-wrap">
+            <h3 id="pf-borrowing-capacity" class="text-xl sm:text-2xl font-bold text-slate-900 font-mono tabular-nums">KES 0</h3>
+            <span id="pf-borrowing-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+              3× Savings Rule
+            </span>
+          </div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs shrink-0">
+          <i class="fas fa-gauge-high"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+          <div id="pf-borrowing-bar" class="h-full bg-sky-600 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
+          <span>3× Savings Limit: <strong id="pf-borrowing-limit" class="font-mono tabular-nums text-slate-800">KES 0</strong></span>
+          <span>Used (Active Loans): <strong id="pf-borrowing-used" class="font-mono tabular-nums text-amber-700">KES 0</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loan Repayment Progress -->
+    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-3">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Loan Repayment Progress</span>
+          <div class="flex items-baseline gap-2 mt-1 flex-wrap">
+            <h3 id="pf-loan-progress-pct" class="text-xl sm:text-2xl font-bold text-emerald-600 font-mono tabular-nums">0%</h3>
+            <span id="pf-loan-progress-label" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+              No active loans
+            </span>
+          </div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs shrink-0">
+          <i class="fas fa-circle-check"></i>
+        </div>
+      </div>
+
+      <div>
+        <div class="w-full h-2.5 bg-amber-100 rounded-full overflow-hidden">
+          <div id="pf-loan-progress-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+        <div class="mt-2 flex items-center justify-between text-[11px] text-slate-500 flex-wrap gap-2">
+          <span>Repaid: <strong id="pf-loan-repaid-total" class="font-mono tabular-nums text-emerald-700">KES 0</strong></span>
+          <span>Remaining Balance: <strong id="pf-loan-remaining-total" class="font-mono tabular-nums text-amber-700">KES 0</strong></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Personal Contribution Consistency Tracker -->
+  <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200/80 shadow-sm space-y-3">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <i class="fas fa-calendar-check text-emerald-600 text-xs"></i>
+          <span>Contribution Consistency Tracker</span>
+        </h3>
+        <p class="text-[11px] text-slate-500 mt-0.5" id="pf-consistency-subtitle">Monthly deposit consistency for the current financial year</p>
+      </div>
+      <span id="pf-consistency-summary" class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-mono tabular-nums w-fit">
+        0 / 12 months
+      </span>
+    </div>
+
+    <div id="pf-consistency-grid" class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2 pt-1">
+      <!-- Populated via JavaScript -->
+    </div>
   </div>
 
   <!-- Group Macro Health (Safe for all members to see together) -->

@@ -209,31 +209,63 @@
     }
   }
 
-  function loadMembers() {
+  function loadMembers(forceRefresh) {
     const container = document.getElementById("member-table-body");
-    startAppLoader();
-    container.innerHTML =
-      '<tr><td colspan="11" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-blue-600 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+    const cached = (!forceRefresh && typeof cacheGet === "function") ? cacheGet("members_list") : null;
+    const hasCached = Array.isArray(cached) && cached.length > 0;
+
+    if (hasCached) {
+      currentMembers = cached;
+      updateLoanStatusFilterOptions(currentMembers);
+      filterMembersTable();
+      if (typeof setHeaderSyncState === "function") {
+        setHeaderSyncState("revalidating", "Syncing...");
+      }
+    } else {
+      startAppLoader();
+      if (container) {
+        container.innerHTML =
+          '<tr><td colspan="11" class="px-6 py-6"><div class="w-full h-2 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-blue-600 animate-pulse rounded" style="width: 50%"></div></div></td></tr>';
+      }
+    }
 
     google.script.run
       .withSuccessHandler((response) => {
+        if (!hasCached) stopAppLoader();
         if (!response || !response.success) {
-          container.innerHTML =
-            '<tr><td colspan="11" class="text-center py-6 text-rose-600">' +
-            ((response && response.error) || "Failed to load members.") +
-            "</td></tr>";
-          stopAppLoader();
+          if (!hasCached && container) {
+            container.innerHTML =
+              '<tr><td colspan="11" class="text-center py-6 text-rose-600">' +
+              ((response && response.error) || "Failed to load members.") +
+              "</td></tr>";
+          } else if (hasCached && typeof setHeaderSyncState === "function") {
+            setHeaderSyncState("cached", "Cached");
+          }
           return;
         }
 
         currentMembers = response.members || [];
+        if (typeof cacheSet === "function") {
+          cacheSet("members_list", currentMembers, 10 * 60 * 1000);
+        }
+        if (typeof setHeaderSyncState === "function") {
+          setHeaderSyncState("synced");
+        }
         updateLoanStatusFilterOptions(currentMembers);
         filterMembersTable();
-        stopAppLoader();
       })
       .withFailureHandler((err) => {
-        stopAppLoader();
-        handleErr(err);
+        if (!hasCached) {
+          stopAppLoader();
+          handleErr(err);
+        } else {
+          if (typeof setHeaderSyncState === "function") {
+            setHeaderSyncState("cached", "Offline cache");
+          }
+          if (typeof showNotification === "function") {
+            showNotification("Background sync failed — displaying cached members.", "warning", 3000);
+          }
+        }
       })
       .getMembersData();
   }
@@ -332,8 +364,13 @@
       .withSuccessHandler(function () {
         btn.disabled = false;
         btn.innerText = "Save Member Profile";
+        if (typeof cacheClear === "function") {
+          cacheClear("members_list");
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+        }
         closeMemberModal();
-        loadMembers();
+        loadMembers(true);
       })
       .withFailureHandler(function (err) {
         btn.disabled = false;

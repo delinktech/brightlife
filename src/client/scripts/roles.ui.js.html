@@ -212,7 +212,15 @@
       if (memberHidden) memberHidden.value = "";
     }
 
-    if (!currentMembers || !currentMembers.length) {
+    if (typeof ensureMembersLoaded === "function") {
+      ensureMembersLoaded()
+        .then(function () {
+          setupRoleMemberCombobox(selectedMember, email);
+        })
+        .catch(function () {
+          setupRoleMemberCombobox(selectedMember, email);
+        });
+    } else if (!currentMembers || !currentMembers.length) {
       google.script.run
         .withSuccessHandler(function(res) {
           if (res && res.members) {

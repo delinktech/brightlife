@@ -1,20 +1,250 @@
 <script>
-  function loadPersonalFinancials() {
-    showAppLoader(true);
+  function escapePfHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function loadPersonalFinancials(forceRefresh) {
+    const cacheKey = "personal_financials";
+    const cached = (!forceRefresh && typeof cacheGet === "function") ? cacheGet(cacheKey) : null;
+    const hasCached = Boolean(cached && cached.success);
+
+    if (hasCached) {
+      renderPersonalFinancials(cached);
+      if (typeof setHeaderSyncState === "function") {
+        setHeaderSyncState("revalidating", "Syncing...");
+      }
+    } else {
+      showAppLoader(true);
+    }
+
     google.script.run
       .withSuccessHandler(function (res) {
-        showAppLoader(false);
+        if (!hasCached) showAppLoader(false);
         if (!res || !res.success) {
           console.error("Personal financials error:", res ? res.error : "Unknown error");
+          if (hasCached) {
+            if (typeof setHeaderSyncState === "function") {
+              setHeaderSyncState("cached", "Cached");
+            }
+          } else {
+            const cTbody = document.getElementById("pf-contrib-tbody");
+            if (cTbody) {
+              cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-600">Unable to load personal records. <button type="button" onclick="loadPersonalFinancials(true)" class="underline font-semibold ml-1">Retry</button></td></tr>';
+            }
+          }
           return;
+        }
+        if (typeof cacheSet === "function") {
+          cacheSet(cacheKey, res, 5 * 60 * 1000);
+        }
+        if (typeof setHeaderSyncState === "function") {
+          setHeaderSyncState("synced");
         }
         renderPersonalFinancials(res);
       })
       .withFailureHandler(function (err) {
-        showAppLoader(false);
+        if (!hasCached) showAppLoader(false);
         console.error("Personal financials failure:", err);
+        if (hasCached) {
+          if (typeof setHeaderSyncState === "function") {
+            setHeaderSyncState("cached", "Offline cache");
+          }
+          if (typeof showNotification === "function") {
+            showNotification("Background refresh failed — showing cached personal data.", "warning", 3000);
+          }
+        } else {
+          const userEl = document.getElementById("pf-user-name");
+          if (userEl) userEl.textContent = "Unable to load profile";
+          const cTbody = document.getElementById("pf-contrib-tbody");
+          if (cTbody) {
+            cTbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-rose-600">Failed to fetch personal financials. <button type="button" onclick="loadPersonalFinancials(true)" class="underline font-semibold ml-1">Retry</button></td></tr>';
+          }
+        }
       })
       .getPersonalFinancialsData();
+  }
+
+  function parsePersonalContribMonth_(dateStr) {
+    if (!dateStr) return null;
+    const raw = String(dateStr).trim();
+    const parsed = new Date(raw);
+    if (!isNaN(parsed.getTime())) {
+      return { year: parsed.getFullYear(), month: parsed.getMonth() };
+    }
+    const monthsMap = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const m = raw.match(/\b([A-Za-z]{3})\s+(\d{4})\b/);
+    if (m) {
+      const mIdx = monthsMap[m[1].toLowerCase()];
+      if (mIdx !== undefined) return { year: Number(m[2]), month: mIdx };
+    }
+    return null;
+  }
+
+  function renderPersonalVisualizations(data) {
+    const summary = (data && data.personalSummary) || {};
+    const loans = (data && data.loans) || [];
+    const contribs = (data && data.contributions) || [];
+
+    // 1. Borrowing Capacity (3x Personal Savings - Active Loans)
+    const savings = Number(summary.savings) || 0;
+    const activeLoans = Number(summary.activeLoanBalance) || 0;
+    const maxLimit = savings * 3;
+    const availableCapacity = Math.max(0, maxLimit - activeLoans);
+    const utilizationPct = maxLimit > 0 ? Math.min(100, (activeLoans / maxLimit) * 100) : 0;
+
+    const capEl = document.getElementById("pf-borrowing-capacity");
+    const capLimEl = document.getElementById("pf-borrowing-limit");
+    const capUsedEl = document.getElementById("pf-borrowing-used");
+    const capBarEl = document.getElementById("pf-borrowing-bar");
+    const capBadgeEl = document.getElementById("pf-borrowing-badge");
+
+    if (capEl) capEl.textContent = formatMoney(availableCapacity);
+    if (capLimEl) capLimEl.textContent = formatMoney(maxLimit);
+    if (capUsedEl) capUsedEl.textContent = formatMoney(activeLoans);
+    if (capBarEl) {
+      capBarEl.style.width = utilizationPct.toFixed(1) + "%";
+      capBarEl.className = "h-full rounded-full transition-all duration-500 " + (
+        utilizationPct >= 85 ? "bg-rose-500" :
+        utilizationPct >= 50 ? "bg-amber-500" : "bg-sky-600"
+      );
+    }
+    if (capBadgeEl) {
+      if (savings <= 0) {
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200";
+        capBadgeEl.textContent = "Build Savings First";
+      } else if (utilizationPct >= 100) {
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200";
+        capBadgeEl.textContent = "Limit Reached";
+      } else {
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200";
+        capBadgeEl.textContent = (100 - utilizationPct).toFixed(0) + "% Headroom";
+      }
+    }
+
+    // 2. Loan Repayment Progress Bar
+    const activeSet = loans.filter(function (l) {
+      const s = String(l.status || "").toLowerCase();
+      return s !== "rejected" && ((Number(l.balance) || 0) > 0 || s === "active");
+    });
+    const scopeLoans = activeSet.length ? activeSet : loans.filter(function (l) {
+      return String(l.status || "").toLowerCase() !== "rejected";
+    });
+
+    let totalRepayable = 0;
+    let totalRepaid = 0;
+    let totalRemaining = 0;
+    scopeLoans.forEach(function (l) {
+      const p = Number(l.paid) || 0;
+      const b = Number(l.balance) || 0;
+      const rep = Number(l.repaymentAmount) || (p + b) || (Number(l.requestedAmount) || 0);
+      totalRepayable += rep;
+      totalRepaid += p;
+      totalRemaining += b;
+    });
+
+    const pctEl = document.getElementById("pf-loan-progress-pct");
+    const lblEl = document.getElementById("pf-loan-progress-label");
+    const barEl = document.getElementById("pf-loan-progress-bar");
+    const repEl = document.getElementById("pf-loan-repaid-total");
+    const remEl = document.getElementById("pf-loan-remaining-total");
+
+    let repPct = 0;
+    if (totalRepayable > 0) {
+      repPct = Math.min(100, Math.max(0, (totalRepaid / totalRepayable) * 100));
+    } else if (scopeLoans.length === 0) {
+      repPct = 100;
+    }
+
+    if (pctEl) pctEl.textContent = totalRepayable > 0 ? repPct.toFixed(1) + "%" : "100%";
+    if (repEl) repEl.textContent = formatMoney(totalRepaid);
+    if (remEl) remEl.textContent = formatMoney(totalRemaining);
+    if (barEl) {
+      barEl.style.width = (scopeLoans.length === 0 ? 100 : repPct).toFixed(1) + "%";
+      barEl.className = "h-full rounded-full transition-all duration-500 " + (
+        scopeLoans.length === 0 || totalRemaining === 0 ? "bg-emerald-500" : "bg-emerald-500"
+      );
+    }
+    if (lblEl) {
+      if (scopeLoans.length === 0) {
+        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        lblEl.textContent = "Debt-Free";
+      } else if (totalRemaining === 0) {
+        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        lblEl.textContent = "All Loans Settled";
+      } else {
+        lblEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200";
+        lblEl.textContent = activeSet.length + (activeSet.length === 1 ? " Active Loan" : " Active Loans");
+      }
+    }
+
+    // 3. Personal Contribution Consistency Tracker (Current Year Month-by-Month)
+    const now = new Date();
+    const targetYear = now.getFullYear();
+    const currentMonthIdx = now.getMonth();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlySums = new Array(12).fill(0);
+
+    contribs.forEach(function (c) {
+      const parsed = parsePersonalContribMonth_(c.date);
+      if (parsed && parsed.year === targetYear && parsed.month >= 0 && parsed.month < 12) {
+        monthlySums[parsed.month] += Number(c.amount) || 0;
+      }
+    });
+
+    const maxMonthAmt = Math.max.apply(null, monthlySums.concat([1]));
+    let contributedElapsed = 0;
+    const elapsedMonths = currentMonthIdx + 1;
+
+    const gridEl = document.getElementById("pf-consistency-grid");
+    const subEl = document.getElementById("pf-consistency-subtitle");
+    const sumEl = document.getElementById("pf-consistency-summary");
+
+    if (subEl) subEl.textContent = "Monthly contribution consistency for FY " + targetYear;
+
+    if (gridEl) {
+      gridEl.innerHTML = monthNames.map(function (mLabel, idx) {
+        const amt = monthlySums[idx] || 0;
+        const isFuture = idx > currentMonthIdx;
+        const hasPaid = amt > 0;
+        if (!isFuture && hasPaid) contributedElapsed++;
+
+        const barHeightPct = hasPaid ? Math.max(22, Math.round((amt / maxMonthAmt) * 100)) : (isFuture ? 10 : 12);
+        const cardCls = hasPaid
+          ? "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+          : isFuture
+          ? "bg-slate-50/40 border-slate-200/60 border-dashed text-slate-400"
+          : "bg-slate-50 border-slate-200 text-slate-500";
+        const barCls = hasPaid
+          ? "bg-emerald-500"
+          : isFuture
+          ? "bg-slate-200/70"
+          : "bg-amber-300/70";
+        const statusIcon = hasPaid
+          ? '<i class="fas fa-check text-emerald-600 text-[9px]"></i>'
+          : isFuture
+          ? '<span class="text-[9px] text-slate-300">—</span>'
+          : '<span class="text-[9px] text-amber-600 font-bold">0</span>';
+        const titleAttr = mLabel + " " + targetYear + ": " + (hasPaid ? formatMoney(amt) : (isFuture ? "Upcoming" : "No deposit recorded"));
+
+        return (
+          '<div title="' + escapePfHtml(titleAttr) + '" class="rounded-lg border p-2 flex flex-col items-center justify-between gap-1.5 ' + cardCls + '">' +
+            '<span class="text-[10px] font-bold uppercase tracking-wide">' + mLabel + '</span>' +
+            '<div class="w-full h-8 flex items-end justify-center">' +
+              '<div class="w-3 rounded-t ' + barCls + '" style="height:' + barHeightPct + '%"></div>' +
+            '</div>' +
+            '<div class="h-4 flex items-center justify-center">' + statusIcon + '</div>' +
+          '</div>'
+        );
+      }).join("");
+    }
+
+    if (sumEl) {
+      sumEl.textContent = contributedElapsed + " / " + elapsedMonths + " months in " + targetYear;
+    }
   }
 
   function renderPersonalFinancials(data) {
@@ -31,19 +261,21 @@
 
     // Personal Summary KPI Cards
     if (data.personalSummary) {
-      document.getElementById("pf-my-savings").textContent = data.personalSummary.savingsFormatted || "KSh 0";
+      document.getElementById("pf-my-savings").textContent = data.personalSummary.savingsFormatted || "KES 0";
       document.getElementById("pf-my-shares").textContent = data.personalSummary.sharesPercentage || "0.00%";
-      document.getElementById("pf-my-loan-balance").textContent = data.personalSummary.activeLoanBalanceFormatted || "KSh 0";
-      document.getElementById("pf-my-profit-share").textContent = data.personalSummary.estimatedProfitShareFormatted || "KSh 0";
+      document.getElementById("pf-my-loan-balance").textContent = data.personalSummary.activeLoanBalanceFormatted || "KES 0";
+      document.getElementById("pf-my-profit-share").textContent = data.personalSummary.estimatedProfitShareFormatted || "KES 0";
     }
 
     // Group Macro Overview
     if (data.groupOverview) {
-      document.getElementById("pf-group-pool").textContent = data.groupOverview.totalSavingsPoolFormatted || "KSh 0";
-      document.getElementById("pf-group-invested").textContent = data.groupOverview.totalInvestmentsFormatted || "KSh 0";
-      document.getElementById("pf-group-profit").textContent = data.groupOverview.totalProfitFormatted || "KSh 0";
+      document.getElementById("pf-group-pool").textContent = data.groupOverview.totalSavingsPoolFormatted || "KES 0";
+      document.getElementById("pf-group-invested").textContent = data.groupOverview.totalInvestmentsFormatted || "KES 0";
+      document.getElementById("pf-group-profit").textContent = data.groupOverview.totalProfitFormatted || "KES 0";
       document.getElementById("pf-group-members").textContent = data.groupOverview.activeMembers || "0";
     }
+
+    renderPersonalVisualizations(data);
 
     // Contributions List
     const cTbody = document.getElementById("pf-contrib-tbody");
