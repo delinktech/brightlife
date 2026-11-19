@@ -236,53 +236,40 @@ function saveMember(data) {
   }
 
   if (col["Full Name"] !== undefined) {
-    rowData[col["Full Name"]] = (
-      (data.firstName || "") +
-      " " +
-      (data.middleName || "") +
-      " " +
-      (data.lastName || "")
-    )
-      .replace(/\s+/g, " ")
-      .trim();
+    if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, col["Full Name"])) {
+      rowData[col["Full Name"]] = "";
+    } else {
+      rowData[col["Full Name"]] = (
+        (data.firstName || "") +
+        " " +
+        (data.middleName || "") +
+        " " +
+        (data.lastName || "")
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+    }
   }
+
+  // ARC-3: Any column governed by a Row 1 header spill formula must remain blank ("") on insert & update
+  // so that row writes never obstruct the array spill with #REF!.
+  const spillComputedHeaders = [
+    "Total Savings",
+    "Current Loan Balance",
+    "Guaranteed Amount",
+    "Max Loan Eligibility",
+    "Available to Guarantee",
+    "Full Name",
+  ];
+  spillComputedHeaders.forEach(function (h) {
+    if (col[h] !== undefined && typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, col[h])) {
+      rowData[col[h]] = "";
+    }
+  });
 
   if (isUpdate) {
     sheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
   } else {
-    // When inserting a new member, ensure dynamic financial formulas are pre-populated
-    const nextRow = sheet.getLastRow() + 1;
-    const memIdColIdx = col["Member ID"];
-    const memIdLetter = getColLetter_(memIdColIdx + 1);
-
-    // 1. Total Savings: SUMIFS from Contributions where Status = "Approved" via Named Ranges
-    if (col["Total Savings"] !== undefined) {
-      rowData[col["Total Savings"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Contributions_Amount, Contributions_MemberID, ' + memIdLetter + nextRow + ', Contributions_Status, "Approved"))';
-    }
-
-    // 2. Current Loan Balance via Named Ranges
-    if (col["Current Loan Balance"] !== undefined) {
-      rowData[col["Current Loan Balance"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + nextRow + ', Loans_Status, "Active") + SUMIFS(Loans_Balance, Loans_MemberID, ' + memIdLetter + nextRow + ', Loans_Status, "Approved"))';
-    }
-
-    // 3. Guaranteed Amount via Named Ranges
-    if (col["Guaranteed Amount"] !== undefined) {
-      rowData[col["Guaranteed Amount"]] = '=IF(' + memIdLetter + nextRow + '="", 0, SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + nextRow + ', Guarantors_Status, "Active") + SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, ' + memIdLetter + nextRow + ', Guarantors_Status, "Approved"))';
-    }
-
-    // 4. Max Loan Eligibility & Available to Guarantee
-    const savColLetter = col["Total Savings"] !== undefined ? getColLetter_(col["Total Savings"] + 1) : "K";
-    const loanBalColLetter = col["Current Loan Balance"] !== undefined ? getColLetter_(col["Current Loan Balance"] + 1) : "L";
-    const guarColLetter = col["Guaranteed Amount"] !== undefined ? getColLetter_(col["Guaranteed Amount"] + 1) : "M";
-
-    if (col["Max Loan Eligibility"] !== undefined) {
-      rowData[col["Max Loan Eligibility"]] = '=IF(' + memIdLetter + nextRow + '="", 0, MAX(0, 2 * (' + savColLetter + nextRow + ' - ' + guarColLetter + nextRow + ') - ' + loanBalColLetter + nextRow + '))';
-    }
-
-    if (col["Available to Guarantee"] !== undefined) {
-      rowData[col["Available to Guarantee"]] = '=IF(OR(Members[Status] <> "Active", ' + memIdLetter + nextRow + ' = ""), 0, MAX(0, ' + savColLetter + nextRow + ' - ' + loanBalColLetter + nextRow + ' - ' + guarColLetter + nextRow + '))';
-    }
-
     sheet.appendRow(rowData);
   }
 

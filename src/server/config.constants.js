@@ -334,3 +334,81 @@ function formatCurrency_(value) {
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
 }
+
+/**
+ * ARC-3: Returns true when Row 1 of the given 0-based column index carries a header-anchored
+ * spill formula (e.g. ={"Member Name"; MAP(...)}). Row-level writers must leave cells in
+ * rows 2..N of that column empty ("") so they never obstruct the array spill with #REF!.
+ */
+function hasHeaderSpillFormula_(sheet, colIndexZeroBased) {
+  if (!sheet || colIndexZeroBased === undefined || colIndexZeroBased === null || colIndexZeroBased < 0) {
+    return false;
+  }
+  try {
+    const cell = sheet.getRange(1, colIndexZeroBased + 1);
+    if (!cell || typeof cell.getFormula !== "function") return false;
+    const f = String(cell.getFormula() || "").trim();
+    return f.indexOf("=") === 0 && (f.indexOf("MAP(") !== -1 || f.indexOf("ARRAYFORMULA(") !== -1 || f.indexOf("{") !== -1);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * ARC-3: Installs a single Row 1 header-anchored spill formula ={"Header"; MAP(...)} on a column,
+ * purging any legacy per-row formulas or blocking values in rows 2..lastRow first.
+ */
+function installColumnSpillFormula_(sheet, colIndexZeroBased, headerTitle, mapExpr) {
+  if (!sheet || colIndexZeroBased === undefined || colIndexZeroBased === null || colIndexZeroBased < 0) {
+    return null;
+  }
+  const col1 = colIndexZeroBased + 1;
+  const lastRow = Math.max(sheet.getLastRow(), 2);
+  const clearCount = Math.max(lastRow - 1, 1);
+  const dataRange = sheet.getRange(2, col1, clearCount, 1);
+  if (dataRange && typeof dataRange.clearDataValidations === "function") {
+    try { dataRange.clearDataValidations(); } catch (e) {}
+  }
+  if (dataRange && typeof dataRange.clearContent === "function") {
+    try { dataRange.clearContent(); } catch (e) {}
+  }
+  const safeHeader = String(headerTitle || "").replace(/"/g, '""');
+  const spillFormula = '={"' + safeHeader + '"; ' + mapExpr + "}";
+  const headerCell = sheet.getRange(1, col1);
+  headerCell.setValue(headerTitle);
+  if (headerCell && typeof headerCell.setFormula === "function") {
+    headerCell.setFormula(spillFormula);
+  }
+  return spillFormula;
+}
+
+/**
+ * ARC-3: In-memory lookup of a member's full name by Member ID from SHEETS.MEMBERS.
+ * Used for audit logs, receipts, and non-spill fallback without injecting sheet formulas.
+ */
+function resolveMemberFullNameById_(ss, memberId, fallbackName) {
+  const cleanFallback = String(fallbackName || "").trim();
+  if (cleanFallback) return cleanFallback;
+  const targetId = String(memberId || "").trim().toLowerCase();
+  if (!targetId) return "";
+  try {
+    const spreadsheet = ss || getSpreadsheet_();
+    const memSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.MEMBERS);
+    if (!memSheet || memSheet.getLastRow() <= 1) return "";
+    const vals = memSheet.getDataRange().getValues();
+    const col = getHeaderMap_(vals[0]);
+    if (col["Member ID"] === undefined) return "";
+    for (let i = 1; i < vals.length; i++) {
+      const id = String(vals[i][col["Member ID"]] || "").trim().toLowerCase();
+      if (id !== targetId) continue;
+      if (col["Full Name"] !== undefined && String(vals[i][col["Full Name"]] || "").trim()) {
+        return String(vals[i][col["Full Name"]]).trim();
+      }
+      const first = col["First Name"] !== undefined ? String(vals[i][col["First Name"]] || "").trim() : "";
+      const middle = col["Middle Name"] !== undefined ? String(vals[i][col["Middle Name"]] || "").trim() : "";
+      const last = col["Last Name"] !== undefined ? String(vals[i][col["Last Name"]] || "").trim() : "";
+      return (first + " " + middle + " " + last).replace(/\s+/g, " ").trim();
+    }
+  } catch (e) {}
+  return "";
+}

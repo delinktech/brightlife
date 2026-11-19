@@ -1,39 +1,59 @@
 function getDashboardData() {
   requireAccess_();
   const ss = getSpreadsheet_();
-  const members = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+  const kpiSnap = typeof readSummaryKpisSnapshot_ === "function" ? readSummaryKpisSnapshot_(ss) : null;
   const loans = getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
   const guarantors = getRequiredSheet_(SHEETS.GUARANTORS).getDataRange().getValues();
 
-  let totalPool = 0;
-  let totalActiveLoans = 0;
-  let pendingLoansCount = 0;
+  let totalPool = kpiSnap ? kpiSnap.totalMemberSavings : 0;
+  let totalActiveLoans = kpiSnap ? kpiSnap.totalOutstandingLoans : 0;
+  let pendingLoansCount = kpiSnap ? kpiSnap.pendingLoansCount : 0;
 
-  for (let i = 1; i < members.length; i++) {
-    totalPool += Number(members[i][6]) || 0;
+  if (!kpiSnap) {
+    const members = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+    const mCol = members.length > 0 ? getHeaderMap_(members[0]) : {};
+    const savIdx = mCol["Total Savings"] !== undefined ? mCol["Total Savings"] : 6;
+    for (let i = 1; i < members.length; i++) {
+      totalPool += Number(members[i][savIdx]) || 0;
+    }
   }
+
+  const gCol = guarantors.length > 0 ? getHeaderMap_(guarantors[0]) : {};
+  const gLidIdx = gCol["Loan ID"] !== undefined ? gCol["Loan ID"] : 0;
+  const gNameIdx = gCol["Guarantor Name"] !== undefined ? gCol["Guarantor Name"] : 1;
+  const gAmtIdx = gCol["Guaranteed Amount"] !== undefined ? gCol["Guaranteed Amount"] : 2;
 
   const guarantorMap = {};
   for (let j = 1; j < guarantors.length; j++) {
-    const loanId = guarantors[j][0];
+    const loanId = guarantors[j][gLidIdx];
     if (!guarantorMap[loanId]) guarantorMap[loanId] = [];
     guarantorMap[loanId].push({
-      name: guarantors[j][1],
-      amount: guarantors[j][2],
+      name: guarantors[j][gNameIdx],
+      amount: guarantors[j][gAmtIdx],
     });
   }
 
+  const lCol = loans.length > 0 ? getHeaderMap_(loans[0]) : {};
+  const lIdIdx = lCol["Loan ID"] !== undefined ? lCol["Loan ID"] : 0;
+  const lNameIdx = lCol["Borrower Name"] !== undefined ? lCol["Borrower Name"] : 1;
+  const lAmtIdx = lCol["Balance"] !== undefined ? lCol["Balance"] : (lCol["Requested Amount"] !== undefined ? lCol["Requested Amount"] : 2);
+  const lStatIdx = lCol["Status"] !== undefined ? lCol["Status"] : 5;
+
   const loanList = [];
   for (let k = 1; k < loans.length; k++) {
-    const loanId = loans[k][0];
-    const status = loans[k][5];
-    if (status === LOAN_STATUS.ACTIVE) totalActiveLoans += Number(loans[k][2]) || 0;
-    if (status === LOAN_STATUS.PENDING) pendingLoansCount++;
+    const loanId = loans[k][lIdIdx];
+    if (!loanId) continue;
+    const status = loans[k][lStatIdx];
+    const amt = Number(loans[k][lAmtIdx]) || 0;
+    if (!kpiSnap) {
+      if (status === LOAN_STATUS.ACTIVE || status === LOAN_STATUS.APPROVED) totalActiveLoans += amt;
+      if (status === LOAN_STATUS.PENDING) pendingLoansCount++;
+    }
 
     loanList.push({
       id: loanId,
-      borrower: loans[k][1],
-      amount: Number(loans[k][2]) || 0,
+      borrower: loans[k][lNameIdx],
+      amount: amt,
       status: status,
       guarantors: guarantorMap[loanId] || [],
     });
@@ -43,8 +63,12 @@ function getDashboardData() {
     stats: {
       pool: totalPool,
       activeLoans: totalActiveLoans,
-      cash: totalPool - totalActiveLoans,
+      cash: kpiSnap ? kpiSnap.netCashPosition : (totalPool - totalActiveLoans),
       pending: pendingLoansCount,
+      invested: kpiSnap ? kpiSnap.totalInvestmentAssets : 0,
+      activeMembers: kpiSnap ? kpiSnap.totalActiveMembers : 0,
+      parRate: kpiSnap ? kpiSnap.activeParPct : 0,
+      fromMaterializedView: Boolean(kpiSnap),
     },
     loans: loanList,
   };
@@ -83,7 +107,9 @@ function getHomeAnalyticsByRange_(rangeKey) {
   const tz = ss.getSpreadsheetTimeZone();
   const rangeBounds = getDateRangeBounds_(effectiveRange, now);
 
-  const memberRows = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+  // ARC-3: Query the single-row materialized view "Summary KPIs" in 1 instant range call
+  // to avoid scanning and summing the entire Members register on every analytics refresh.
+  const kpiSnap = typeof readSummaryKpisSnapshot_ === "function" ? readSummaryKpisSnapshot_(ss) : null;
   const contributionRows = getRequiredSheet_(SHEETS.CONTRIBUTIONS).getDataRange().getValues();
   const loanRows = getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
 
@@ -91,21 +117,28 @@ function getHomeAnalyticsByRange_(rangeKey) {
   let totalLoans = 0;
   let memberCount = 0;
 
-  if (memberRows.length > 1) {
-    const memberHeaders = memberRows[0];
-    const memberCol = getHeaderMap_(memberHeaders);
-    requireHeaders_(
-      memberCol,
-      ["Member ID", "Total Savings", "Current Loan Balance"],
-      SHEETS.MEMBERS
-    );
+  if (kpiSnap && (kpiSnap.totalRegisteredMembers > 0 || kpiSnap.totalMemberSavings > 0)) {
+    totalSavings = kpiSnap.totalMemberSavings;
+    totalLoans = kpiSnap.totalOutstandingLoans;
+    memberCount = kpiSnap.totalRegisteredMembers;
+  } else {
+    const memberRows = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+    if (memberRows.length > 1) {
+      const memberHeaders = memberRows[0];
+      const memberCol = getHeaderMap_(memberHeaders);
+      requireHeaders_(
+        memberCol,
+        ["Member ID", "Total Savings", "Current Loan Balance"],
+        SHEETS.MEMBERS
+      );
 
-    for (let i = 1; i < memberRows.length; i++) {
-      const row = memberRows[i];
-      if (!row[memberCol["Member ID"]]) continue;
-      totalSavings += Number(row[memberCol["Total Savings"]]) || 0;
-      totalLoans += Number(row[memberCol["Current Loan Balance"]]) || 0;
-      memberCount++;
+      for (let i = 1; i < memberRows.length; i++) {
+        const row = memberRows[i];
+        if (!row[memberCol["Member ID"]]) continue;
+        totalSavings += Number(row[memberCol["Total Savings"]]) || 0;
+        totalLoans += Number(row[memberCol["Current Loan Balance"]]) || 0;
+        memberCount++;
+      }
     }
   }
 

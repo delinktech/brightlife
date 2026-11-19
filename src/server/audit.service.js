@@ -156,6 +156,10 @@ function onEdit(e) {
 
     // User edited the Member ID column
     if (col === midColIdx + 1) {
+      // ARC-3: When the Name column uses a Row 1 header spill formula, never write static values into rows 2..N.
+      if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, nameColIdx)) {
+        return;
+      }
       const changedMid = String(e.value || sheet.getRange(row, col).getValue() || "").trim();
       const nameCell = sheet.getRange(row, nameColIdx + 1);
 
@@ -301,13 +305,13 @@ function runSchemaMigrationAddMemberIds_() {
     sheet.getRange(2, finalNameIdx + 1, Math.max(sheet.getLastRow() - 1, 1), 1).clearDataValidations();
 
     const midColLetter = getColLetter_(finalMidIdx + 1);
-    for (let r = 2; r <= Math.max(sheet.getLastRow(), 2); r++) {
-      const cell = sheet.getRange(r, finalNameIdx + 1);
-      // Use Named Ranges: Members_MemberID and Members_FullName
-      const formula = '=IF(' + midColLetter + r + '="", "", IFERROR(XLOOKUP(' + midColLetter + r + ', Members_MemberID, Members_FullName, "—"), ""))';
-      cell.clearContent();
-      cell.setFormula(formula);
-    }
+    // ARC-3: Single Row 1 header spill formula replaces per-row XLOOKUP formulas.
+    installColumnSpillFormula_(
+      sheet,
+      finalNameIdx,
+      nameHeader,
+      "MAP(" + midColLetter + "2:" + midColLetter + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_FullName, "—"), ""))))'
+    );
 
     // Add Data Validation Dropdown to Member ID column pointing to Members_MemberID
     const memIdRange = ss.getRangeByName("Members_MemberID");
@@ -996,6 +1000,95 @@ function setupAllNamedRanges_(ss) {
       setOrUpdateNamedRange_(ss, "Guarantors_Status", getNamedColumnRange_(ss, SHEETS.GUARANTORS, l));
     }
   }
+
+  // 6. Loans Approved Date (for PAR calculation in Summary KPIs)
+  if (loanSheet && loanSheet.getLastRow() >= 1) {
+    const lH2 = loanSheet.getDataRange().getValues()[0];
+    const lCol2 = getHeaderMap_(lH2);
+    const appDateIdx = lCol2["Approved Date"] !== undefined ? lCol2["Approved Date"] : lCol2["Request Date"];
+    if (appDateIdx !== undefined) {
+      const l = getColLetter_(appDateIdx + 1);
+      setOrUpdateNamedRange_(ss, "Loans_ApprovedDate", getNamedColumnRange_(ss, SHEETS.LOANS, l));
+    }
+  }
+
+  // 7. Accounts & Fund Statements (for Net Cash Position in Summary KPIs)
+  const accSheet = getSheetByNameInsensitive_(ss, SHEETS.ACCOUNTS);
+  if (accSheet && accSheet.getLastRow() >= 1) {
+    const aH = accSheet.getDataRange().getValues()[0];
+    const aCol = getHeaderMap_(aH);
+    const balIdx = aCol["Statement Balance"] !== undefined ? aCol["Statement Balance"] : aCol["Balance"];
+    if (balIdx !== undefined) {
+      const l = getColLetter_(balIdx + 1);
+      setOrUpdateNamedRange_(ss, "Accounts_Balance", getNamedColumnRange_(ss, accSheet.getName(), l));
+    }
+    if (aCol["Org. Name"] !== undefined) {
+      const l = getColLetter_(aCol["Org. Name"] + 1);
+      setOrUpdateNamedRange_(ss, "Accounts_OrgName", getNamedColumnRange_(ss, accSheet.getName(), l));
+    }
+  }
+
+  const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+  if (fundSheet && fundSheet.getLastRow() >= 1) {
+    const fH = fundSheet.getDataRange().getValues()[0];
+    const fCol = getHeaderMap_(fH);
+    if (fCol["Closing Balance"] !== undefined) {
+      const l = getColLetter_(fCol["Closing Balance"] + 1);
+      setOrUpdateNamedRange_(ss, "FundStatements_ClosingBalance", getNamedColumnRange_(ss, fundSheet.getName(), l));
+    }
+  }
+
+  // 8. Investments, Investment Projects, Investment Cashflows, InvestmentLedger (ARC-2 + ARC-3)
+  const invSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENTS);
+  if (invSheet && invSheet.getLastRow() >= 1) {
+    const iH = invSheet.getDataRange().getValues()[0];
+    const iCol = getHeaderMap_(iH);
+    const cvIdx = iCol["Carrying Value"] !== undefined ? iCol["Carrying Value"] : iCol["Money Invested"];
+    if (cvIdx !== undefined) {
+      const l = getColLetter_(cvIdx + 1);
+      setOrUpdateNamedRange_(ss, "Investments_CarryingValue", getNamedColumnRange_(ss, invSheet.getName(), l));
+    }
+  }
+
+  const prjSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_PROJECTS);
+  if (prjSheet && prjSheet.getLastRow() >= 1) {
+    const pH = prjSheet.getDataRange().getValues()[0];
+    const pCol = getHeaderMap_(pH);
+    if (pCol["Carrying Value"] !== undefined) {
+      const l = getColLetter_(pCol["Carrying Value"] + 1);
+      setOrUpdateNamedRange_(ss, "Projects_CarryingValue", getNamedColumnRange_(ss, prjSheet.getName(), l));
+    }
+  }
+
+  const cfSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_CASHFLOWS);
+  if (cfSheet && cfSheet.getName().trim().toLowerCase() === SHEETS.INVESTMENT_CASHFLOWS.toLowerCase() && cfSheet.getLastRow() >= 1) {
+    const cfH = cfSheet.getDataRange().getValues()[0];
+    const cfCol = getHeaderMap_(cfH);
+    if (cfCol["Entity ID"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Cashflows_EntityID", getNamedColumnRange_(ss, cfSheet.getName(), getColLetter_(cfCol["Entity ID"] + 1)));
+    }
+    if (cfCol["Flow Type"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Cashflows_FlowType", getNamedColumnRange_(ss, cfSheet.getName(), getColLetter_(cfCol["Flow Type"] + 1)));
+    }
+    if (cfCol["Amount"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Cashflows_Amount", getNamedColumnRange_(ss, cfSheet.getName(), getColLetter_(cfCol["Amount"] + 1)));
+    }
+  }
+
+  const ledSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_LEDGER);
+  if (ledSheet && ledSheet.getName().trim().toLowerCase() === SHEETS.INVESTMENT_LEDGER.toLowerCase() && ledSheet.getLastRow() >= 1) {
+    const ledH = ledSheet.getDataRange().getValues()[0];
+    const ledCol = getHeaderMap_(ledH);
+    if (ledCol["Investment ID"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Ledger_InvestmentID", getNamedColumnRange_(ss, ledSheet.getName(), getColLetter_(ledCol["Investment ID"] + 1)));
+    }
+    if (ledCol["Type"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Ledger_Type", getNamedColumnRange_(ss, ledSheet.getName(), getColLetter_(ledCol["Type"] + 1)));
+    }
+    if (ledCol["Amount"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Ledger_Amount", getNamedColumnRange_(ss, ledSheet.getName(), getColLetter_(ledCol["Amount"] + 1)));
+    }
+  }
 }
 
 /**
@@ -1212,59 +1305,70 @@ function setupLoansSchemaAndFormulas_(ss, nameToId, idToFullName) {
 
   const totalRows = Math.max(loanSheet.getLastRow(), 2);
 
-  // Apply native Google Sheets formulas row by row using Named Ranges (Column Names)
+  // ARC-3: Install single Row 1 header spill formulas across all computed Loans columns
+  installColumnSpillFormula_(
+    loanSheet,
+    4,
+    "Borrower Name",
+    'MAP(D2:D, LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_FullName, "—"), ""))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    8,
+    "Repayment Amount",
+    'MAP(A2:A, F2:F, G2:G, H2:H, LAMBDA(lid, req, intr, fee, IF(lid="", "", N(req) + N(intr) + N(fee))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    9,
+    "Total Paid",
+    'MAP(A2:A, LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_TotalPaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    10,
+    "Principal Paid",
+    'MAP(A2:A, LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_PrincipalPaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    11,
+    "Interest Paid",
+    'MAP(A2:A, LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_InterestPaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    12,
+    "Fee Paid",
+    'MAP(A2:A, LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_FeePaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    13,
+    "Balance",
+    'MAP(A2:A, I2:I, J2:J, LAMBDA(lid, rep, paid, IF(lid="", "", MAX(0, N(rep) - N(paid)))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    15,
+    "Borrower’s Own Savings",
+    'MAP(D2:D, LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_TotalSavings, 0), 0))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    16,
+    "Total Guaranteed",
+    'MAP(A2:A, LAMBDA(lid, IF(lid="", "", SUMIFS(Guarantors_GuaranteedAmount, Guarantors_LoanID, lid))))'
+  );
+  installColumnSpillFormula_(
+    loanSheet,
+    17,
+    "Shortfall Amount",
+    'MAP(A2:A, I2:I, P2:P, Q2:Q, LAMBDA(lid, rep, sav, guar, IF(lid="", "", MAX(0, N(rep) - (N(sav) + N(guar))))))'
+  );
+
+  // O (Status): Preserve explicit Rejected / Pending states, otherwise compute Active / Settled
   for (let r = 2; r <= totalRows; r++) {
-    // E (Borrower Name): XLOOKUP from Members using Named Ranges
-    loanSheet.getRange(r, 5).setFormula(
-      '=IF(D' + r + '="", "", IFERROR(XLOOKUP(D' + r + ', Members_MemberID, Members_FullName, "—"), ""))'
-    );
-
-    // I (Repayment Amount): Requested Amount (F) + Interest (G) + Fee (H)
-    loanSheet.getRange(r, 9).setFormula(
-      '=IF(F' + r + '="", 0, F' + r + ' + G' + r + ' + H' + r + ')'
-    );
-
-    // J (Total Paid): SUMIFS from Loan Repayments using Named Ranges
-    loanSheet.getRange(r, 10).setFormula(
-      '=IF(A' + r + '="", 0, SUMIFS(Repayments_TotalPaid, Repayments_LoanID, A' + r + ', Repayments_Status, "Approved"))'
-    );
-
-    // K (Principal Paid): SUMIFS of Principal Paid from Loan Repayments using Named Ranges
-    loanSheet.getRange(r, 11).setFormula(
-      '=IF(A' + r + '="", 0, SUMIFS(Repayments_PrincipalPaid, Repayments_LoanID, A' + r + ', Repayments_Status, "Approved"))'
-    );
-
-    // L (Interest Paid): SUMIFS of Interest Paid from Loan Repayments using Named Ranges
-    loanSheet.getRange(r, 12).setFormula(
-      '=IF(A' + r + '="", 0, SUMIFS(Repayments_InterestPaid, Repayments_LoanID, A' + r + ', Repayments_Status, "Approved"))'
-    );
-
-    // M (Fee Paid): SUMIFS of Fee Paid from Loan Repayments using Named Ranges
-    loanSheet.getRange(r, 13).setFormula(
-      '=IF(A' + r + '="", 0, SUMIFS(Repayments_FeePaid, Repayments_LoanID, A' + r + ', Repayments_Status, "Approved"))'
-    );
-
-    // N (Balance): MAX(0, Repayment Amount - Total Paid)
-    loanSheet.getRange(r, 14).setFormula(
-      '=IF(I' + r + '="", 0, MAX(0, I' + r + ' - J' + r + '))'
-    );
-
-    // P (Borrower’s Own Savings): XLOOKUP from Members using Named Ranges
-    loanSheet.getRange(r, 16).setFormula(
-      '=IF(D' + r + '="", 0, IFERROR(XLOOKUP(D' + r + ', Members_MemberID, Members_TotalSavings, 0), 0))'
-    );
-
-    // Q (Total Guaranteed): SUMIFS from Guarantors using Named Ranges
-    loanSheet.getRange(r, 17).setFormula(
-      '=IF(A' + r + '="", 0, SUMIFS(Guarantors_GuaranteedAmount, Guarantors_LoanID, A' + r + '))'
-    );
-
-    // R (Shortfall Amount): MAX(0, Repayment Amount - (Own Savings + Total Guaranteed))
-    loanSheet.getRange(r, 18).setFormula(
-      '=IF(I' + r + '="", 0, MAX(0, I' + r + ' - (P' + r + ' + Q' + r + ')))'
-    );
-
-    // O (Status): Settled if Balance == 0 and Repayment > 0, else Active / Pending / Rejected
     const currentStat = standardRows[r - 2] ? String(standardRows[r - 2]["Status"] || "").trim() : "";
     if (currentStat === LOAN_STATUS.REJECTED) {
       loanSheet.getRange(r, 15).setValue(LOAN_STATUS.REJECTED);
@@ -1339,52 +1443,60 @@ function setupMembersSavingsFormula_(ss) {
   const guarColLetter = guarColIdx !== undefined ? getColLetter_(guarColIdx + 1) : "M";
   const memStatLetter = statusColIdx !== undefined ? getColLetter_(statusColIdx + 1) : "P";
 
-  for (let r = 2; r <= totalRows; r++) {
-    // 1. Total Savings: sum approved contributions matching Member ID
-    if (savColIdx !== undefined) {
-      memSheet.getRange(r, savColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Contributions!$D:$D, Contributions!$B:$B, ' + memIdLetter + r + ', Contributions!$H:$H, "Approved"))'
-      );
-    }
+  // ARC-3: Install single Row 1 header spill formulas on Members
+  if (savColIdx !== undefined) {
+    installColumnSpillFormula_(
+      memSheet,
+      savColIdx,
+      "Total Savings",
+      "MAP(" + memIdLetter + "2:" + memIdLetter + ', LAMBDA(id, IF(id="", "", SUMIFS(Contributions_Amount, Contributions_MemberID, id, Contributions_Status, "Approved"))))'
+    );
+  }
 
-    // 2. Current Loan Balance: sum Balance from Loans matching Member ID and Status Active or Approved
-    if (loanBalColIdx !== undefined) {
-      memSheet.getRange(r, loanBalColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Loans!$N:$N, Loans!$D:$D, ' + memIdLetter + r + ', Loans!$O:$O, "Active") + SUMIFS(Loans!$N:$N, Loans!$D:$D, ' + memIdLetter + r + ', Loans!$O:$O, "Approved"))'
-      );
-    }
+  if (loanBalColIdx !== undefined) {
+    installColumnSpillFormula_(
+      memSheet,
+      loanBalColIdx,
+      "Current Loan Balance",
+      "MAP(" + memIdLetter + "2:" + memIdLetter + ', LAMBDA(id, IF(id="", "", SUMIFS(Loans_Balance, Loans_MemberID, id, Loans_Status, "Active") + SUMIFS(Loans_Balance, Loans_MemberID, id, Loans_Status, "Approved"))))'
+    );
+  }
 
-    // 3. Guaranteed Amount: sum Guaranteed Amount from Guarantors matching Member ID and Status Active or Approved
-    if (guarColIdx !== undefined) {
-      memSheet.getRange(r, guarColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, SUMIFS(Guarantors!$F:$F, Guarantors!$B:$B, ' + memIdLetter + r + ', Guarantors!$D:$D, "Active") + SUMIFS(Guarantors!$F:$F, Guarantors!$B:$B, ' + memIdLetter + r + ', Guarantors!$D:$D, "Approved"))'
-      );
-    }
+  if (guarColIdx !== undefined) {
+    installColumnSpillFormula_(
+      memSheet,
+      guarColIdx,
+      "Guaranteed Amount",
+      "MAP(" + memIdLetter + "2:" + memIdLetter + ', LAMBDA(id, IF(id="", "", SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, id, Guarantors_Status, "Active") + SUMIFS(Guarantors_GuaranteedAmount, Guarantors_MemberID, id, Guarantors_Status, "Approved"))))'
+    );
+  }
 
-    // 4. Max Loan Eligibility: 2 * (Savings - Guaranteed) - Loan Balance
-    if (maxLoanColIdx !== undefined) {
-      memSheet.getRange(r, maxLoanColIdx + 1).setFormula(
-        '=IF(' + memIdLetter + r + '="", 0, MAX(0, 2 * (' + savColLetter + r + ' - ' + guarColLetter + r + ') - ' + mLoanBalLetter + r + '))'
-      );
-    }
+  if (maxLoanColIdx !== undefined) {
+    installColumnSpillFormula_(
+      memSheet,
+      maxLoanColIdx,
+      "Max Loan Eligibility",
+      "MAP(" + memIdLetter + "2:" + memIdLetter + ", " + savColLetter + "2:" + savColLetter + ", " + mLoanBalLetter + "2:" + mLoanBalLetter + ", " + guarColLetter + "2:" + guarColLetter + ', LAMBDA(id, sav, loan, guar, IF(id="", "", MAX(0, 2 * (N(sav) - N(guar)) - N(loan)))))'
+    );
+  }
 
-    // 5. Available to Guarantee: Savings - Loan Balance - Guaranteed Amount
-    if (availGuarColIdx !== undefined) {
-      memSheet.getRange(r, availGuarColIdx + 1).setFormula(
-        '=IF(OR(' + memStatLetter + r + ' <> "Active", ' + memIdLetter + r + ' = ""), 0, MAX(0, ' + savColLetter + r + ' - ' + mLoanBalLetter + r + ' - ' + guarColLetter + r + '))'
-      );
-    }
+  if (availGuarColIdx !== undefined) {
+    installColumnSpillFormula_(
+      memSheet,
+      availGuarColIdx,
+      "Available to Guarantee",
+      "MAP(" + memIdLetter + "2:" + memIdLetter + ", " + memStatLetter + "2:" + memStatLetter + ", " + savColLetter + "2:" + savColLetter + ", " + mLoanBalLetter + "2:" + mLoanBalLetter + ", " + guarColLetter + "2:" + guarColLetter + ', LAMBDA(id, stat, sav, loan, guar, IF(id="", "", IF(stat<>"Active", 0, MAX(0, N(sav) - N(loan) - N(guar))))))'
+    );
+  }
 
-    // 6. Full Name formula: First Name + Middle Name + Last Name
-    if (fnColIdx !== undefined && fnIdx !== undefined && lnIdx !== undefined) {
-      const fnL = getColLetter_(fnIdx + 1);
-      const mnL = mnIdx !== undefined ? getColLetter_(mnIdx + 1) : "";
-      const lnL = getColLetter_(lnIdx + 1);
-      const nameFormula = mnL
-        ? '=IF(' + fnL + r + '="", "", TRIM(' + fnL + r + ' & " " & ' + mnL + r + ' & " " & ' + lnL + r + '))'
-        : '=IF(' + fnL + r + '="", "", TRIM(' + fnL + r + ' & " " & ' + lnL + r + '))';
-      memSheet.getRange(r, fnColIdx + 1).setFormula(nameFormula);
-    }
+  if (fnColIdx !== undefined && fnIdx !== undefined && lnIdx !== undefined) {
+    const fnL = getColLetter_(fnIdx + 1);
+    const mnL = mnIdx !== undefined ? getColLetter_(mnIdx + 1) : "";
+    const lnL = getColLetter_(lnIdx + 1);
+    const nameMapExpr = mnL
+      ? "MAP(" + fnL + "2:" + fnL + ", " + mnL + "2:" + mnL + ", " + lnL + "2:" + lnL + ', LAMBDA(fn, mn, ln, IF(fn="", "", TRIM(fn & " " & mn & " " & ln))))'
+      : "MAP(" + fnL + "2:" + fnL + ", " + lnL + "2:" + lnL + ', LAMBDA(fn, ln, IF(fn="", "", TRIM(fn & " " & ln))))';
+    installColumnSpillFormula_(memSheet, fnColIdx, "Full Name", nameMapExpr);
   }
 }
 
@@ -1419,16 +1531,17 @@ function setupLoanRepaymentsFormulas_(ss) {
 
   if (memIdColIdx !== undefined && nameColIdx !== undefined) {
     const midLetter = getColLetter_(memIdColIdx + 1);
-    for (let r = 2; r <= totalRows; r++) {
-      repSheet.getRange(r, nameColIdx + 1).setFormula(
-        '=IF(' + midLetter + r + '="", "", IFERROR(XLOOKUP(' + midLetter + r + ', Members_MemberID, Members_FullName, "—"), ""))'
-      );
-    }
+    installColumnSpillFormula_(
+      repSheet,
+      nameColIdx,
+      "Borrower Name",
+      "MAP(" + midLetter + "2:" + midLetter + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_FullName, "—"), ""))))'
+    );
   }
 }
 
 /**
- * Ensures Guarantors sheet has dynamic, error-free formulas using Named Ranges
+ * Ensures Guarantors sheet has dynamic, error-free Row 1 header spill formulas using Named Ranges
  */
 function setupGuarantorsSchemaAndFormulas_(ss) {
   if (!ss) ss = getSpreadsheet_();
@@ -1443,42 +1556,49 @@ function setupGuarantorsSchemaAndFormulas_(ss) {
   const memIdColIdx = col["Member ID"] !== undefined ? col["Member ID"] : col["Member id"];
   const nameColIdx = col["Guarantor Name"];
   const loanStatColIdx = col["Loan Status"];
+  const savHeader = col["Guarantor’s Savings Balance"] !== undefined ? "Guarantor’s Savings Balance" : "Guarantor's Savings Balance";
   const savColIdx = col["Guarantor’s Savings Balance"] !== undefined ? col["Guarantor’s Savings Balance"] : col["Guarantor's Savings Balance"];
   const eligColIdx = col["Guarantor Eligibility"];
 
-  for (let r = 2; r <= totalRows; r++) {
-    const midLetter = memIdColIdx !== undefined ? getColLetter_(memIdColIdx + 1) : "B";
-    const loanIdLetter = loanIdColIdx !== undefined ? getColLetter_(loanIdColIdx + 1) : "A";
+  const midLetter = memIdColIdx !== undefined ? getColLetter_(memIdColIdx + 1) : "B";
+  const loanIdLetter = loanIdColIdx !== undefined ? getColLetter_(loanIdColIdx + 1) : "A";
 
-    // Guarantor Name
-    if (nameColIdx !== undefined) {
-      gSheet.getRange(r, nameColIdx + 1).setFormula(
-        '=IF(' + midLetter + r + '="", "", IFERROR(XLOOKUP(' + midLetter + r + ', Members_MemberID, Members_FullName, "—"), ""))'
-      );
-    }
+  if (nameColIdx !== undefined && memIdColIdx !== undefined) {
+    installColumnSpillFormula_(
+      gSheet,
+      nameColIdx,
+      "Guarantor Name",
+      "MAP(" + midLetter + "2:" + midLetter + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_FullName, "—"), ""))))'
+    );
+  }
 
-    // Loan Status
-    if (loanStatColIdx !== undefined) {
-      gSheet.getRange(r, loanStatColIdx + 1).setFormula(
-        '=IF(' + loanIdLetter + r + '="", "", IFERROR(XLOOKUP(' + loanIdLetter + r + ', Loans_LoanID, Loans_Status, "—"), ""))'
-      );
-    }
+  if (loanStatColIdx !== undefined && loanIdColIdx !== undefined) {
+    installColumnSpillFormula_(
+      gSheet,
+      loanStatColIdx,
+      "Loan Status",
+      "MAP(" + loanIdLetter + "2:" + loanIdLetter + ', LAMBDA(lid, IF(lid="", "", IFERROR(XLOOKUP(lid, Loans_LoanID, Loans_Status, "—"), ""))))'
+    );
+  }
 
-    // Guarantor’s Savings Balance
-    if (savColIdx !== undefined) {
-      gSheet.getRange(r, savColIdx + 1).setFormula(
-        '=IF(' + midLetter + r + '="", 0, IFERROR(XLOOKUP(' + midLetter + r + ', Members_MemberID, Members_TotalSavings, 0), 0))'
-      );
-    }
+  if (savColIdx !== undefined && memIdColIdx !== undefined) {
+    installColumnSpillFormula_(
+      gSheet,
+      savColIdx,
+      savHeader,
+      "MAP(" + midLetter + "2:" + midLetter + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_TotalSavings, 0), 0))))'
+    );
+  }
 
-    // Guarantor Eligibility: VALID if Savings Balance >= Guaranteed Amount
-    if (eligColIdx !== undefined && savColIdx !== undefined && col["Guaranteed Amount"] !== undefined) {
-      const savLetter = getColLetter_(savColIdx + 1);
-      const amtLetter = getColLetter_(col["Guaranteed Amount"] + 1);
-      gSheet.getRange(r, eligColIdx + 1).setFormula(
-        '=IF(' + midLetter + r + '="", "", IF(' + savLetter + r + ' >= ' + amtLetter + r + ', "VALID", "INSUFFICIENT_SAVINGS"))'
-      );
-    }
+  if (eligColIdx !== undefined && savColIdx !== undefined && col["Guaranteed Amount"] !== undefined) {
+    const savLetter = getColLetter_(savColIdx + 1);
+    const amtLetter = getColLetter_(col["Guaranteed Amount"] + 1);
+    installColumnSpillFormula_(
+      gSheet,
+      eligColIdx,
+      "Guarantor Eligibility",
+      "MAP(" + midLetter + "2:" + midLetter + ", " + savLetter + "2:" + savLetter + ", " + amtLetter + "2:" + amtLetter + ', LAMBDA(mid, sav, amt, IF(mid="", "", IF(N(sav) >= N(amt), "VALID", "INSUFFICIENT_SAVINGS"))))'
+    );
   }
 
   try {
@@ -1500,15 +1620,34 @@ function testDiagnoseSheetHeaders_() {
     }
   });
 
-  [SHEETS.MEMBERS, SHEETS.CONTRIBUTIONS, SHEETS.LOANS, SHEETS.GUARANTORS, SHEETS.LOAN_REPAYMENTS, SHEETS.ACCOUNTS, SHEETS.INVESTMENTS, SHEETS.CONSTANTS, SHEETS.FUND_STATEMENTS, SHEETS.CIC_TRANSACTIONS].forEach(function(sName) {
-    const s = ss.getSheetByName(sName);
+  [
+    SHEETS.MEMBERS,
+    SHEETS.CONTRIBUTIONS,
+    SHEETS.LOANS,
+    SHEETS.GUARANTORS,
+    SHEETS.LOAN_REPAYMENTS,
+    SHEETS.ACCOUNTS,
+    SHEETS.INVESTMENTS,
+    SHEETS.INVESTMENT_PROJECTS,
+    SHEETS.INVESTMENT_CASHFLOWS,
+    SHEETS.SUMMARY_KPIS,
+    SHEETS.CONSTANTS,
+    SHEETS.FUND_STATEMENTS,
+    SHEETS.CIC_TRANSACTIONS,
+  ].forEach(function(sName) {
+    const s = getSheetByNameInsensitive_(ss, sName);
     if (!s) {
       res[sName] = "SHEET NOT FOUND";
     } else {
       const headers = s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getValues()[0];
+      const row1Formulas = typeof s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getFormulas === "function"
+        ? s.getRange(1, 1, 1, Math.max(s.getLastColumn(), 1)).getFormulas()[0]
+        : [];
       const dataRows = s.getLastRow() > 1 ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getValues() : [];
-      const formulaRows = s.getLastRow() > 1 ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getFormulas() : [];
-      res[sName] = { rowCount: s.getLastRow(), headers: headers, preview: dataRows, formulas: formulaRows };
+      const formulaRows = s.getLastRow() > 1 && typeof s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getFormulas === "function"
+        ? s.getRange(2, 1, Math.min(s.getLastRow() - 1, 5), Math.max(s.getLastColumn(), 1)).getFormulas()
+        : [];
+      res[sName] = { rowCount: s.getLastRow(), headers: headers, row1Formulas: row1Formulas, preview: dataRows, formulas: formulaRows };
     }
   });
   return res;

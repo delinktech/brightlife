@@ -285,27 +285,18 @@ function processLoanPayment(data) {
   // Only apply waterfall balance updates if Approved immediately; if Pending, hold until Treasurer approves
   const isApproved = initialStatus === "Approved";
   if (isApproved) {
-    const totCell = sheet.getRange(targetRowIndex, col["Total Paid"] + 1);
-    if (!totCell.getFormula()) totCell.setValue(newTotalPaid);
-
-    const balCell = sheet.getRange(targetRowIndex, col["Balance"] + 1);
-    if (!balCell.getFormula()) balCell.setValue(newBalance);
-
-    const statCell = sheet.getRange(targetRowIndex, col["Status"] + 1);
-    if (!statCell.getFormula()) statCell.setValue(newStatus);
-
-    if (col["Principal Paid"] !== undefined) {
-      const pCell = sheet.getRange(targetRowIndex, col["Principal Paid"] + 1);
-      if (!pCell.getFormula()) pCell.setValue(allocPrincipal);
-    }
-    if (col["Interest Paid"] !== undefined) {
-      const iCell = sheet.getRange(targetRowIndex, col["Interest Paid"] + 1);
-      if (!iCell.getFormula()) iCell.setValue(allocInterest);
-    }
-    if (col["Fee Paid"] !== undefined) {
-      const fCell = sheet.getRange(targetRowIndex, col["Fee Paid"] + 1);
-      if (!fCell.getFormula()) fCell.setValue(allocFee);
-    }
+    const canWriteLoanCol_ = function (colIdx) {
+      if (colIdx === undefined) return false;
+      if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, colIdx)) return false;
+      const cell = sheet.getRange(targetRowIndex, colIdx + 1);
+      return !(cell && typeof cell.getFormula === "function" && cell.getFormula());
+    };
+    if (canWriteLoanCol_(col["Total Paid"])) sheet.getRange(targetRowIndex, col["Total Paid"] + 1).setValue(newTotalPaid);
+    if (canWriteLoanCol_(col["Balance"])) sheet.getRange(targetRowIndex, col["Balance"] + 1).setValue(newBalance);
+    if (canWriteLoanCol_(col["Status"])) sheet.getRange(targetRowIndex, col["Status"] + 1).setValue(newStatus);
+    if (canWriteLoanCol_(col["Principal Paid"])) sheet.getRange(targetRowIndex, col["Principal Paid"] + 1).setValue(allocPrincipal);
+    if (canWriteLoanCol_(col["Interest Paid"])) sheet.getRange(targetRowIndex, col["Interest Paid"] + 1).setValue(allocInterest);
+    if (canWriteLoanCol_(col["Fee Paid"])) sheet.getRange(targetRowIndex, col["Fee Paid"] + 1).setValue(allocFee);
   }
 
   const loanId = String(values[targetRowIndex - 1][col["Loan ID"]] || "");
@@ -345,7 +336,12 @@ function processLoanPayment(data) {
     if (repCol["Loan ID"] !== undefined) repRow[repCol["Loan ID"]] = loanId;
     if (repCol["Payment Date"] !== undefined) repRow[repCol["Payment Date"]] = paymentDate;
     if (repCol["Member ID"] !== undefined) repRow[repCol["Member ID"]] = rowLoanMid;
-    if (repCol["Borrower Name"] !== undefined) repRow[repCol["Borrower Name"]] = rowLoanBorrower;
+    if (repCol["Borrower Name"] !== undefined) {
+      repRow[repCol["Borrower Name"]] =
+        (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(repSheet, repCol["Borrower Name"]))
+          ? ""
+          : rowLoanBorrower;
+    }
     if (repCol["Total Paid"] !== undefined) repRow[repCol["Total Paid"]] = paymentAmount;
     if (repCol["Principal Paid"] !== undefined) repRow[repCol["Principal Paid"]] = deltaPrincipal;
     if (repCol["Interest Paid"] !== undefined) repRow[repCol["Interest Paid"]] = deltaInterest;
@@ -373,7 +369,12 @@ function processLoanPayment(data) {
       const paymentDate = (data.date ? parseDateInput_(data.date) : null) || new Date();
       if (cCol["Date"] !== undefined) nextRow[cCol["Date"]] = paymentDate;
       if (cCol["Member ID"] !== undefined) nextRow[cCol["Member ID"]] = rowLoanMid;
-      if (cCol["Member Name"] !== undefined) nextRow[cCol["Member Name"]] = rowLoanBorrower;
+      if (cCol["Member Name"] !== undefined) {
+        nextRow[cCol["Member Name"]] =
+          (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(cSheet, cCol["Member Name"]))
+            ? ""
+            : rowLoanBorrower;
+      }
       if (cCol["Amount"] !== undefined) nextRow[cCol["Amount"]] = paymentAmount;
       const cModeCol = cCol["Deposit Channel"] !== undefined ? cCol["Deposit Channel"] : cCol["Payment Mode"];
       if (cModeCol !== undefined) nextRow[cModeCol] = data.mode || data.channel || "Equity Bank";
@@ -600,27 +601,18 @@ function updateLoanRepaymentStatus(params) {
       allocInterestPaid = allocInterest;
       allocFeePaid = allocFee;
 
-      const totCell = loanSheet.getRange(targetLoanRow, loanCol["Total Paid"] + 1);
-      if (!totCell.getFormula()) totCell.setValue(newTotalPaid);
-
-      const balCell = loanSheet.getRange(targetLoanRow, loanCol["Balance"] + 1);
-      if (!balCell.getFormula()) balCell.setValue(newBalance);
-
-      const statCell = loanSheet.getRange(targetLoanRow, loanCol["Status"] + 1);
-      if (!statCell.getFormula()) statCell.setValue(newStatusLoan);
-
-      if (loanCol["Principal Paid"] !== undefined) {
-        const pCell = loanSheet.getRange(targetLoanRow, loanCol["Principal Paid"] + 1);
-        if (!pCell.getFormula()) pCell.setValue(allocPrincipal);
-      }
-      if (loanCol["Interest Paid"] !== undefined) {
-        const iCell = loanSheet.getRange(targetLoanRow, loanCol["Interest Paid"] + 1);
-        if (!iCell.getFormula()) iCell.setValue(allocInterest);
-      }
-      if (loanCol["Fee Paid"] !== undefined) {
-        const fCell = loanSheet.getRange(targetLoanRow, loanCol["Fee Paid"] + 1);
-        if (!fCell.getFormula()) fCell.setValue(allocFee);
-      }
+      const canWriteCol_ = function (colIdx) {
+        if (colIdx === undefined) return false;
+        if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(loanSheet, colIdx)) return false;
+        const cell = loanSheet.getRange(targetLoanRow, colIdx + 1);
+        return !(cell && typeof cell.getFormula === "function" && cell.getFormula());
+      };
+      if (canWriteCol_(loanCol["Total Paid"])) loanSheet.getRange(targetLoanRow, loanCol["Total Paid"] + 1).setValue(newTotalPaid);
+      if (canWriteCol_(loanCol["Balance"])) loanSheet.getRange(targetLoanRow, loanCol["Balance"] + 1).setValue(newBalance);
+      if (canWriteCol_(loanCol["Status"])) loanSheet.getRange(targetLoanRow, loanCol["Status"] + 1).setValue(newStatusLoan);
+      if (canWriteCol_(loanCol["Principal Paid"])) loanSheet.getRange(targetLoanRow, loanCol["Principal Paid"] + 1).setValue(allocPrincipal);
+      if (canWriteCol_(loanCol["Interest Paid"])) loanSheet.getRange(targetLoanRow, loanCol["Interest Paid"] + 1).setValue(allocInterest);
+      if (canWriteCol_(loanCol["Fee Paid"])) loanSheet.getRange(targetLoanRow, loanCol["Fee Paid"] + 1).setValue(allocFee);
     }
   }
 

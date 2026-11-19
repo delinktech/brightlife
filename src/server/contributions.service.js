@@ -30,14 +30,15 @@ function saveContribution(data) {
     newRow[col["Member ID"]] = memberId;
   }
 
-  // Member Name is dynamically computed via formula pointing to Members Named Ranges
+  // ARC-3: Per-row XLOOKUP formula injection is deprecated in favour of the Row 1 header spill formula.
+  // Resolve memberName in memory for audit logs/receipts; leave the cell blank when Row 1 has a spill formula.
+  if (!memberName && memberId && typeof resolveMemberFullNameById_ === "function") {
+    memberName = resolveMemberFullNameById_(ss, memberId, "");
+  }
   const nameIdx = col["Member Name"];
   if (nameIdx !== undefined) {
-    const nextRowNumber = sheet.getLastRow() + 1;
-    const midIdx = col["Member ID"];
-    if (midIdx !== undefined) {
-      const midColLetter = String.fromCharCode(65 + midIdx);
-      newRow[nameIdx] = '=IF(' + midColLetter + nextRowNumber + '="", "", IFERROR(XLOOKUP(' + midColLetter + nextRowNumber + ', Members_MemberID, Members_FullName, "—"), ""))';
+    if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, nameIdx)) {
+      newRow[nameIdx] = "";
     } else {
       newRow[nameIdx] = memberName;
     }
@@ -149,13 +150,14 @@ function getContributionsData(page, limit) {
     for (let r = 1; r < values.length; r++) {
       const row = values[r];
       const rowName = String(row[col["Member Name"]] || "").trim();
-      if (!rowName) continue;
+      const rowMidRaw = memberIdCol !== undefined ? String(row[memberIdCol] || "").trim() : "";
+      if (!rowName && !rowMidRaw) continue;
 
       if (isMemberOnly) {
-        const rowMid = memberIdCol !== undefined ? String(row[memberIdCol] || "").trim().toLowerCase() : "";
+        const rowMid = rowMidRaw.toLowerCase();
         const rowNameLower = rowName.toLowerCase();
         const matchId = callerMemberId && rowMid === callerMemberId;
-        const matchName = callerMemberName && (rowNameLower === callerMemberName || callerMemberName.indexOf(rowNameLower) !== -1 || rowNameLower.indexOf(callerMemberName) !== -1);
+        const matchName = callerMemberName && rowNameLower && (rowNameLower === callerMemberName || callerMemberName.indexOf(rowNameLower) !== -1 || rowNameLower.indexOf(callerMemberName) !== -1);
         if (!matchId && !matchName) continue;
       }
       allRowsWithIndex.push({
@@ -178,11 +180,12 @@ function getContributionsData(page, limit) {
       const mCol = getHeaderMap_(mVals[0]);
       for (let m = 1; m < mVals.length; m++) {
         const mid = mCol["Member ID"] !== undefined ? String(mVals[m][mCol["Member ID"]] || "").trim().toLowerCase() : "";
-        const mname = mCol["Full Name"] !== undefined ? String(mVals[m][mCol["Full Name"]] || "").trim().toLowerCase() : (mCol["Member Name"] !== undefined ? String(mVals[m][mCol["Member Name"]] || "").trim().toLowerCase() : "");
+        const mnameRaw = mCol["Full Name"] !== undefined ? String(mVals[m][mCol["Full Name"]] || "").trim() : (mCol["Member Name"] !== undefined ? String(mVals[m][mCol["Member Name"]] || "").trim() : "");
+        const mname = mnameRaw.toLowerCase();
         const rawPhone = mCol["Phone Number"] !== undefined ? String(mVals[m][mCol["Phone Number"]] || "").trim() : "";
         const cleanPh = typeof normalizeKenyanPhone_ === "function" ? normalizeKenyanPhone_(rawPhone) : rawPhone;
         const email = mCol["Email"] !== undefined ? String(mVals[m][mCol["Email"]] || "").trim() : "";
-        const info = { phone: rawPhone, cleanPhone: cleanPh, email: email };
+        const info = { name: mnameRaw, phone: rawPhone, cleanPhone: cleanPh, email: email };
         if (mid) memMap[mid] = info;
         if (mname) memMap[mname] = info;
       }
@@ -191,8 +194,9 @@ function getContributionsData(page, limit) {
     const contributions = pageItems.map(function (item) {
       const row = item.data;
       const mIdVal = memberIdCol !== undefined ? String(row[memberIdCol] || "").trim() : "";
-      const mNameVal = String(row[col["Member Name"]] || "").trim();
-      const memInfo = (mIdVal && memMap[mIdVal.toLowerCase()]) || (mNameVal && memMap[mNameVal.toLowerCase()]) || {};
+      const rawNameVal = String(row[col["Member Name"]] || "").trim();
+      const memInfo = (mIdVal && memMap[mIdVal.toLowerCase()]) || (rawNameVal && memMap[rawNameVal.toLowerCase()]) || {};
+      const mNameVal = rawNameVal || memInfo.name || mIdVal;
 
       return {
         rowNumber: item.rowNumber,

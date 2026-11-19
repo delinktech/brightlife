@@ -23,6 +23,7 @@ const INVESTMENT_ENGINE = Object.freeze({
     "Unit Cost",
     "Current Price",
     "Last Valued",
+    "Carrying Value",
   ],
   PROJECT_HEADERS: [
     "Project ID",
@@ -37,6 +38,10 @@ const INVESTMENT_ENGINE = Object.freeze({
     "Status",
     "Notes",
     "Created At",
+    "Capital Deployed",
+    "Cumulative Revenue",
+    "Cumulative OpEx",
+    "Carrying Value",
   ],
   CASHFLOW_HEADERS: [
     "Transaction ID",
@@ -65,12 +70,20 @@ const INVESTMENT_ENGINE = Object.freeze({
  * ------------------------------------------------------------------ */
 
 /**
- * One-shot institutional workbook setup for ARC-1 + ARC-2.
+ * One-shot institutional workbook setup for ARC-1 + ARC-2 + ARC-3.
  * Never deletes, renames, reorders or overwrites existing data.
  */
 function runInstitutionalWorkbookSetup_() {
   const ss = getSpreadsheet_();
-  const report = { constants: null, investments: null, projects: null, cashflows: null, prepopulated: [] };
+  const report = {
+    constants: null,
+    investments: null,
+    projects: null,
+    cashflows: null,
+    prepopulated: [],
+    spillFormulas: null,
+    summaryKpis: null,
+  };
 
   report.constants = provisionConstantsReferenceTables_(ss);
   const refRanges = getConstantsReferenceRanges_(ss);
@@ -79,6 +92,8 @@ function runInstitutionalWorkbookSetup_() {
   report.projects = provisionInvestmentProjects_(ss, refRanges);
   report.cashflows = provisionInvestmentCashflows_(ss, refRanges);
   report.prepopulated = prepopulateInvestmentEngine_(ss);
+  report.spillFormulas = provisionWorkbookSpillFormulas_(ss);
+  report.summaryKpis = provisionSummaryKpisSheet_(ss);
 
   SpreadsheetApp.flush();
   try { clearDashboardCache_(); } catch (e) {}
@@ -86,7 +101,7 @@ function runInstitutionalWorkbookSetup_() {
     "workbook.setup",
     "Workbook",
     "",
-    "ARC-2 institutional investment engine provisioned",
+    "ARC-1/ARC-2/ARC-3 institutional workbook engine & Summary KPIs provisioned",
     JSON.stringify(report)
   );
   return report;
@@ -180,8 +195,32 @@ function provisionInvestmentsRegister_(ss, refRanges) {
   const sheet = res.sheet;
   applyRangeValidation_(columnRange_(sheet, "Asset Class"), refRanges.assetClasses);
   applyNumberFormat_(sheet, ["Units Held"], "#,##0.####");
-  applyNumberFormat_(sheet, ["Unit Cost", "Current Price"], "#,##0.00");
+  applyNumberFormat_(sheet, ["Unit Cost", "Current Price", "Carrying Value"], "#,##0.00");
   applyNumberFormat_(sheet, ["Last Valued"], "dd mmm yyyy");
+
+  // ARC-3: Row 1 spill formula for Carrying Value (Units Held * Current Price when marked to market, else Money Invested)
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const col = getHeaderMap_(headers);
+  if (
+    col["Carrying Value"] !== undefined &&
+    col["Investment ID"] !== undefined &&
+    col["Money Invested"] !== undefined &&
+    col["Status"] !== undefined &&
+    col["Units Held"] !== undefined &&
+    col["Current Price"] !== undefined
+  ) {
+    const idL = getColLetter_(col["Investment ID"] + 1);
+    const invL = getColLetter_(col["Money Invested"] + 1);
+    const statL = getColLetter_(col["Status"] + 1);
+    const uL = getColLetter_(col["Units Held"] + 1);
+    const pL = getColLetter_(col["Current Price"] + 1);
+    installColumnSpillFormula_(
+      sheet,
+      col["Carrying Value"],
+      "Carrying Value",
+      "MAP(" + idL + "2:" + idL + ", " + invL + "2:" + invL + ", " + statL + "2:" + statL + ", " + uL + "2:" + uL + ", " + pL + "2:" + pL + ', LAMBDA(id, inv, stat, u, p, IF(id="", "", IF(REGEXMATCH(LOWER(TRIM(stat)), "^(exited|closed|sold|matured|settled|inactive|cancelled|rejected)$"), 0, IF(AND(N(u)>0, N(p)>0), N(u)*N(p), N(inv))))))'
+    );
+  }
   return { created: res.created, addedHeaders: res.addedHeaders };
 }
 
@@ -192,7 +231,7 @@ function provisionInvestmentProjects_(ss, refRanges) {
   applyListValidation_(columnRange_(sheet, "Status"), INVESTMENT_ENGINE.PROJECT_STATUSES);
   const inv = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENTS);
   if (inv) applyRangeValidation_(columnRange_(sheet, "Linked Investment ID"), inv.getRange("A2:A"));
-  applyNumberFormat_(sheet, ["Approved Budget"], "#,##0.00");
+  applyNumberFormat_(sheet, ["Approved Budget", "Capital Deployed", "Cumulative Revenue", "Cumulative OpEx", "Carrying Value"], "#,##0.00");
   applyNumberFormat_(sheet, ["Start Date"], "dd mmm yyyy");
   return { created: res.created, addedHeaders: res.addedHeaders };
 }
@@ -827,5 +866,496 @@ function recordInvestmentCashflow(payload) {
     });
   } catch (error) {
     return { success: false, error: error.message };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * ARC-3: Row 1 Header Spill Formulas & Summary KPIs Materialized View
+ * ------------------------------------------------------------------ */
+
+/**
+ * Installs non-volatile Row 1 header-anchored spill formulas (MAP + LAMBDA + SUMIFS / XLOOKUP)
+ * across Members, Contributions, Loans, Loan Repayments, Guarantors, Investments, and Investment Projects,
+ * purging legacy per-row formula injections.
+ */
+function provisionWorkbookSpillFormulas_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const upgraded = [];
+
+  try {
+    if (typeof setupAllNamedRanges_ === "function") setupAllNamedRanges_(spreadsheet);
+  } catch (eNR) {}
+
+  // 1. Members sheet spill formulas
+  try {
+    const memSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.MEMBERS);
+    if (memSheet && memSheet.getLastRow() >= 1 && typeof setupMembersSavingsFormula_ === "function") {
+      setupMembersSavingsFormula_(spreadsheet);
+      upgraded.push("Members");
+    }
+  } catch (eMem) {}
+
+  // 2. Contributions sheet: Member Name spill formula (only when Member ID column exists)
+  try {
+    const cSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CONTRIBUTIONS);
+    if (cSheet && cSheet.getLastRow() >= 1) {
+      const cHeaders = cSheet.getRange(1, 1, 1, Math.max(cSheet.getLastColumn(), 1)).getValues()[0];
+      const cCol = getHeaderMap_(cHeaders);
+      const midIdx = cCol["Member ID"] !== undefined ? cCol["Member ID"] : cCol["Member id"];
+      const nameIdx = cCol["Member Name"];
+      if (midIdx !== undefined && nameIdx !== undefined) {
+        const midL = getColLetter_(midIdx + 1);
+        installColumnSpillFormula_(
+          cSheet,
+          nameIdx,
+          "Member Name",
+          "MAP(" + midL + "2:" + midL + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_FullName, "—"), ""))))'
+        );
+        upgraded.push("Contributions");
+      }
+    }
+  } catch (eCon) {}
+
+  // 3. Loans sheet: dynamic Row 1 spill formulas for all computed columns present on the sheet
+  try {
+    const lSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
+    if (lSheet && lSheet.getLastRow() >= 1) {
+      const lHeaders = lSheet.getRange(1, 1, 1, Math.max(lSheet.getLastColumn(), 1)).getValues()[0];
+      const lCol = getHeaderMap_(lHeaders);
+      const lidIdx = lCol["Loan ID"];
+      const midIdx = lCol["Member ID"] !== undefined ? lCol["Member ID"] : lCol["Member id"];
+      const nameIdx = lCol["Borrower Name"];
+      const reqIdx = lCol["Requested Amount"];
+      const intIdx = lCol["Interest"];
+      const feeIdx = lCol["Transaction Fee"];
+      const repIdx = lCol["Repayment Amount"];
+      const paidIdx = lCol["Total Paid"];
+      const pPaidIdx = lCol["Principal Paid"];
+      const iPaidIdx = lCol["Interest Paid"];
+      const fPaidIdx = lCol["Fee Paid"];
+      const balIdx = lCol["Balance"];
+      const savHeader = lCol["Borrower’s Own Savings"] !== undefined ? "Borrower’s Own Savings" : "Borrower's Own Savings";
+      const savIdx = lCol["Borrower’s Own Savings"] !== undefined ? lCol["Borrower’s Own Savings"] : lCol["Borrower's Own Savings"];
+      const guarIdx = lCol["Total Guaranteed"];
+      const shortIdx = lCol["Shortfall Amount"];
+
+      const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
+      const hasRepaymentsLedger = Boolean(repSheet && repSheet.getLastRow() > 1);
+
+      if (lidIdx !== undefined) {
+        const lidL = getColLetter_(lidIdx + 1);
+        if (midIdx !== undefined && nameIdx !== undefined) {
+          const midL = getColLetter_(midIdx + 1);
+          installColumnSpillFormula_(
+            lSheet,
+            nameIdx,
+            "Borrower Name",
+            "MAP(" + midL + "2:" + midL + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_FullName, "—"), ""))))'
+          );
+        }
+        if (repIdx !== undefined && reqIdx !== undefined && intIdx !== undefined && feeIdx !== undefined) {
+          const reqL = getColLetter_(reqIdx + 1);
+          const intL = getColLetter_(intIdx + 1);
+          const feeL = getColLetter_(feeIdx + 1);
+          installColumnSpillFormula_(
+            lSheet,
+            repIdx,
+            "Repayment Amount",
+            "MAP(" + lidL + "2:" + lidL + ", " + reqL + "2:" + reqL + ", " + intL + "2:" + intL + ", " + feeL + "2:" + feeL + ', LAMBDA(lid, req, intr, fee, IF(lid="", "", N(req) + N(intr) + N(fee))))'
+          );
+        }
+        if (hasRepaymentsLedger) {
+          if (paidIdx !== undefined) {
+            installColumnSpillFormula_(
+              lSheet,
+              paidIdx,
+              "Total Paid",
+              "MAP(" + lidL + "2:" + lidL + ', LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_TotalPaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+            );
+          }
+          if (pPaidIdx !== undefined) {
+            installColumnSpillFormula_(
+              lSheet,
+              pPaidIdx,
+              "Principal Paid",
+              "MAP(" + lidL + "2:" + lidL + ', LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_PrincipalPaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+            );
+          }
+          if (iPaidIdx !== undefined) {
+            installColumnSpillFormula_(
+              lSheet,
+              iPaidIdx,
+              "Interest Paid",
+              "MAP(" + lidL + "2:" + lidL + ', LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_InterestPaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+            );
+          }
+          if (fPaidIdx !== undefined) {
+            installColumnSpillFormula_(
+              lSheet,
+              fPaidIdx,
+              "Fee Paid",
+              "MAP(" + lidL + "2:" + lidL + ', LAMBDA(lid, IF(lid="", "", SUMIFS(Repayments_FeePaid, Repayments_LoanID, lid, Repayments_Status, "Approved"))))'
+            );
+          }
+        }
+        if (balIdx !== undefined && repIdx !== undefined && paidIdx !== undefined) {
+          const repL = getColLetter_(repIdx + 1);
+          const paidL = getColLetter_(paidIdx + 1);
+          installColumnSpillFormula_(
+            lSheet,
+            balIdx,
+            "Balance",
+            "MAP(" + lidL + "2:" + lidL + ", " + repL + "2:" + repL + ", " + paidL + "2:" + paidL + ', LAMBDA(lid, rep, paid, IF(lid="", "", MAX(0, N(rep) - N(paid)))))'
+          );
+        }
+        if (savIdx !== undefined && midIdx !== undefined) {
+          const midL = getColLetter_(midIdx + 1);
+          installColumnSpillFormula_(
+            lSheet,
+            savIdx,
+            savHeader,
+            "MAP(" + midL + "2:" + midL + ', LAMBDA(mid, IF(mid="", "", IFERROR(XLOOKUP(mid, Members_MemberID, Members_TotalSavings, 0), 0))))'
+          );
+        }
+        if (guarIdx !== undefined) {
+          installColumnSpillFormula_(
+            lSheet,
+            guarIdx,
+            "Total Guaranteed",
+            "MAP(" + lidL + "2:" + lidL + ', LAMBDA(lid, IF(lid="", "", SUMIFS(Guarantors_GuaranteedAmount, Guarantors_LoanID, lid))))'
+          );
+        }
+        if (shortIdx !== undefined && repIdx !== undefined && savIdx !== undefined && guarIdx !== undefined) {
+          const repL = getColLetter_(repIdx + 1);
+          const savL = getColLetter_(savIdx + 1);
+          const guarL = getColLetter_(guarIdx + 1);
+          installColumnSpillFormula_(
+            lSheet,
+            shortIdx,
+            "Shortfall Amount",
+            "MAP(" + lidL + "2:" + lidL + ", " + repL + "2:" + repL + ", " + savL + "2:" + savL + ", " + guarL + "2:" + guarL + ', LAMBDA(lid, rep, sav, guar, IF(lid="", "", MAX(0, N(rep) - (N(sav) + N(guar))))))'
+          );
+        }
+        upgraded.push("Loans");
+      }
+    }
+  } catch (eLn) {}
+
+  // 4. Loan Repayments sheet spill formulas
+  try {
+    const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
+    if (repSheet && repSheet.getLastRow() >= 1 && typeof setupLoanRepaymentsFormulas_ === "function") {
+      setupLoanRepaymentsFormulas_(spreadsheet);
+      upgraded.push("Loan Repayments");
+    }
+  } catch (eRep) {}
+
+  // 5. Guarantors sheet spill formulas
+  try {
+    const gSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.GUARANTORS);
+    if (gSheet && gSheet.getLastRow() >= 1 && typeof setupGuarantorsSchemaAndFormulas_ === "function") {
+      setupGuarantorsSchemaAndFormulas_(spreadsheet);
+      upgraded.push("Guarantors");
+    }
+  } catch (eGuar) {}
+
+  // 6. Investment Projects sheet spill formulas (Capital Deployed, Cumulative Revenue, Cumulative OpEx, Carrying Value)
+  try {
+    const prjSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENT_PROJECTS);
+    if (prjSheet && prjSheet.getLastRow() >= 1) {
+      const pHeaders = prjSheet.getRange(1, 1, 1, Math.max(prjSheet.getLastColumn(), 1)).getValues()[0];
+      const pCol = getHeaderMap_(pHeaders);
+      const pidIdx = pCol["Project ID"];
+      const linkIdx = pCol["Linked Investment ID"];
+      const statIdx = pCol["Status"];
+      if (pidIdx !== undefined && linkIdx !== undefined && statIdx !== undefined) {
+        const pidL = getColLetter_(pidIdx + 1);
+        const linkL = getColLetter_(linkIdx + 1);
+        const statL = getColLetter_(statIdx + 1);
+        if (pCol["Capital Deployed"] !== undefined) {
+          installColumnSpillFormula_(
+            prjSheet,
+            pCol["Capital Deployed"],
+            "Capital Deployed",
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Capital In"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Ledger_Amount, Ledger_InvestmentID, lnk, Ledger_Type, "Capital In"), 0)))))'
+          );
+        }
+        if (pCol["Cumulative Revenue"] !== undefined) {
+          installColumnSpillFormula_(
+            prjSheet,
+            pCol["Cumulative Revenue"],
+            "Cumulative Revenue",
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Revenue") + SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Dividend"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Ledger_Amount, Ledger_InvestmentID, lnk, Ledger_Type, "Revenue"), 0)))))'
+          );
+        }
+        if (pCol["Cumulative OpEx"] !== undefined) {
+          installColumnSpillFormula_(
+            prjSheet,
+            pCol["Cumulative OpEx"],
+            "Cumulative OpEx",
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Expense"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Ledger_Amount, Ledger_InvestmentID, lnk, Ledger_Type, "Expense"), 0)))))'
+          );
+        }
+        if (pCol["Carrying Value"] !== undefined) {
+          installColumnSpillFormula_(
+            prjSheet,
+            pCol["Carrying Value"],
+            "Carrying Value",
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ", " + statL + "2:" + statL + ', LAMBDA(pid, lnk, stat, IF(pid="", "", IF(OR(lnk<>"", LOWER(TRIM(stat))="exited"), 0, MAX(0, IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Capital In") - SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Withdrawal"), 0))))))'
+          );
+        }
+        upgraded.push("Investment Projects");
+      }
+    }
+  } catch (ePrj) {}
+
+  try {
+    if (typeof setupAllNamedRanges_ === "function") setupAllNamedRanges_(spreadsheet);
+  } catch (eNR2) {}
+
+  return { upgradedSheets: upgraded };
+}
+
+/**
+ * ARC-3: Provisions the dedicated "Summary KPIs" materialized view sheet.
+ * Maintains live non-volatile formulas in B2:B16 for instant 1-range O(1) reads.
+ */
+function provisionSummaryKpisSheet_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const res = ensureHeaderedSheet_(spreadsheet, SHEETS.SUMMARY_KPIS, [
+    "Metric Key",
+    "Value",
+    "Formula Basis & Description",
+  ]);
+  const sheet = res.sheet;
+  const baseline = computeSummaryKpisBaseline_(spreadsheet);
+
+  const kpiDefinitions = [
+    ["Total_Active_Members", baseline.totalActiveMembers, '=IFERROR(COUNTIF(Members_Status, "Active"), 0)', "Count of active members in Members register"],
+    ["Total_Registered_Members", baseline.totalRegisteredMembers, "=IFERROR(COUNTA(Members_MemberID), 0)", "Total registered members in Members register"],
+    ["Total_Member_Savings", baseline.totalMemberSavings, "=IFERROR(SUM(Members_TotalSavings), 0)", "Cumulative approved member savings pool (KES)"],
+    ["Total_Disbursed_Loans", baseline.totalDisbursedLoans, '=IFERROR(SUMIFS(Loans_RequestedAmount, Loans_Status, "<>Rejected", Loans_Status, "<>Pending"), 0)', "Cumulative principal disbursed across approved/active/settled loans (KES)"],
+    ["Total_Outstanding_Loans", baseline.totalOutstandingLoans, '=IFERROR(SUMIFS(Loans_Balance, Loans_Status, "Active") + SUMIFS(Loans_Balance, Loans_Status, "Approved"), 0)', "Total active & approved loan balances receivable (KES)"],
+    ["Active_Loans_Count", baseline.activeLoansCount, '=IFERROR(COUNTIF(Loans_Status, "Active") + COUNTIF(Loans_Status, "Approved"), 0)', "Number of currently active or approved loans"],
+    ["Pending_Loans_Count", baseline.pendingLoansCount, '=IFERROR(COUNTIF(Loans_Status, "Pending"), 0)', "Number of loan applications awaiting approval"],
+    ["Settled_Loans_Count", baseline.settledLoansCount, '=IFERROR(COUNTIF(Loans_Status, "Settled"), 0)', "Number of fully repaid and settled loans"],
+    ["Total_Loan_Interest_Earned", baseline.totalLoanInterestEarned, '=IFERROR(SUMIFS(Repayments_InterestPaid, Repayments_Status, "Approved"), 0)', "Cumulative verified loan interest earned (KES)"],
+    [
+      "Net_Cash_Position",
+      baseline.netCashPosition,
+      '=IF(IFERROR(SUM(Accounts_Balance), 0) + IF(IFERROR(COUNTIF(Accounts_OrgName, "*CIC*"), 0)=0, IFERROR(LOOKUP(2, 1/(FundStatements_ClosingBalance<>""), FundStatements_ClosingBalance), 0), 0) > 0, IFERROR(SUM(Accounts_Balance), 0) + IF(IFERROR(COUNTIF(Accounts_OrgName, "*CIC*"), 0)=0, IFERROR(LOOKUP(2, 1/(FundStatements_ClosingBalance<>""), FundStatements_ClosingBalance), 0), 0), MAX(0, B4 - B6))',
+      "Verified physical bank + MMF cash (fallback to unlent member capital) (KES)",
+    ],
+    ["Total_Investment_Assets", baseline.totalInvestmentAssets, "=IFERROR(SUM(Investments_CarryingValue), 0) + IFERROR(SUM(Projects_CarryingValue), 0)", "Combined carrying value of Tier 1 instruments & standalone Tier 2 projects (KES)"],
+    ["Total_Group_Assets", baseline.totalGroupAssets, "=B11 + B6 + B12", "Total Group Assets = Net Cash Position + Outstanding Loans + Investment Assets (KES)"],
+    [
+      "Active_PAR_Amount",
+      baseline.activeParAmount,
+      '=IFERROR(SUMIFS(Loans_Balance, Loans_Status, "Active", Loans_ApprovedDate, "<" & (TODAY() - 90)) + SUMIFS(Loans_Balance, Loans_Status, "*Arrear*") + SUMIFS(Loans_Balance, Loans_Status, "*Default*") + SUMIFS(Loans_Balance, Loans_Status, "*Overdue*"), 0)',
+      "Portfolio at Risk balance (>90d tenor or delinquent status) (KES)",
+    ],
+    ["Active_PAR_Pct", baseline.activeParPct, "=IF(B6 > 0, ROUND((B14 / B6) * 100, 2), 0)", "Active Portfolio at Risk percentage of active loan book (%)"],
+    ["Statutory_Reserve_Fund", baseline.statutoryReserveFund, "=MAX(0, ROUND((B13 - B4) * 0.20, 2))", "SASRA Section 51 statutory reserve (20% of accumulated surplus) (KES)"],
+  ];
+
+  const valueRows = kpiDefinitions.map(function (d) {
+    return [d[0], d[1], d[3]];
+  });
+  sheet.getRange(2, 1, valueRows.length, 3).setValues(valueRows);
+  for (let i = 0; i < kpiDefinitions.length; i++) {
+    const cell = sheet.getRange(i + 2, 2);
+    if (cell && typeof cell.setFormula === "function") {
+      cell.setFormula(kpiDefinitions[i][2]);
+    }
+  }
+  sheet.getRange(2, 2, valueRows.length, 1).setNumberFormat("#,##0.00");
+
+  return {
+    created: res.created,
+    metricCount: kpiDefinitions.length,
+  };
+}
+
+/**
+ * Computes baseline KPI totals from existing sheets (also used as fallback if Summary KPIs
+ * has not yet been provisioned on the spreadsheet).
+ */
+function computeSummaryKpisBaseline_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  let totalActiveMembers = 0;
+  let totalRegisteredMembers = 0;
+  let totalMemberSavings = 0;
+  let totalDisbursedLoans = 0;
+  let totalOutstandingLoans = 0;
+  let activeLoansCount = 0;
+  let pendingLoansCount = 0;
+  let settledLoansCount = 0;
+  let totalLoanInterestEarned = 0;
+  let activeParAmount = 0;
+
+  try {
+    const memSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.MEMBERS);
+    if (memSheet && memSheet.getLastRow() > 1) {
+      const mVals = memSheet.getDataRange().getValues();
+      const mCol = getHeaderMap_(mVals[0]);
+      for (let i = 1; i < mVals.length; i++) {
+        const mid = mCol["Member ID"] !== undefined ? String(mVals[i][mCol["Member ID"]] || "").trim() : "";
+        if (!mid) continue;
+        totalRegisteredMembers++;
+        const stat = mCol["Status"] !== undefined ? String(mVals[i][mCol["Status"]] || "").trim().toLowerCase() : "active";
+        if (stat === "active") totalActiveMembers++;
+        if (mCol["Total Savings"] !== undefined) {
+          totalMemberSavings += Number(mVals[i][mCol["Total Savings"]]) || 0;
+        }
+      }
+    }
+  } catch (eM) {}
+
+  try {
+    const loanSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
+    if (loanSheet && loanSheet.getLastRow() > 1) {
+      const lVals = loanSheet.getDataRange().getValues();
+      const lCol = getHeaderMap_(lVals[0]);
+      for (let k = 1; k < lVals.length; k++) {
+        const lid = lCol["Loan ID"] !== undefined ? String(lVals[k][lCol["Loan ID"]] || "").trim() : "";
+        if (!lid) continue;
+        const stat = lCol["Status"] !== undefined ? String(lVals[k][lCol["Status"]] || "").trim() : "";
+        const statLower = stat.toLowerCase();
+        const req = lCol["Requested Amount"] !== undefined ? (Number(lVals[k][lCol["Requested Amount"]]) || 0) : 0;
+        const bal = lCol["Balance"] !== undefined ? (Number(lVals[k][lCol["Balance"]]) || 0) : 0;
+        if (statLower !== "rejected" && statLower !== "pending") {
+          totalDisbursedLoans += req;
+        }
+        const isDelinq = statLower.indexOf("arrear") !== -1 || statLower.indexOf("default") !== -1 || statLower.indexOf("overdue") !== -1;
+        if (statLower === "active" || statLower === "approved" || isDelinq) {
+          activeLoansCount++;
+          totalOutstandingLoans += bal;
+          if (isDelinq) activeParAmount += bal;
+        } else if (statLower === "pending") {
+          pendingLoansCount++;
+        } else if (statLower === "settled") {
+          settledLoansCount++;
+        }
+      }
+    }
+  } catch (eL) {}
+
+  let netCashPosition = Math.max(0, totalMemberSavings - totalOutstandingLoans);
+  try {
+    if (typeof computeLiquiditySummary_ === "function") {
+      const liq = computeLiquiditySummary_(spreadsheet, totalMemberSavings, totalOutstandingLoans);
+      if (liq && isFinite(liq.cash)) netCashPosition = liq.cash;
+    }
+  } catch (eC) {}
+
+  let totalInvestmentAssets = 0;
+  try {
+    const invSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENTS);
+    if (invSheet && invSheet.getLastRow() > 1) {
+      const iVals = invSheet.getDataRange().getValues();
+      const iCol = getHeaderMap_(iVals[0]);
+      for (let r = 1; r < iVals.length; r++) {
+        if (iCol["Investment ID"] !== undefined && !iVals[r][iCol["Investment ID"]]) continue;
+        const v = valueInvestmentRow_(iVals[r], iCol);
+        if (v && v.carryingValue > 0) totalInvestmentAssets += v.carryingValue;
+      }
+    }
+    getStandaloneProjectCarryingItems_(spreadsheet).forEach(function (p) {
+      totalInvestmentAssets += p.value;
+    });
+  } catch (eI) {}
+
+  const totalGroupAssets = round2_(netCashPosition + totalOutstandingLoans + totalInvestmentAssets);
+  const activeParPct = totalOutstandingLoans > 0 ? round2_((activeParAmount / totalOutstandingLoans) * 100) : 0;
+  const statutoryReserveFund = Math.max(0, round2_((totalGroupAssets - totalMemberSavings) * 0.20));
+
+  return {
+    fromMaterializedView: false,
+    totalActiveMembers: totalActiveMembers,
+    totalRegisteredMembers: totalRegisteredMembers,
+    totalMemberSavings: round2_(totalMemberSavings),
+    totalDisbursedLoans: round2_(totalDisbursedLoans),
+    totalOutstandingLoans: round2_(totalOutstandingLoans),
+    activeLoansCount: activeLoansCount,
+    pendingLoansCount: pendingLoansCount,
+    settledLoansCount: settledLoansCount,
+    totalLoanInterestEarned: round2_(totalLoanInterestEarned),
+    netCashPosition: round2_(netCashPosition),
+    totalInvestmentAssets: round2_(totalInvestmentAssets),
+    totalGroupAssets: totalGroupAssets,
+    activeParAmount: round2_(activeParAmount),
+    activeParPct: activeParPct,
+    statutoryReserveFund: statutoryReserveFund,
+  };
+}
+
+/**
+ * ARC-3: Single-range O(1) reader for the "Summary KPIs" materialized view tab.
+ * Executes exactly ONE getRange("A2:B16").getValues() call (~5ms) instead of scanning 6 sheets.
+ * Returns null if the tab does not exist yet so callers can fall back gracefully.
+ */
+function readSummaryKpisSnapshot_(ss) {
+  try {
+    const spreadsheet = ss || getSpreadsheet_();
+    const sheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.SUMMARY_KPIS);
+    if (!sheet) return null;
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return null;
+
+    const rows = sheet.getRange(2, 1, Math.min(lastRow - 1, 25), 2).getValues();
+    const map = {};
+    let numericCount = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const k = String(rows[i][0] || "").trim().toLowerCase();
+      const rawVal = rows[i][1];
+      if (!k) continue;
+      // Ignore unevaluated formula strings if a non-evaluating mock overwrote values
+      if (typeof rawVal === "string" && rawVal.trim().indexOf("=") === 0) return null;
+      const num = Number(rawVal);
+      if (isFinite(num)) {
+        map[k] = num;
+        numericCount++;
+      }
+    }
+    if (numericCount < 3) return null;
+
+    return {
+      fromMaterializedView: true,
+      totalActiveMembers: Number(map["total_active_members"]) || 0,
+      totalRegisteredMembers: Number(map["total_registered_members"]) || 0,
+      totalMemberSavings: round2_(map["total_member_savings"] !== undefined ? map["total_member_savings"] : map["total_group_savings"]),
+      totalDisbursedLoans: round2_(map["total_disbursed_loans"] !== undefined ? map["total_disbursed_loans"] : map["total_disbursed_principal"]),
+      totalOutstandingLoans: round2_(map["total_outstanding_loans"]),
+      activeLoansCount: Number(map["active_loans_count"]) || 0,
+      pendingLoansCount: Number(map["pending_loans_count"]) || 0,
+      settledLoansCount: Number(map["settled_loans_count"]) || 0,
+      totalLoanInterestEarned: round2_(map["total_loan_interest_earned"]),
+      netCashPosition: round2_(map["net_cash_position"] !== undefined ? map["net_cash_position"] : map["total_liquid_bank_cash"]),
+      totalInvestmentAssets: round2_(map["total_investment_assets"] !== undefined ? map["total_investment_assets"] : map["total_investments_carrying_val"]),
+      totalGroupAssets: round2_(map["total_group_assets"]),
+      activeParAmount: round2_(map["active_par_amount"] !== undefined ? map["active_par_amount"] : map["par_30_amount"]),
+      activeParPct: round2_(map["active_par_pct"]),
+      statutoryReserveFund: round2_(map["statutory_reserve_fund"] !== undefined ? map["statutory_reserve_fund"] : map["statutory_reserve_fund_est"]),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Public RPC endpoint returning the instant materialized KPIs from "Summary KPIs" in 1 range read.
+ */
+function getSummaryKpisData() {
+  try {
+    requireAccess_();
+    const ss = getSpreadsheet_();
+    const snap = readSummaryKpisSnapshot_(ss) || computeSummaryKpisBaseline_(ss);
+    return {
+      success: true,
+      fromMaterializedView: Boolean(snap.fromMaterializedView),
+      kpis: snap,
+    };
+  } catch (error) {
+    return { success: false, error: error.message, kpis: null };
   }
 }
