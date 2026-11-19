@@ -684,12 +684,9 @@
   if (typeof document !== "undefined" && !window.__applyLoanDropdownListenersBound) {
     window.__applyLoanDropdownListenersBound = true;
     document.addEventListener("click", function (e) {
-      if (!e.target.closest("[data-apply-dropdown]")) {
-        document.querySelectorAll("[data-apply-dropdown] .shadcn-dropdown-menu").forEach(function (m) {
-          m.classList.add("hidden");
-        });
-        document.querySelectorAll("[data-apply-dropdown] .shadcn-select-trigger").forEach(function (t) {
-          t.classList.remove("active");
+      if (!e.target.closest("[data-guarantor-combo]")) {
+        document.querySelectorAll("[data-guarantor-combo] .custom-combobox-panel").forEach(function (p) {
+          p.classList.add("hidden");
         });
       }
       const tenorWrap = document.getElementById("select-al-tenor-wrapper");
@@ -769,6 +766,64 @@
     updateLoanApplicationCalculator();
   }
 
+  function getEligibleGuarantorsForRow_(idx, filterText) {
+    const q = (filterText || "").toLowerCase().trim();
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    return list.filter(function (m) {
+      if (String(m.id) === String(applyLoanState.borrowerId)) return false;
+      const takenElsewhere = applyLoanState.guarantors.some(function (other, oIdx) {
+        return oIdx !== idx && String(other.memberId) === String(m.id);
+      });
+      if (takenElsewhere) return false;
+      if (!q) return true;
+      return (m.name || "").toLowerCase().indexOf(q) !== -1 || (m.id || "").toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function renderGuarantorComboboxPanel_(idx, filterText) {
+    const panel = document.getElementById("al-guarantor-combobox-" + idx);
+    if (!panel) return;
+
+    document.querySelectorAll("[data-guarantor-combo] .custom-combobox-panel").forEach(function (p) {
+      if (p !== panel) p.classList.add("hidden");
+    });
+
+    const matches = getEligibleGuarantorsForRow_(idx, filterText);
+    if (!matches.length) {
+      panel.innerHTML = '<div class="px-3 py-2 text-xs text-slate-400 text-center">No matching members found</div>';
+      panel.classList.remove("hidden");
+      return;
+    }
+
+    panel.innerHTML = matches.slice(0, 40).map(function (m) {
+      const free = getMemberUnencumberedSavings_(m);
+      return (
+        '<div class="custom-combobox-item" onclick="event.stopPropagation(); onGuarantorSelected(' + idx + ', \'' + escapeHtmlAttr(m.id) + '\')">' +
+          '<span>' + escapeHtmlAttr(m.name) + "</span>" +
+          '<span class="item-id font-mono tabular-nums">' + escapeHtmlAttr(m.id) + " &bull; " + formatMoney(free) + " free</span>" +
+        "</div>"
+      );
+    }).join("");
+    panel.classList.remove("hidden");
+  }
+
+  function openGuarantorCombobox_(idx) {
+    renderGuarantorComboboxPanel_(idx, "");
+  }
+
+  function onGuarantorSearchInput_(idx, value) {
+    const g = applyLoanState.guarantors[idx];
+    if (g && g.memberId) {
+      g.memberId = "";
+      const freeEl = document.getElementById("al-guarantor-free-" + idx);
+      if (freeEl) {
+        freeEl.textContent = "Select a guarantor to view available unencumbered savings";
+      }
+      updateLoanApplicationCalculator();
+    }
+    renderGuarantorComboboxPanel_(idx, value);
+  }
+
   function renderApplyLoanGuarantors_() {
     const container = document.getElementById("al-guarantors-list");
     const addBtn = document.getElementById("al-add-guarantor-btn");
@@ -792,39 +847,22 @@
     container.innerHTML = applyLoanState.guarantors.map(function (g, idx) {
       const selectedMember = eligibleMembers.find(function (m) { return String(m.id) === String(g.memberId); });
       const freeSavings = getMemberUnencumberedSavings_(selectedMember);
-      const triggerLabel = selectedMember ? selectedMember.name : "-- Select Guarantor --";
+      const inputVal = selectedMember ? (selectedMember.name + " (" + selectedMember.id + ")") : "";
 
-      const menuItemsHtml = [
-        '<div class="shadcn-dropdown-item ' + (!selectedMember ? "selected" : "") + '" data-value="" onclick="event.stopPropagation(); onGuarantorSelected(' + idx + ', \'\')">' +
-          '<span class="item-text text-slate-400">-- Select Guarantor --</span>' +
-        "</div>"
-      ].concat(
-        eligibleMembers.map(function (m) {
-          const isSelectedHere = String(m.id) === String(g.memberId);
-          const takenElsewhere = applyLoanState.guarantors.some(function (other, oIdx) {
-            return oIdx !== idx && String(other.memberId) === String(m.id);
-          });
-          if (takenElsewhere) return "";
-          const free = getMemberUnencumberedSavings_(m);
-          return (
-            '<div class="shadcn-dropdown-item ' + (isSelectedHere ? "selected" : "") + '" data-value="' + escapeHtmlAttr(m.id) + '" onclick="event.stopPropagation(); onGuarantorSelected(' + idx + ', \'' + escapeHtmlAttr(m.id) + '\')">' +
-              '<span class="item-text">' + escapeHtmlAttr(m.name) + "</span>" +
-              '<span class="item-id font-mono tabular-nums">' + formatMoney(free) + "</span>" +
-            "</div>"
-          );
-        })
-      ).join("");
-
-      const wrapperId = "al-guarantor-dropdown-" + idx;
       return (
         '<div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-1.5">' +
           '<div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">' +
-            '<div class="sm:col-span-7 relative" id="' + wrapperId + '" data-apply-dropdown="true">' +
-              '<button type="button" onclick="toggleDynamicApplyDropdown_(\'' + wrapperId + '\', event)" class="shadcn-select-trigger min-h-[38px]">' +
-                '<span class="shadcn-select-label ' + (!selectedMember ? "text-slate-400 dark:text-slate-500 font-normal" : "") + '">' + escapeHtmlAttr(triggerLabel) + "</span>" +
-                '<i class="fas fa-chevron-down"></i>' +
-              "</button>" +
-              '<div class="shadcn-dropdown-menu hidden">' + menuItemsHtml + "</div>" +
+            '<div class="sm:col-span-7 relative" id="al-guarantor-wrap-' + idx + '" data-guarantor-combo="true">' +
+              '<input type="text" id="al-guarantor-search-' + idx + '" autocomplete="off" value="' + escapeHtmlAttr(inputVal) + '" ' +
+                'placeholder="Search guarantor name or ID..." ' +
+                'onfocus="openGuarantorCombobox_(' + idx + ')" ' +
+                'oninput="onGuarantorSearchInput_(' + idx + ', this.value)" ' +
+                'aria-label="Search Guarantor ' + (idx + 1) + '" ' +
+                'class="min-h-[38px] w-full pl-3 pr-9 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />' +
+              '<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">' +
+                '<i class="fas fa-search text-[11px]"></i>' +
+              "</div>" +
+              '<div id="al-guarantor-combobox-' + idx + '" class="custom-combobox-panel hidden"></div>' +
             "</div>" +
             '<div class="sm:col-span-4 relative flex items-center">' +
               '<span class="absolute left-3 text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 pointer-events-none">KES</span>' +
@@ -839,7 +877,7 @@
               "</button>" +
             "</div>" +
           "</div>" +
-          '<div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums px-0.5">' +
+          '<div id="al-guarantor-free-' + idx + '" class="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums px-0.5">' +
             (selectedMember ? ("Available to pledge: " + formatMoney(freeSavings)) : "Select a guarantor to view available unencumbered savings") +
           "</div>" +
         "</div>"
