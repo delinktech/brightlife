@@ -11,8 +11,8 @@
 | **Current Live Release** | **`v129`** (Google Apps Script Build `@130`, Commits `d9e93d0` + `abc5596`) |
 | **Total Tracked Tasks** | **33 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
 | **Completed & Shipped (`[DONE]`)** | **25 Tasks (75.8%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for `UI-2`) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **8 Tasks (24.2%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (UI-2)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **7 Tasks (21.2%)** |
 | **Current Sprint Focus** | `UI-2: Native Dashboard Loan Application Workflow` |
 
 ---
@@ -51,11 +51,11 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 8 tasks are categorized below in strict execution priority:
+The remaining 8 tasks (1 `[IN PROGRESS]`, 7 `[BACKLOG]`) are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Core Loan Workflows & Data Reconciliation (`P1`)
 
-#### 1. `UI-2: Native Dashboard Loan Application Workflow`
+#### 1. `UI-2: Native Dashboard Loan Application Workflow` `[IN PROGRESS]`
 * **Priority:** `P1 (High)`
 * **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
 * **Location:** `Loans.html` (`Apply for Loan` modal)
@@ -65,6 +65,13 @@ The remaining 8 tasks are categorized below in strict execution priority:
   - Interactive amortization & installment schedule calculator (`tabular-nums`).
   - Atomic insert to `Loans` with `Status = "Pending Review"`.
 * **Dependencies:** `SET-1` (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
+* **Active Sprint Checklist:**
+  - Dynamic integration with `SET-1` policy limits (borrower multiplier 2x/3x, interest rate, tenor tiers, min guarantors).
+  - Real-time borrower savings & max borrowing limit lookup.
+  - Real-time guarantor unencumbered savings check & guarantee shortfall tracking.
+  - Interactive loan calculator & installment schedule preview.
+  - Atomic submission to `Loans` (`Status = "Pending Review"`) and `Guarantors` sub-ledger with `SHEETS.AUDIT_LOG` entry.
+  - Full `DESIGN.md` compliance (light/dark theme parity, buttons `bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]` touch targets, `tabular-nums`).
 * **Acceptance Criteria:**
   - Modal dynamically enforces `SET-1` multiplier, interest rate, tenor tiers, and minimum guarantor count.
   - Guarantor unencumbered savings & shortfall tracker updates live; atomic write sets `Status = "Pending Review"`.
