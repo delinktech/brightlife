@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v110** | `@111` | `AKfycbx4........wRCA` | `bf401f5` | **Production** | 2026-11-19 | Fixer, Designer & Sentinel: Task RPT-1 - Implemented Statement of Financial Position (Balance Sheet) with Assets/Liabilities/Equity breakdown, CSV export, and BLG letterhead print preview integration. |
+| **v111** | `@112` | `AKfycbx4........wRCA` | `004929a` | **Production** | 2026-11-19 | Fixer, Designer & Sentinel: Task RPT-2 - Implemented Statement of Comprehensive Income (Profit & Loss / P&L) with Gross Revenue, Operating Expenses, Net Surplus, Net Margin, CSV export, and BLG letterhead print preview integration. |
+| **v110** | `@111` | `AKfycbx4........wRCA` | `bf401f5` | Archived | 2026-11-19 | Fixer, Designer & Sentinel: Task RPT-1 - Implemented Statement of Financial Position (Balance Sheet) with Assets/Liabilities/Equity breakdown, CSV export, and BLG letterhead print preview integration. |
 | **v109** | `@110` | `AKfycbx4........wRCA` | `97dc786` | Archived | 2026-11-19 | Fixer, Designer & Sentinel: Task VIS-3 - Implemented SASRA Delinquency Aging Buckets (Performing, Watch, Substandard, Doubtful, Loss) and Loan Loss Provisioning Matrix with interactive drill-down on Analytics tab. |
 | **v108** | `@109` | `AKfycbx4........wRCA` | `a9428f3` | Archived | 2026-11-19 | Fixer, Designer & Sentinel: Task VIS-2 - Implemented Savings vs Loan Exposure Trajectory dual-series visualization and 3-card Balance Sheet Leverage Strip (LDR, Liquidity Coverage, Guarantor Coverage) on Analytics tab. |
 | **v107** | `@108` | `AKfycbx4........wRCA` | `96d5d56` | Archived | 2026-11-19 | Fixer, Designer & Sentinel: Task VIS-1 - Implemented Cash Flow Waterfall Chart (opening, inflows, outflows, closing) and full Analytics Suite on Group Overview Analytics tab. |
