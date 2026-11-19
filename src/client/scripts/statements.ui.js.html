@@ -16,32 +16,70 @@ function formatKshStmt(val) {
   return "KES " + Math.round(num).toLocaleString();
 }
 
-function loadMonthlyStatementsView(monthKey) {
+function applyMonthlyStatementsData(data) {
+  statementsState.overview = data;
+  statementsState.selectedMonthKey = data.activeMonthKey;
+  renderMonthlyStatementsView(data);
+}
+
+function loadMonthlyStatementsView(monthKey, forceRefresh) {
   const tableBody = document.getElementById("stmt-members-table-body");
-  if (tableBody) {
-    tableBody.innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(7, 5)
-        : '<tr><td colspan="7" class="py-8 text-center text-slate-400">Loading members for statement dispatch...</td></tr>';
+  const requestedMonth = monthKey || statementsState.selectedMonthKey || "";
+  const cacheKey = "statements_overview_" + (requestedMonth || "latest");
+  const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+  const cached = entry ? entry.data : null;
+  const hasCached = Boolean(cached);
+  const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+  if (hasCached) {
+    applyMonthlyStatementsData(cached);
+    if (isFresh) {
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+      return;
+    }
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+  } else {
+    if (tableBody) {
+      tableBody.innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(7, 5)
+          : '<tr><td colspan="7" class="py-8 text-center text-slate-400">Loading members for statement dispatch...</td></tr>';
+    }
+    startAppLoader();
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
   }
 
-  startAppLoader();
   google.script.run
     .withSuccessHandler(function (data) {
-      stopAppLoader();
-      if (!data) return;
-      statementsState.overview = data;
-      statementsState.selectedMonthKey = data.activeMonthKey;
-      renderMonthlyStatementsView(data);
+      if (!hasCached) stopAppLoader();
+      if (!data) {
+        if (hasCached && typeof setHeaderSyncState === "function") {
+          setHeaderSyncState("cached", "Offline cache");
+        }
+        return;
+      }
+      if (typeof cacheSet === "function") {
+        cacheSet(cacheKey, data, 5 * 60 * 1000);
+        if (data.activeMonthKey && ("statements_overview_" + data.activeMonthKey) !== cacheKey) {
+          cacheSet("statements_overview_" + data.activeMonthKey, data, 5 * 60 * 1000);
+        }
+      }
+      applyMonthlyStatementsData(data);
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
     })
     .withFailureHandler(function (err) {
-      stopAppLoader();
-      if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-rose-700 dark:text-rose-400 font-medium">Failed to load statements: ' + escapeHtmlAttr(err.message) + '</td></tr>';
+      if (!hasCached) {
+        stopAppLoader();
+        if (tableBody) {
+          tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-rose-700 dark:text-rose-400 font-medium">Failed to load statements: ' + escapeHtmlAttr(err.message) + '</td></tr>';
+        }
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+        handleErr(err);
+      } else {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
       }
-      handleErr(err);
     })
-    .getMonthlyStatementsOverviewData(monthKey || statementsState.selectedMonthKey);
+    .getMonthlyStatementsOverviewData(requestedMonth || undefined);
 }
 
 function renderMonthlyStatementsView(data) {
@@ -276,6 +314,7 @@ async function sendSingleMemberStatement(memberId) {
     .withSuccessHandler(function (res) {
       stopAppLoader();
       if (res && res.success && res.emailSent) {
+        if (typeof cacheClear === "function") cacheClear("statements_overview_");
         showNotification("Statement successfully emailed to " + (res.recipientEmail || memberId), "success");
       } else if (res && res.emailError) {
         if (res.emailError.indexOf("auth/script.send_mail") !== -1) {
@@ -406,6 +445,7 @@ function executeBulkEmailDispatch() {
       setTimeout(function () {
         closeBulkEmailModal();
         if (res && res.success && res.results) {
+          if (typeof cacheClear === "function") cacheClear("statements_overview_");
           showNotification(
             "Bulk Statements Dispatched! Sent: " + res.results.sent + ", Skipped: " + res.results.skippedNoEmail + ", Failed: " + res.results.failed,
             "success"
@@ -467,8 +507,9 @@ function handleSaveNotificationSettings(e) {
       }
       closeNotificationSettingsModal();
       if (res && res.success) {
+        if (typeof cacheClear === "function") cacheClear("statements_overview_");
         showNotification("Notification settings saved successfully!", "success");
-        loadMonthlyStatementsView(statementsState.selectedMonthKey);
+        loadMonthlyStatementsView(statementsState.selectedMonthKey, true);
       } else {
         showNotification((res && res.error) || "Failed to save notification settings.", "error", 6000);
       }

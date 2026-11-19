@@ -150,44 +150,76 @@
   }
   window.setInvestmentsRowsPerPage = setInvestmentsRowsPerPage;
 
-  function loadInvestments(page) {
+  function applyInvestmentsData(res) {
+    invListCache = res.investments || [];
+    filterInvestmentsTable(invPage);
+  }
+
+  function loadInvestments(page, forceRefresh) {
     invPage = Number(page) > 0 ? Number(page) : 1;
-    startAppLoader();
-    document.getElementById("investments-table-body").innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(8, 5)
-        : '<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">Loading investments...</td></tr>';
+    const cacheKey = "investments_p" + invPage + "_l1000";
+    const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+    const cached = entry ? entry.data : null;
+    const hasCached = Boolean(cached);
+    const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+    if (hasCached) {
+      applyInvestmentsData(cached);
+      if (isFresh) {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+        return;
+      }
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+    } else {
+      startAppLoader();
+      document.getElementById("investments-table-body").innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(8, 5)
+          : '<tr><td colspan="8" class="px-4 py-6 text-center text-slate-400">Loading investments...</td></tr>';
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
+    }
+
     google.script.run
       .withSuccessHandler(function (res) {
+        if (!hasCached) stopAppLoader();
         if (!res || !res.success) {
-          stopAppLoader();
-          invListCache = [];
-          filteredInvestments = [];
-          document.getElementById("investments-table-body").innerHTML =
-            '<tr><td colspan="8" class="px-4 py-6 text-center text-rose-600">' +
-            (res && res.error ? res.error : "Failed to load investments.") +
-            "</td></tr>";
-          if (typeof renderTablePagination === "function") {
-            renderTablePagination("investments-pagination", {
-              currentPage: 1,
-              totalPages: 1,
-              totalRows: 0,
-              rowsPerPage: invPerPage,
-              onPageChangeName: "setInvestmentsPage",
-              onRowsPerPageChangeName: "setInvestmentsRowsPerPage",
-              entityLabel: "investments",
-            });
+          if (!hasCached) {
+            invListCache = [];
+            filteredInvestments = [];
+            document.getElementById("investments-table-body").innerHTML =
+              '<tr><td colspan="8" class="px-4 py-6 text-center text-rose-600">' +
+              (res && res.error ? res.error : "Failed to load investments.") +
+              "</td></tr>";
+            if (typeof renderTablePagination === "function") {
+              renderTablePagination("investments-pagination", {
+                currentPage: 1,
+                totalPages: 1,
+                totalRows: 0,
+                rowsPerPage: invPerPage,
+                onPageChangeName: "setInvestmentsPage",
+                onRowsPerPageChangeName: "setInvestmentsRowsPerPage",
+                entityLabel: "investments",
+              });
+            }
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+            handleErr(res || { message: "Failed to load investments." });
+          } else {
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
           }
-          handleErr(res || { message: "Failed to load investments." });
           return;
         }
-        invListCache = res.investments || [];
-        filterInvestmentsTable(invPage);
-        stopAppLoader();
+        if (typeof cacheSet === "function") cacheSet(cacheKey, res, 5 * 60 * 1000);
+        applyInvestmentsData(res);
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
       })
       .withFailureHandler(function (err) {
-        stopAppLoader();
-        handleErr(err);
+        if (!hasCached) {
+          stopAppLoader();
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          handleErr(err);
+        } else {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+        }
       })
       .getInvestmentsData(1, 1000);
   }

@@ -29,33 +29,65 @@
     return '<span class="badge-danger"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inactive</span>';
   }
 
-  function loadUserRoles() {
+  function applyRolesData(response) {
+    currentRoles = response.roles || [];
+    filterRolesTable(rolesPage);
+  }
+
+  function loadUserRoles(forceRefresh) {
     const container = document.getElementById("roles-table-body");
     if (!container) return;
-    startAppLoader();
-    container.innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(5, 5)
-        : '<tr><td colspan="5" class="px-6 py-6 text-center text-slate-400">Loading user roles...</td></tr>';
+
+    const cacheKey = "roles_list";
+    const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+    const cached = entry ? entry.data : null;
+    const hasCached = Boolean(cached);
+    const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+    if (hasCached) {
+      applyRolesData(cached);
+      if (isFresh) {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+        return;
+      }
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+    } else {
+      startAppLoader();
+      container.innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(5, 5)
+          : '<tr><td colspan="5" class="px-6 py-6 text-center text-slate-400">Loading user roles...</td></tr>';
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
+    }
 
     google.script.run
       .withSuccessHandler((response) => {
+        if (!hasCached) stopAppLoader();
         if (!response || !response.success) {
-          container.innerHTML =
-            '<tr><td colspan="5" class="text-center py-6 text-rose-600">' +
-            ((response && response.error) || "Failed to load user roles.") +
-            "</td></tr>";
-          stopAppLoader();
+          if (!hasCached) {
+            container.innerHTML =
+              '<tr><td colspan="5" class="text-center py-6 text-rose-600">' +
+              ((response && response.error) || "Failed to load user roles.") +
+              "</td></tr>";
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          } else {
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+          }
           return;
         }
 
-        currentRoles = response.roles || [];
-        filterRolesTable(rolesPage);
-        stopAppLoader();
+        if (typeof cacheSet === "function") cacheSet(cacheKey, response, 5 * 60 * 1000);
+        applyRolesData(response);
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
       })
       .withFailureHandler((err) => {
-        stopAppLoader();
-        handleErr(err);
+        if (!hasCached) {
+          stopAppLoader();
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          handleErr(err);
+        } else {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+        }
       })
       .getRolesData();
   }
@@ -341,8 +373,9 @@
       .withSuccessHandler(function (response) {
         btn.disabled = false;
         btn.innerText = "Save Role";
+        if (typeof cacheClear === "function") cacheClear("roles_list");
         closeRoleModal();
-        loadUserRoles();
+        loadUserRoles(true);
         refreshSessionInfo();
       })
       .withFailureHandler(function (err) {

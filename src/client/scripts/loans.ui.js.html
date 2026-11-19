@@ -78,12 +78,15 @@
           return;
         }
         if (typeof cacheClear === "function") {
+          cacheClear("loans_");
+          cacheClear("loan_repayments_");
+          cacheClear("contributions_");
           cacheClear("home_analytics");
           cacheClear("personal_financials");
           cacheClear("members_list");
         }
-        loadLoans(loanPage);
-        loadLoanRepayments(repPage);
+        loadLoans(loanPage, true);
+        loadLoanRepayments(repPage, true);
         if (typeof refreshDashboard === "function") refreshDashboard(true);
 
         if (res.receipt) {
@@ -224,39 +227,58 @@
   }
   window.setRepaymentsRowsPerPage = setRepaymentsRowsPerPage;
 
-  function loadLoanRepayments(page) {
+  function applyLoanRepaymentsData(res) {
+    loadedRepayments = res.repayments || [];
+    filterRepaymentsTable(repPage);
+  }
+
+  function loadLoanRepayments(page, forceRefresh) {
     repPage = Number(page) > 0 ? Number(page) : 1;
     const body = document.getElementById("loan-repayments-body");
-    if (body) {
+    const cacheKey = "loan_repayments_p" + repPage + "_l2000";
+    const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+    const cached = entry ? entry.data : null;
+    const hasCached = Boolean(cached);
+    const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+    if (hasCached) {
+      applyLoanRepaymentsData(cached);
+      if (isFresh) return;
+    } else if (body) {
       body.innerHTML =
         typeof renderTableSkeleton === "function"
           ? renderTableSkeleton(12, 5)
           : '<tr><td colspan="12" class="px-4 py-6 text-center text-xs text-slate-400">Loading repayments...</td></tr>';
     }
+
     google.script.run
       .withSuccessHandler(function (res) {
         if (!res || !res.success) {
-          loadedRepayments = [];
-          filteredRepayments = [];
-          if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-amber-600">Failed to load sub-ledger: ' + (res && res.error ? res.error : "") + '</td></tr>';
-          if (typeof renderTablePagination === "function") {
-            renderTablePagination("repayments-pagination", {
-              currentPage: 1,
-              totalPages: 1,
-              totalRows: 0,
-              rowsPerPage: repaymentsPerPage,
-              onPageChangeName: "setRepaymentsPage",
-              onRowsPerPageChangeName: "setRepaymentsRowsPerPage",
-              entityLabel: "repayments",
-            });
+          if (!hasCached) {
+            loadedRepayments = [];
+            filteredRepayments = [];
+            if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-amber-600">Failed to load sub-ledger: ' + (res && res.error ? res.error : "") + '</td></tr>';
+            if (typeof renderTablePagination === "function") {
+              renderTablePagination("repayments-pagination", {
+                currentPage: 1,
+                totalPages: 1,
+                totalRows: 0,
+                rowsPerPage: repaymentsPerPage,
+                onPageChangeName: "setRepaymentsPage",
+                onRowsPerPageChangeName: "setRepaymentsRowsPerPage",
+                entityLabel: "repayments",
+              });
+            }
           }
           return;
         }
-        loadedRepayments = res.repayments || [];
-        filterRepaymentsTable(repPage);
+        if (typeof cacheSet === "function") cacheSet(cacheKey, res, 5 * 60 * 1000);
+        applyLoanRepaymentsData(res);
       })
       .withFailureHandler(function (err) {
-        if (body) body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-rose-600">Error loading sub-ledger: ' + (err && err.message ? err.message : err) + '</td></tr>';
+        if (!hasCached && body) {
+          body.innerHTML = '<tr><td colspan="12" class="px-4 py-4 text-center text-xs text-rose-600">Error loading sub-ledger: ' + (err && err.message ? err.message : err) + '</td></tr>';
+        }
       })
       .getLoanRepaymentsData("", 1, 2000);
   }
@@ -420,43 +442,76 @@
   }
   window.setLoansRowsPerPage = setLoansRowsPerPage;
 
-  function loadLoans(page) {
+  function applyLoansData(res) {
+    loadedLoans = res.loans || [];
+    filterLoansTable(loanPage);
+  }
+
+  function loadLoans(page, forceRefresh) {
     loanPage = Number(page) > 0 ? Number(page) : 1;
-    startAppLoader();
-    document.getElementById("loan-table-body").innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(10, 5)
-        : '<tr><td colspan="10" class="px-4 py-6 text-center text-slate-400">Loading loans...</td></tr>';
+    const cacheKey = "loans_p" + loanPage + "_l2000";
+    const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+    const cached = entry ? entry.data : null;
+    const hasCached = Boolean(cached);
+    const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+    if (hasCached) {
+      applyLoansData(cached);
+      loadLoanRepayments(1, false);
+      if (isFresh) {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+        return;
+      }
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+    } else {
+      startAppLoader();
+      document.getElementById("loan-table-body").innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(10, 5)
+          : '<tr><td colspan="10" class="px-4 py-6 text-center text-slate-400">Loading loans...</td></tr>';
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
+    }
+
     google.script.run
       .withSuccessHandler(function (res) {
+        if (!hasCached) stopAppLoader();
         if (!res || !res.success) {
-          stopAppLoader();
-          loadedLoans = [];
-          filteredLoans = [];
-          renderLoanTable([]);
-          if (typeof renderTablePagination === "function") {
-            renderTablePagination("loans-pagination", {
-              currentPage: 1,
-              totalPages: 1,
-              totalRows: 0,
-              rowsPerPage: loansPerPage,
-              onPageChangeName: "setLoansPage",
-              onRowsPerPageChangeName: "setLoansRowsPerPage",
-              entityLabel: "loans",
-            });
+          if (!hasCached) {
+            loadedLoans = [];
+            filteredLoans = [];
+            renderLoanTable([]);
+            if (typeof renderTablePagination === "function") {
+              renderTablePagination("loans-pagination", {
+                currentPage: 1,
+                totalPages: 1,
+                totalRows: 0,
+                rowsPerPage: loansPerPage,
+                onPageChangeName: "setLoansPage",
+                onRowsPerPageChangeName: "setLoansRowsPerPage",
+                entityLabel: "loans",
+              });
+            }
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+            handleErr(res || { message: "Failed to load loans." });
+          } else {
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
           }
-          handleErr(res || { message: "Failed to load loans." });
           return;
         }
 
-        loadedLoans = res.loans || [];
-        filterLoansTable(loanPage);
-        stopAppLoader();
-        loadLoanRepayments(1);
+        if (typeof cacheSet === "function") cacheSet(cacheKey, res, 5 * 60 * 1000);
+        applyLoansData(res);
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
+        loadLoanRepayments(1, Boolean(forceRefresh));
       })
       .withFailureHandler((err) => {
-        stopAppLoader();
-        handleErr(err);
+        if (!hasCached) {
+          stopAppLoader();
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          handleErr(err);
+        } else {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+        }
       })
       .getLoansData(1, 2000);
   }
@@ -680,14 +735,17 @@
           return;
         }
         if (typeof cacheClear === "function") {
+          cacheClear("loans_");
+          cacheClear("loan_repayments_");
+          cacheClear("contributions_");
           cacheClear("home_analytics");
           cacheClear("personal_financials");
           cacheClear("members_list");
         }
         closePayLoanModal();
         document.getElementById("payLoanForm").reset();
-        loadLoans(loanPage);
-        loadLoanRepayments(1);
+        loadLoans(loanPage, true);
+        loadLoanRepayments(1, true);
         if (typeof refreshDashboard === "function") refreshDashboard(true);
       })
       .withFailureHandler(function (err) {

@@ -292,44 +292,82 @@ function renderReconciliationErrorRow(message) {
   );
 }
 
+function applyAccountsResponse(response) {
+  const rows = response.rows || response.accounts || [];
+  accountsState.accounts = rows;
+  renderPaymentGuideCards(rows);
+
+  const perms = window.APP_PERMS || (window.currentUser && window.currentUser.permissions) || {};
+  const roleKey = (window.currentUser && (window.currentUser.roleKey || window.currentUser.role)) || (typeof session !== "undefined" && (session.roleKey || session.role)) || "";
+  const isAdminOrTreasurer =
+    response.canReconcile === true ||
+    perms.accountsWrite === true ||
+    perms.isAdmin === true ||
+    roleKey === "admin" ||
+    roleKey === "treasurer";
+  const tabs = document.getElementById("accounts-admin-tabs");
+
+  if (isAdminOrTreasurer) {
+    if (tabs) tabs.classList.remove("hidden");
+    switchAccountsTab(accountsState.activeTab || "reconciliation");
+  } else {
+    if (tabs) tabs.classList.add("hidden");
+    switchAccountsTab("guides");
+  }
+  return isAdminOrTreasurer;
+}
+
 function loadAccounts(forceRefresh) {
   const tbody = document.getElementById("reconciliation-table-body");
-  if (tbody) {
-    tbody.innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(9, 4)
-        : '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">Loading accounts...</td></tr>';
+  const acctEntry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry("accounts_data") : null;
+  const recEntry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry("accounts_reconciliation") : null;
+  const hasCached = Boolean(acctEntry && acctEntry.data);
+
+  if (hasCached) {
+    const isAdminCached = applyAccountsResponse(acctEntry.data);
+    if (isAdminCached && recEntry && recEntry.data) {
+      accountsState.reconciliation = recEntry.data;
+      renderReconciliationDashboard(recEntry.data);
+    }
+    const acctFresh = Boolean(acctEntry.timestamp && (Date.now() - Number(acctEntry.timestamp) < 60000));
+    const recFresh = !isAdminCached || Boolean(recEntry && recEntry.timestamp && (Date.now() - Number(recEntry.timestamp) < 60000));
+    if (acctFresh && recFresh) {
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+      return;
+    }
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+  } else {
+    if (tbody) {
+      tbody.innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(9, 4)
+          : '<tr><td colspan="9" class="py-6 text-center text-slate-400 font-sans">Loading accounts...</td></tr>';
+    }
+    startAppLoader();
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
   }
-  startAppLoader();
+
   google.script.run
     .withSuccessHandler(function (response) {
-      stopAppLoader();
+      if (!hasCached) stopAppLoader();
       if (!response || response.success === false) {
         const msg = (response && response.error) || "No account data received.";
-        if (tbody) tbody.innerHTML = renderReconciliationErrorRow(msg);
-        showNotification(msg, "error");
+        if (!hasCached) {
+          if (tbody) tbody.innerHTML = renderReconciliationErrorRow(msg);
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          showNotification(msg, "error");
+        } else {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+        }
         return;
       }
 
-      const rows = response.rows || response.accounts || [];
-      accountsState.accounts = rows;
-      renderPaymentGuideCards(rows);
-
-      const perms = window.APP_PERMS || (window.currentUser && window.currentUser.permissions) || {};
-      const roleKey = (window.currentUser && (window.currentUser.roleKey || window.currentUser.role)) || (typeof session !== "undefined" && (session.roleKey || session.role)) || "";
-      const isAdminOrTreasurer =
-        response.canReconcile === true ||
-        perms.accountsWrite === true ||
-        perms.isAdmin === true ||
-        roleKey === "admin" ||
-        roleKey === "treasurer";
-      const tabs = document.getElementById("accounts-admin-tabs");
+      if (typeof cacheSet === "function") cacheSet("accounts_data", response, 5 * 60 * 1000);
+      const isAdminOrTreasurer = applyAccountsResponse(response);
 
       if (isAdminOrTreasurer) {
-        if (tabs) tabs.classList.remove("hidden");
-        switchAccountsTab(accountsState.activeTab || "reconciliation");
-
-        if (tbody) {
+        const hasRecCached = Boolean(hasCached && recEntry && recEntry.data);
+        if (!hasRecCached && tbody) {
           tbody.innerHTML =
             typeof renderTableSkeleton === "function"
               ? renderTableSkeleton(9, 4)
@@ -341,31 +379,47 @@ function loadAccounts(forceRefresh) {
           .withSuccessHandler(function (recData) {
             if (!recData || recData.success === false) {
               const errMsg = (recData && recData.error) || "Failed to load reconciliation data.";
-              if (tbody) tbody.innerHTML = renderReconciliationErrorRow(errMsg);
-              showNotification(errMsg, "error");
+              if (!hasRecCached) {
+                if (tbody) tbody.innerHTML = renderReconciliationErrorRow(errMsg);
+                if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+                showNotification(errMsg, "error");
+              } else {
+                if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+              }
               return;
             }
+            if (typeof cacheSet === "function") cacheSet("accounts_reconciliation", recData, 5 * 60 * 1000);
             accountsState.reconciliation = recData;
             renderReconciliationDashboard(recData);
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
           })
           .withFailureHandler(function (err) {
             console.error("Auto-reconciliation error:", err);
-            const errMsg = (err && err.message) || "Auto-reconciliation request failed.";
-            if (tbody) tbody.innerHTML = renderReconciliationErrorRow(errMsg);
-            handleErr(err);
+            if (!hasRecCached) {
+              const errMsg = (err && err.message) || "Auto-reconciliation request failed.";
+              if (tbody) tbody.innerHTML = renderReconciliationErrorRow(errMsg);
+              if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+              handleErr(err);
+            } else {
+              if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+            }
           })
           .getAccountsReconciliationData();
       } else {
-        if (tabs) tabs.classList.add("hidden");
-        switchAccountsTab("guides");
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
       }
     })
     .withFailureHandler(function (err) {
-      stopAppLoader();
-      if (tbody) {
-        tbody.innerHTML = renderReconciliationErrorRow((err && err.message) || "Failed to load accounts.");
+      if (!hasCached) {
+        stopAppLoader();
+        if (tbody) {
+          tbody.innerHTML = renderReconciliationErrorRow((err && err.message) || "Failed to load accounts.");
+        }
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+        handleErr(err);
+      } else {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
       }
-      handleErr(err);
     })
     .getAccountsData();
 }
@@ -431,6 +485,10 @@ function submitReconcileForm(event) {
       closeReconcileModal();
 
       if (res && res.success) {
+        if (typeof cacheClear === "function") {
+          cacheClear("accounts_");
+          cacheClear("home_analytics");
+        }
         showNotification("Account statement balance updated successfully!", "success");
         loadAccounts(true);
       } else {

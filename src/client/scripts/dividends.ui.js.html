@@ -33,51 +33,84 @@ function populateDividendYearOptions() {
 
 populateDividendYearOptions();
 
-function loadDividendOverview() {
-  populateDividendYearOptions();
-  const stmtTbody = document.getElementById("fund-statements-table-body");
-  if (stmtTbody) {
-    stmtTbody.innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(9, 4)
-        : '<tr><td colspan="9" class="py-6 text-center text-slate-400">Loading fund statements...</td></tr>';
+function applyDividendOverviewData(res) {
+  dividendsState.overview = res;
+  const s = res.summary || {};
+
+  const kpiEarnings = document.getElementById("div-kpi-total-earnings");
+  const kpiLoanInt = document.getElementById("div-kpi-loan-interest");
+  const kpiInvestGains = document.getElementById("div-kpi-invest-gains");
+  const kpiSavings = document.getElementById("div-kpi-total-savings");
+  const kpiMemberCount = document.getElementById("div-kpi-member-count");
+  const simPoolInput = document.getElementById("div-sim-pool");
+
+  if (kpiEarnings) kpiEarnings.textContent = formatKshDiv(s.suggestedPool);
+  if (kpiLoanInt) kpiLoanInt.textContent = formatKshDiv(s.totalLoanInterest);
+  if (kpiInvestGains) kpiInvestGains.textContent = formatKshDiv(s.totalInvestmentGains);
+  if (kpiSavings) kpiSavings.textContent = formatKshDiv(s.totalGroupSavings);
+  if (kpiMemberCount) kpiMemberCount.textContent = "Across " + (s.qualifyingMemberCount || 0) + " qualifying members";
+
+  // Pre-fill pool amount if empty
+  if (simPoolInput && (!simPoolInput.value || Number(simPoolInput.value) === 0)) {
+    simPoolInput.value = s.suggestedPool || 0;
   }
-  startAppLoader();
+
+  // Render Fund Statements table
+  renderFundStatementsTable(res.fundStatements || []);
+}
+
+function loadDividendOverview(forceRefresh) {
+  populateDividendYearOptions();
+  const cacheKey = "dividends_overview";
+  const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+  const cached = entry ? entry.data : null;
+  const hasCached = Boolean(cached);
+  const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+  if (hasCached) {
+    applyDividendOverviewData(cached);
+    if (isFresh) {
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+      return;
+    }
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+  } else {
+    const stmtTbody = document.getElementById("fund-statements-table-body");
+    if (stmtTbody) {
+      stmtTbody.innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(9, 4)
+          : '<tr><td colspan="9" class="py-6 text-center text-slate-400">Loading fund statements...</td></tr>';
+    }
+    startAppLoader();
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
+  }
+
   google.script.run
     .withSuccessHandler(function (res) {
-      stopAppLoader();
+      if (!hasCached) stopAppLoader();
       if (!res || !res.success) {
-        showNotification((res && res.error) || "Failed to load dividend overview.", "error");
+        if (!hasCached) {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          showNotification((res && res.error) || "Failed to load dividend overview.", "error");
+        } else {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+        }
         return;
       }
 
-      dividendsState.overview = res;
-      const s = res.summary || {};
-
-      const kpiEarnings = document.getElementById("div-kpi-total-earnings");
-      const kpiLoanInt = document.getElementById("div-kpi-loan-interest");
-      const kpiInvestGains = document.getElementById("div-kpi-invest-gains");
-      const kpiSavings = document.getElementById("div-kpi-total-savings");
-      const kpiMemberCount = document.getElementById("div-kpi-member-count");
-      const simPoolInput = document.getElementById("div-sim-pool");
-
-      if (kpiEarnings) kpiEarnings.textContent = formatKshDiv(s.suggestedPool);
-      if (kpiLoanInt) kpiLoanInt.textContent = formatKshDiv(s.totalLoanInterest);
-      if (kpiInvestGains) kpiInvestGains.textContent = formatKshDiv(s.totalInvestmentGains);
-      if (kpiSavings) kpiSavings.textContent = formatKshDiv(s.totalGroupSavings);
-      if (kpiMemberCount) kpiMemberCount.textContent = "Across " + (s.qualifyingMemberCount || 0) + " qualifying members";
-
-      // Pre-fill pool amount if empty
-      if (simPoolInput && (!simPoolInput.value || Number(simPoolInput.value) === 0)) {
-        simPoolInput.value = s.suggestedPool || 0;
-      }
-
-      // Render Fund Statements table
-      renderFundStatementsTable(res.fundStatements || []);
+      if (typeof cacheSet === "function") cacheSet(cacheKey, res, 5 * 60 * 1000);
+      applyDividendOverviewData(res);
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
     })
     .withFailureHandler(function (err) {
-      stopAppLoader();
-      handleErr(err);
+      if (!hasCached) {
+        stopAppLoader();
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+        handleErr(err);
+      } else {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+      }
     })
     .getDividendOverviewData();
 }
@@ -167,8 +200,13 @@ function submitFundStatementForm(event) {
       closeFundStatementModal();
 
       if (res && res.success) {
+        if (typeof cacheClear === "function") {
+          cacheClear("dividends_overview");
+          cacheClear("home_analytics");
+          cacheClear("accounts_");
+        }
         showNotification("Fund statement recorded successfully! Net yield: " + formatKshDiv(res.entry ? res.entry.netYield : 0), "success");
-        loadDividendOverview();
+        loadDividendOverview(true);
       } else {
         showNotification((res && res.error) || "Failed to record fund statement.", "error", 6000);
       }
@@ -349,6 +387,7 @@ function executeDividendPost() {
 
       if (res && res.success) {
         if (typeof cacheClear === "function") {
+          cacheClear("dividends_overview");
           cacheClear("home_analytics");
           cacheClear("personal_financials");
           cacheClear("members_list");
@@ -363,7 +402,7 @@ function executeDividendPost() {
         dividendsState.simulation = null;
         const card = document.getElementById("dividend-preview-card");
         if (card) card.classList.add("hidden");
-        loadDividendOverview();
+        loadDividendOverview(true);
       } else {
         showNotification((res && res.error) || "Failed to execute dividend distribution.", "error", 6000);
       }

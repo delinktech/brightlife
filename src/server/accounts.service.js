@@ -166,11 +166,7 @@ function updateAccountStatementBalance(data) {
  */
 function getAccountsReconciliationData() {
   try {
-    try {
-      requireAccess_();
-    } catch (eAuth) {
-      console.warn("getAccountsReconciliationData access warning: " + eAuth.message);
-    }
+    requireAccess_();
     const ss = getSpreadsheet_();
     const sheet = getRequiredSheet_(SHEETS.ACCOUNTS);
     const rows = sheet.getDataRange().getValues();

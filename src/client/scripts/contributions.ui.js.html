@@ -74,11 +74,12 @@
           return;
         }
         if (typeof cacheClear === "function") {
+          cacheClear("contributions_");
           cacheClear("home_analytics");
           cacheClear("personal_financials");
           cacheClear("members_list");
         }
-        loadContributions(currentPage);
+        loadContributions(currentPage, true);
         if (typeof refreshDashboard === "function") refreshDashboard(true);
 
         if (res.receipt) {
@@ -296,42 +297,73 @@
   }
   window.setContributionsRowsPerPage = setContributionsRowsPerPage;
 
-  function loadContributions(page) {
+  function applyContributionsData(response) {
+    loadedContributions = response.contributions || [];
+    filterContributionsTable(currentPage);
+  }
+
+  function loadContributions(page, forceRefresh) {
     currentPage = Number(page) > 0 ? Number(page) : 1;
-    startAppLoader();
-    document.getElementById("contribution-table-body").innerHTML =
-      typeof renderTableSkeleton === "function"
-        ? renderTableSkeleton(7, 5)
-        : '<tr><td colspan="7" class="px-6 py-6 text-center text-slate-400">Loading...</td></tr>';
+    const cacheKey = "contributions_p" + currentPage + "_l2000";
+    const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+    const cached = entry ? entry.data : null;
+    const hasCached = Boolean(cached);
+    const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+    if (hasCached) {
+      applyContributionsData(cached);
+      if (isFresh) {
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+        return;
+      }
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+    } else {
+      startAppLoader();
+      document.getElementById("contribution-table-body").innerHTML =
+        typeof renderTableSkeleton === "function"
+          ? renderTableSkeleton(7, 5)
+          : '<tr><td colspan="7" class="px-6 py-6 text-center text-slate-400">Loading...</td></tr>';
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
+    }
 
     google.script.run
       .withSuccessHandler(function (response) {
+        if (!hasCached) stopAppLoader();
         if (!response || !response.success) {
-          stopAppLoader();
-          loadedContributions = [];
-          filteredContributions = [];
-          renderContributionTable([]);
-          if (typeof renderTablePagination === "function") {
-            renderTablePagination("contributions-pagination", {
-              currentPage: 1,
-              totalPages: 1,
-              totalRows: 0,
-              rowsPerPage: rowsPerPage,
-              onPageChangeName: "setContributionsPage",
-              onRowsPerPageChangeName: "setContributionsRowsPerPage",
-              entityLabel: "contributions",
-            });
+          if (!hasCached) {
+            loadedContributions = [];
+            filteredContributions = [];
+            renderContributionTable([]);
+            if (typeof renderTablePagination === "function") {
+              renderTablePagination("contributions-pagination", {
+                currentPage: 1,
+                totalPages: 1,
+                totalRows: 0,
+                rowsPerPage: rowsPerPage,
+                onPageChangeName: "setContributionsPage",
+                onRowsPerPageChangeName: "setContributionsRowsPerPage",
+                entityLabel: "contributions",
+              });
+            }
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+            handleErr(response || { message: "Failed to load contributions" });
+          } else {
+            if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
           }
-          handleErr(response || { message: "Failed to load contributions" });
           return;
         }
-        loadedContributions = response.contributions || [];
-        filterContributionsTable(currentPage);
-        stopAppLoader();
+        if (typeof cacheSet === "function") cacheSet(cacheKey, response, 5 * 60 * 1000);
+        applyContributionsData(response);
+        if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
       })
       .withFailureHandler((err) => {
-        stopAppLoader();
-        handleErr(err);
+        if (!hasCached) {
+          stopAppLoader();
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Sync error");
+          handleErr(err);
+        } else {
+          if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Offline cache");
+        }
       })
       .getContributionsData(1, 2000);
   }
@@ -601,14 +633,17 @@
             return;
           }
           if (typeof cacheClear === "function") {
+            cacheClear("contributions_");
+            cacheClear("loans_");
+            cacheClear("loan_repayments_");
             cacheClear("home_analytics");
             cacheClear("personal_financials");
             cacheClear("members_list");
           }
           closeContributionModal();
-          loadContributions();
-          if (typeof loadLoans === "function") loadLoans(1);
-          if (typeof loadLoanRepayments === "function") loadLoanRepayments(1);
+          loadContributions(1, true);
+          if (typeof loadLoans === "function") loadLoans(1, true);
+          if (typeof loadLoanRepayments === "function") loadLoanRepayments(1, true);
           if (typeof refreshDashboard === "function") refreshDashboard(true);
         })
         .withFailureHandler(function (err) {
@@ -638,12 +673,13 @@
             return;
           }
           if (typeof cacheClear === "function") {
+            cacheClear("contributions_");
             cacheClear("home_analytics");
             cacheClear("personal_financials");
             cacheClear("members_list");
           }
           closeContributionModal();
-          loadContributions();
+          loadContributions(1, true);
           if (typeof refreshDashboard === "function") refreshDashboard(true);
         })
         .withFailureHandler(function (err) {

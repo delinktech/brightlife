@@ -21,6 +21,7 @@
   }
 
   let currentSessionEmail = "";
+  let currentSessionRole = "";
   let sessionAccessDenied = false;
   let currentActivePageId = "session-loading";
 
@@ -42,7 +43,10 @@
   let membersLoadPromise = null;
 
   function getNormalizedSessionOwner() {
-    return String(currentSessionEmail || "").trim().toLowerCase();
+    const email = String(currentSessionEmail || "").trim().toLowerCase();
+    if (!email) return "";
+    const role = String(currentSessionRole || "").trim().toLowerCase();
+    return email + "|" + role;
   }
 
   function cacheSet(key, data, ttlMs) {
@@ -101,6 +105,7 @@
       return null;
     }
   }
+  window.cacheGetEntry = cacheGetEntry;
 
   function cacheGet(key) {
     const entry = cacheGetEntry(key);
@@ -1107,6 +1112,7 @@
 
     const failClosedSessionFallback = (fallbackLabel, reasonMessage) => {
       currentSessionEmail = "";
+      currentSessionRole = "";
       window.currentUser = null;
       window.session = null;
       window.latestPersonalFinancials = null;
@@ -1172,7 +1178,8 @@
 
           if (info && info.success) {
             const nextEmail = String(info.email || "").trim();
-            const nextOwner = nextEmail.toLowerCase();
+            const nextRole = String(info.roleKey || info.role || "").trim().toLowerCase();
+            const nextOwner = nextEmail ? (nextEmail.toLowerCase() + "|" + nextRole) : "";
             const prevOwner = getNormalizedSessionOwner();
             let storedOwner = "";
             try {
@@ -1187,6 +1194,7 @@
               window.latestPersonalFinancials = null;
             }
             currentSessionEmail = nextEmail;
+            currentSessionRole = nextRole;
             if (nextOwner && info.hasAccess !== false) {
               try {
                 sessionStorage.setItem(BL_CACHE_OWNER_KEY, nextOwner);
@@ -1681,17 +1689,17 @@
       else if (activeId === "members") loadMembers(true);
       else if (activeId === "contributions") {
         ensureMembersLoaded(true).catch(function () {});
-        loadContributions(typeof currentPage !== "undefined" ? currentPage : 1);
+        loadContributions(typeof currentPage !== "undefined" ? currentPage : 1, true);
       } else if (activeId === "loans") {
         ensureMembersLoaded(true).catch(function () {});
-        loadLoans(typeof loanPage !== "undefined" ? loanPage : 1);
-      } else if (activeId === "investments") loadInvestments(typeof invPage !== "undefined" ? invPage : 1);
-      else if (activeId === "accounts") loadAccounts();
-      else if (activeId === "dividends") loadDividendOverview();
-      else if (activeId === "statements") loadMonthlyStatementsView();
+        loadLoans(typeof loanPage !== "undefined" ? loanPage : 1, true);
+      } else if (activeId === "investments") loadInvestments(typeof invPage !== "undefined" ? invPage : 1, true);
+      else if (activeId === "accounts") loadAccounts(true);
+      else if (activeId === "dividends") loadDividendOverview(true);
+      else if (activeId === "statements") loadMonthlyStatementsView(null, true);
       else if (activeId === "roles") {
         ensureMembersLoaded(true).catch(function () {});
-        loadUserRoles();
+        loadUserRoles(true);
       }
     });
   }
