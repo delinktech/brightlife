@@ -27,6 +27,10 @@
     const opts = options || {};
     const refEl = document.getElementById("print-ref-display");
     if (refEl) refEl.textContent = "Ref: BLG-RPT-" + Date.now().toString(36).toUpperCase();
+    const kpiEl = document.getElementById("print-kpi-row");
+    if (kpiEl) {
+      kpiEl.className = opts.kpiGridClass || "grid grid-cols-3 gap-4 mb-6";
+    }
     const signoffEl = document.getElementById("print-signoff-block");
     if (signoffEl) {
       signoffEl.classList.toggle("hidden", !opts.showSignoff);
@@ -567,5 +571,114 @@
       "</tr>";
 
     showPrintModal_({ showSignoff: true });
+  }
+
+  function openPrintIncomeStatementReport() {
+    const m = window.latestIncomeStatementModel;
+    if (!m) {
+      if (typeof showNotification === "function") {
+        showNotification("Income Statement data is still loading.", "warning");
+      }
+      return;
+    }
+
+    const periodEl = document.getElementById("pnl-period-label");
+    const periodLabel = periodEl ? periodEl.textContent : (m.periodStart && m.periodEnd ? (m.periodStart + " - " + m.periodEnd) : "Current Fiscal Period");
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "STATEMENT OF COMPREHENSIVE INCOME (PROFIT & LOSS)";
+    document.getElementById("print-report-badge").textContent = "IFRS / SASRA Schedule";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official Statement of Comprehensive Income • IFRS & SASRA Prudential Performance • Period: " + periodLabel;
+
+    const cirText = (m.totalRevenue <= 0 && m.totalExpenses > 0) ? ">100%" : (m.costToIncomeRatio.toFixed(1) + "%");
+    const netText = m.netOperatingSurplus < 0
+      ? ("(" + formatPrintBsMoney_(Math.abs(m.netOperatingSurplus)) + ")")
+      : formatPrintBsMoney_(m.netOperatingSurplus);
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Revenue</div>' +
+      '<div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.totalRevenue) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Operating Expenses</div>' +
+      '<div class="text-sm font-bold text-rose-700 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.totalExpenses) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Cost-to-Income (CIR)</div>' +
+      '<div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + escapePrintHtml(cirText) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Net Surplus</div>' +
+      '<div class="text-sm font-bold ' + (m.netOperatingSurplus >= 0 ? "text-emerald-700" : "text-rose-700") + ' font-mono tabular-nums mt-0.5">' + netText + "</div>" +
+      "</div>";
+
+    document.getElementById("print-table-head").innerHTML =
+      "<tr>" +
+      '<th class="px-4 py-3">Section / Account Classification (IFRS)</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      "</tr>";
+
+    const sectionHdr = function (title) {
+      return (
+        '<tr class="bg-slate-100/80">' +
+        '<td colspan="2" class="px-4 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-700">' + escapePrintHtml(title) + "</td>" +
+        "</tr>"
+      );
+    };
+    const itemRow = function (label, amountHtml, isDeduction) {
+      return (
+        "<tr>" +
+        '<td class="px-4 py-2 pl-8 ' + (isDeduction ? "text-slate-600" : "text-slate-700") + '">' + escapePrintHtml(label) + "</td>" +
+        '<td class="px-4 py-2 text-right font-mono tabular-nums ' + (isDeduction ? "text-rose-700" : "text-slate-800 font-medium") + '">' + amountHtml + "</td>" +
+        "</tr>"
+      );
+    };
+    const subtotalRow = function (label, amountHtml) {
+      return (
+        '<tr class="bg-slate-50/80 border-t border-slate-200">' +
+        '<td class="px-4 py-2.5 pl-6 font-bold text-slate-900">' + escapePrintHtml(label) + "</td>" +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900">' + amountHtml + "</td>" +
+        "</tr>"
+      );
+    };
+
+    document.getElementById("print-table-body").innerHTML =
+      sectionHdr("Section I: Operating Revenue") +
+      itemRow("Loan Interest Income", formatPrintBsMoney_(m.operatingRevenue.loanInterest)) +
+      itemRow("Processing & Application Fees", formatPrintBsMoney_(m.operatingRevenue.processingFees)) +
+      itemRow("Fines & Penalties", formatPrintBsMoney_(m.operatingRevenue.finesAndPenalties)) +
+      itemRow("Other Operating Revenue", formatPrintBsMoney_(m.operatingRevenue.otherOperatingRevenue)) +
+      subtotalRow("Subtotal Operating Revenue", formatPrintBsMoney_(m.operatingRevenue.operatingSubtotal)) +
+      sectionHdr("Section II: Investment Yields") +
+      itemRow("CIC MMF Net Yield", formatPrintBsMoney_(m.investmentYields.cicMmfNetYield)) +
+      itemRow("Other External Investments", formatPrintBsMoney_(m.investmentYields.externalInvestments)) +
+      subtotalRow("Subtotal Investment Yields", formatPrintBsMoney_(m.investmentYields.investmentSubtotal)) +
+      '<tr class="bg-slate-100 border-t-2 border-b-2 border-slate-300">' +
+      '<td class="px-4 py-2.5 font-extrabold uppercase tracking-wider text-slate-900">Total Comprehensive Revenue (Gross Operating Income)</td>' +
+      '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-sm font-extrabold text-slate-900">' + formatPrintBsMoney_(m.totalRevenue) + "</td>" +
+      "</tr>" +
+      sectionHdr("Section III: Operating & Administrative Expenses") +
+      itemRow("Bank & Transaction Fees", "(" + formatPrintBsMoney_(m.operatingExpenses.bankAndTransactionFees) + ")", true) +
+      itemRow("Technology & Infrastructure", "(" + formatPrintBsMoney_(m.operatingExpenses.techAndInfrastructure) + ")", true) +
+      itemRow("AGM & Governance", "(" + formatPrintBsMoney_(m.operatingExpenses.agmAndAdmin) + ")", true) +
+      itemRow("Other Administrative Expenses", "(" + formatPrintBsMoney_(m.operatingExpenses.otherExpenses) + ")", true) +
+      subtotalRow("Subtotal Operating Expenses", "(" + formatPrintBsMoney_(m.totalExpenses) + ")") +
+      subtotalRow("Section IV: Net Operating Surplus Before Impairment", m.operatingSurplusBeforeImpairment < 0 ? ("(" + formatPrintBsMoney_(Math.abs(m.operatingSurplusBeforeImpairment)) + ")") : formatPrintBsMoney_(m.operatingSurplusBeforeImpairment)) +
+      itemRow("Section V: Credit Impairment Loss (SASRA Sec 51 Provision Charge)", "(" + formatPrintBsMoney_(m.loanLossProvisionCharge) + ")", true) +
+      '<tr class="' + (m.netOperatingSurplus >= 0 ? "bg-emerald-50/70 border-b-double border-b-emerald-800" : "bg-rose-50/70 border-b-double border-b-rose-800") + ' border-t-2 border-slate-300 border-b-4">' +
+      '<td class="px-4 py-3 font-extrabold uppercase tracking-wider text-slate-900">Section VI: Net Operating Surplus / (Deficit) for the Period</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold ' + (m.netOperatingSurplus >= 0 ? "text-emerald-700" : "text-rose-700") + '">' + netText + "</td>" +
+      "</tr>" +
+      sectionHdr("Section VII: Statutory & Policy Appropriations (SASRA Section 51(1))") +
+      itemRow("20% Statutory Reserve Fund Transfer (Indivisible Capital)", formatPrintBsMoney_(m.appropriations.statutoryReserveTransfer)) +
+      subtotalRow("80% Distributable Member Surplus Base (Dividend / Rebate Pool)", formatPrintBsMoney_(m.appropriations.distributableMemberPool));
+
+    showPrintModal_({
+      showSignoff: true,
+      kpiGridClass: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
+    });
   }
 </script>

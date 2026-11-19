@@ -444,6 +444,15 @@ function getHomeAnalyticsByRange_(rangeKey) {
     portfolioPayload,
     totalSavings
   );
+  const incomeStatement = buildIncomeStatement_(
+    ss,
+    tz,
+    now,
+    effectiveRange,
+    rangeBounds,
+    portfolioPayload,
+    loanRows
+  );
 
   const invInflows = (investments && investments.breakdown && investments.breakdown.inflows) || {};
   const invOutflows = (investments && investments.breakdown && investments.breakdown.outflows) || {};
@@ -470,6 +479,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
     cash: liquiditySummary.cash,
     liquidity: liquiditySummary.liquidity,
     balanceSheet: balanceSheet,
+    incomeStatement: incomeStatement,
     cashflowWaterfall: {
       openingCash: openingLiquidCash,
       closingCash: closingLiquidCash,
@@ -1279,6 +1289,342 @@ function buildBalanceSheet_(ss, tz, now, effectiveRange, liquiditySummary, portf
     variance: variance,
     isBalanced: isBalanced,
     solvencyRatio: solvencyRatio,
+  };
+}
+
+/**
+ * Builds IFRS / SASRA-aligned Statement of Comprehensive Income (Income & Expenditure)
+ * for the active reporting range, including operating revenue, investment yields,
+ * categorized operating expenses, impairment provision charge, and SASRA Sec 51 appropriations.
+ */
+function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfolio, cachedLoanRows) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const bounds = rangeBounds || getDateRangeBounds_(normalizeRangeKey_(effectiveRange), now || new Date());
+  const timeZone = tz || "Africa/Nairobi";
+
+  let loanInterest = 0;
+  let ledgerProcessingFees = 0;
+  let loansTransactionFees = 0;
+  let finesAndPenalties = 0;
+  let otherOperatingRevenue = 0;
+
+  let cicMmfNetYield = 0;
+  let externalInvestments = 0;
+
+  let bankAndTransactionFees = 0;
+  let techAndInfrastructure = 0;
+  let agmAndAdmin = 0;
+  let otherExpenses = 0;
+
+  // 1a. Loan Interest from approved Loan Repayments in range
+  try {
+    const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
+    if (repSheet && repSheet.getLastRow() > 1) {
+      const rRows = repSheet.getDataRange().getValues();
+      if (rRows.length > 1) {
+        const rCol = getHeaderMap_(rRows[0]);
+        const rDateCol =
+          rCol["Payment Date"] !== undefined
+            ? rCol["Payment Date"]
+            : (rCol["Repayment Date"] !== undefined ? rCol["Repayment Date"] : rCol["Date"]);
+        const rIntCol =
+          rCol["Interest Paid"] !== undefined
+            ? rCol["Interest Paid"]
+            : rCol["Interest Portion"];
+        const rStatCol = rCol["Status"];
+
+        if (rDateCol !== undefined && rIntCol !== undefined) {
+          for (let r = 1; r < rRows.length; r++) {
+            const row = rRows[r];
+            const stat = rStatCol !== undefined ? String(row[rStatCol] || "").trim().toLowerCase() : "";
+            if (stat !== "" && stat !== "approved") continue;
+            const dt = parseSheetDate_(row[rDateCol]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+            loanInterest += Number(row[rIntCol]) || 0;
+          }
+        }
+      }
+    }
+  } catch (eRep) {
+    console.error("Income statement loan repayments error: " + eRep.message);
+  }
+
+  // 1b. Fallback Loan Processing / Transaction Fees from Loans in range
+  try {
+    let lRows = cachedLoanRows;
+    if (!lRows) {
+      const lSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
+      lRows = lSheet && lSheet.getLastRow() > 1 ? lSheet.getDataRange().getValues() : [];
+    }
+    if (lRows && lRows.length > 1) {
+      const lCol = getHeaderMap_(lRows[0]);
+      const appDateCol =
+        lCol["Approved Date"] !== undefined ? lCol["Approved Date"] : lCol["Request Date"];
+      const feeCol = lCol["Transaction Fee"];
+      const statCol = lCol["Status"];
+      if (appDateCol !== undefined && feeCol !== undefined) {
+        for (let k = 1; k < lRows.length; k++) {
+          const row = lRows[k];
+          const stat = statCol !== undefined ? String(row[statCol] || "").trim().toLowerCase() : "";
+          if (stat === "pending" || stat === "rejected") continue;
+          const dt = parseSheetDate_(row[appDateCol]);
+          if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+          loansTransactionFees += Number(row[feeCol]) || 0;
+        }
+      }
+    }
+  } catch (eLoanFees) {
+    console.error("Income statement loan fees error: " + eLoanFees.message);
+  }
+
+  // 2a. CIC MMF & Fund Statements Net Yield in range
+  try {
+    const fundSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.FUND_STATEMENTS);
+    if (fundSheet && fundSheet.getLastRow() > 1) {
+      const fRows = fundSheet.getDataRange().getValues();
+      if (fRows.length > 1) {
+        const fCol = getHeaderMap_(fRows[0]);
+        const fDateCol = fCol["Statement Date"] !== undefined ? fCol["Statement Date"] : fCol["Date"];
+        const netCol = fCol["Net Yield"];
+        const grossCol = fCol["Gross Interest"];
+        const taxCol = fCol["Withholding Tax"];
+        if (fDateCol !== undefined) {
+          for (let f = 1; f < fRows.length; f++) {
+            const row = fRows[f];
+            const dt = parseSheetDate_(row[fDateCol]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+            const gross = grossCol !== undefined ? (Number(row[grossCol]) || 0) : 0;
+            const tax = taxCol !== undefined ? (Number(row[taxCol]) || 0) : 0;
+            const netRaw = netCol !== undefined ? row[netCol] : undefined;
+            const hasNet = netRaw !== "" && netRaw !== undefined && netRaw !== null && Number(netRaw) !== 0;
+            cicMmfNetYield += hasNet ? (Number(netRaw) || 0) : (gross - tax);
+          }
+        }
+      }
+    }
+  } catch (eFund) {
+    console.error("Income statement fund statements error: " + eFund.message);
+  }
+
+  // 2b. External Investment realized returns from SHEETS.INVESTMENTS in range
+  try {
+    const invSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENTS);
+    if (invSheet && invSheet.getLastRow() > 1) {
+      const iRows = invSheet.getDataRange().getValues();
+      if (iRows.length > 1) {
+        const iCol = getHeaderMap_(iRows[0]);
+        const dateCol =
+          iCol["Maturity Date"] !== undefined
+            ? iCol["Maturity Date"]
+            : (iCol["Start Date"] !== undefined
+                ? iCol["Start Date"]
+                : (iCol["Date Invested"] !== undefined ? iCol["Date Invested"] : iCol["Date"]));
+        const roiCol = iCol["ROI Amount"];
+        const revCol = iCol["Revenue"];
+        const currValCol = iCol["Current Value"];
+        const invAmtCol =
+          iCol["Money Invested"] !== undefined
+            ? iCol["Money Invested"]
+            : (iCol["Amount Invested"] !== undefined ? iCol["Amount Invested"] : iCol["Invested"]);
+        const statCol = iCol["Status"];
+
+        for (let i = 1; i < iRows.length; i++) {
+          const row = iRows[i];
+          if (statCol !== undefined) {
+            const stat = String(row[statCol] || "").trim().toLowerCase();
+            if (stat === "cancelled" || stat === "rejected") continue;
+          }
+          if (dateCol !== undefined) {
+            const rawDt = row[dateCol];
+            const dt = parseSheetDate_(rawDt);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+          }
+
+          let realized = 0;
+          if (roiCol !== undefined && row[roiCol] !== "" && row[roiCol] !== undefined) {
+            realized = Number(row[roiCol]) || 0;
+          } else if (revCol !== undefined && row[revCol] !== "" && row[revCol] !== undefined) {
+            realized = Number(row[revCol]) || 0;
+          } else if (currValCol !== undefined && invAmtCol !== undefined) {
+            const cv = Number(row[currValCol]) || 0;
+            const iv = Number(row[invAmtCol]) || 0;
+            realized = Math.max(0, cv - iv);
+          }
+          externalInvestments += realized;
+        }
+      }
+    }
+  } catch (eInv) {
+    console.error("Income statement external investments error: " + eInv.message);
+  }
+
+  // 1c & 4. InvestmentLedger operating revenue & categorized operating expenses in range
+  try {
+    const ledgerSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENT_LEDGER);
+    if (ledgerSheet && ledgerSheet.getLastRow() > 1) {
+      const lv = ledgerSheet.getDataRange().getValues();
+      if (lv.length > 1) {
+        const lc = getHeaderMap_(lv[0]);
+        if (lc["Date"] !== undefined && lc["Type"] !== undefined && lc["Amount"] !== undefined) {
+          for (let j = 1; j < lv.length; j++) {
+            const row = lv[j];
+            const dt = parseSheetDate_(row[lc["Date"]]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+            const kind = normalizeLedgerType_(row[lc["Type"]]);
+            const absAmt = Math.abs(Number(row[lc["Amount"]]) || 0);
+            const fee = lc["Transaction Fee"] !== undefined ? (Number(row[lc["Transaction Fee"]]) || 0) : 0;
+            const cat = lc["Category"] !== undefined ? String(row[lc["Category"]] || "").trim() : "";
+            const desc = lc["Description"] !== undefined ? String(row[lc["Description"]] || "").trim() : "";
+            const labelLower = (cat + " " + desc).toLowerCase();
+
+            if (kind === "revenue") {
+              if (
+                labelLower.indexOf("process") !== -1 ||
+                labelLower.indexOf("application") !== -1 ||
+                labelLower.indexOf("origination") !== -1 ||
+                labelLower.indexOf("loan fee") !== -1
+              ) {
+                ledgerProcessingFees += absAmt;
+              } else if (
+                labelLower.indexOf("fine") !== -1 ||
+                labelLower.indexOf("penalt") !== -1 ||
+                labelLower.indexOf("late") !== -1
+              ) {
+                finesAndPenalties += absAmt;
+              } else {
+                otherOperatingRevenue += absAmt;
+              }
+            } else if (kind === "expense") {
+              if (fee > 0) {
+                bankAndTransactionFees += fee;
+              }
+              if (
+                labelLower.indexOf("bank") !== -1 ||
+                labelLower.indexOf("mpesa") !== -1 ||
+                labelLower.indexOf("m-pesa") !== -1 ||
+                labelLower.indexOf("withdraw") !== -1 ||
+                labelLower.indexOf("transaction fee") !== -1 ||
+                labelLower.indexOf("transfer fee") !== -1 ||
+                labelLower.indexOf("charge") !== -1 ||
+                labelLower.indexOf("paybill") !== -1
+              ) {
+                bankAndTransactionFees += absAmt;
+              } else if (
+                labelLower.indexOf("tech") !== -1 ||
+                labelLower.indexOf("software") !== -1 ||
+                labelLower.indexOf("host") !== -1 ||
+                labelLower.indexOf("domain") !== -1 ||
+                labelLower.indexOf("cloud") !== -1 ||
+                labelLower.indexOf("server") !== -1 ||
+                labelLower.indexOf("comm") !== -1 ||
+                labelLower.indexOf("internet") !== -1 ||
+                labelLower.indexOf("sms") !== -1 ||
+                labelLower.indexOf("airtime") !== -1
+              ) {
+                techAndInfrastructure += absAmt;
+              } else if (
+                labelLower.indexOf("agm") !== -1 ||
+                labelLower.indexOf("committee") !== -1 ||
+                labelLower.indexOf("meeting") !== -1 ||
+                labelLower.indexOf("refreshment") !== -1 ||
+                labelLower.indexOf("catering") !== -1 ||
+                labelLower.indexOf("stationery") !== -1 ||
+                labelLower.indexOf("transport") !== -1 ||
+                labelLower.indexOf("legal") !== -1 ||
+                labelLower.indexOf("admin") !== -1 ||
+                labelLower.indexOf("audit") !== -1
+              ) {
+                agmAndAdmin += absAmt;
+              } else {
+                otherExpenses += absAmt;
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (eLedger) {
+    console.error("Income statement ledger error: " + eLedger.message);
+  }
+
+  loanInterest = roundCurrency2_(loanInterest);
+  const processingFees = roundCurrency2_(
+    ledgerProcessingFees > 0 ? ledgerProcessingFees : loansTransactionFees
+  );
+  finesAndPenalties = roundCurrency2_(finesAndPenalties);
+  otherOperatingRevenue = roundCurrency2_(otherOperatingRevenue);
+  const operatingSubtotal = roundCurrency2_(
+    loanInterest + processingFees + finesAndPenalties + otherOperatingRevenue
+  );
+
+  cicMmfNetYield = roundCurrency2_(cicMmfNetYield);
+  externalInvestments = roundCurrency2_(externalInvestments);
+  const investmentSubtotal = roundCurrency2_(cicMmfNetYield + externalInvestments);
+
+  const totalRevenue = roundCurrency2_(operatingSubtotal + investmentSubtotal);
+
+  bankAndTransactionFees = roundCurrency2_(bankAndTransactionFees);
+  techAndInfrastructure = roundCurrency2_(techAndInfrastructure);
+  agmAndAdmin = roundCurrency2_(agmAndAdmin);
+  otherExpenses = roundCurrency2_(otherExpenses);
+  const totalExpenses = roundCurrency2_(
+    bankAndTransactionFees + techAndInfrastructure + agmAndAdmin + otherExpenses
+  );
+
+  const operatingSurplusBeforeImpairment = roundCurrency2_(totalRevenue - totalExpenses);
+  const pf = portfolio || {};
+  const loanLossProvisionCharge = roundCurrency2_(pf.recommendedProvision);
+  const netOperatingSurplus = roundCurrency2_(
+    operatingSurplusBeforeImpairment - loanLossProvisionCharge
+  );
+  const costToIncomeRatio =
+    totalRevenue > 0
+      ? Math.round(((totalExpenses / totalRevenue) * 100) * 100) / 100
+      : 0;
+
+  let statutoryReserveTransfer = 0;
+  let distributableMemberPool = 0;
+  if (netOperatingSurplus > 0) {
+    statutoryReserveTransfer = roundCurrency2_(netOperatingSurplus * 0.20);
+    distributableMemberPool = roundCurrency2_(netOperatingSurplus * 0.80);
+  }
+
+  return {
+    range: effectiveRange,
+    periodStart: Utilities.formatDate(bounds.start, timeZone, "dd MMM yyyy"),
+    periodEnd: Utilities.formatDate(new Date(bounds.end.getTime() - 1), timeZone, "dd MMM yyyy"),
+    operatingRevenue: {
+      loanInterest: loanInterest,
+      processingFees: processingFees,
+      finesAndPenalties: finesAndPenalties,
+      otherOperatingRevenue: otherOperatingRevenue,
+      operatingSubtotal: operatingSubtotal,
+    },
+    investmentYields: {
+      cicMmfNetYield: cicMmfNetYield,
+      externalInvestments: externalInvestments,
+      investmentSubtotal: investmentSubtotal,
+    },
+    totalRevenue: totalRevenue,
+    operatingExpenses: {
+      bankAndTransactionFees: bankAndTransactionFees,
+      techAndInfrastructure: techAndInfrastructure,
+      agmAndAdmin: agmAndAdmin,
+      otherExpenses: otherExpenses,
+      totalExpenses: totalExpenses,
+    },
+    totalExpenses: totalExpenses,
+    operatingSurplusBeforeImpairment: operatingSurplusBeforeImpairment,
+    loanLossProvisionCharge: loanLossProvisionCharge,
+    netOperatingSurplus: netOperatingSurplus,
+    costToIncomeRatio: costToIncomeRatio,
+    appropriations: {
+      statutoryReserveTransfer: statutoryReserveTransfer,
+      distributableMemberPool: distributableMemberPool,
+    },
+    statutoryReserveTransfer: statutoryReserveTransfer,
+    distributableMemberPool: distributableMemberPool,
   };
 }
 

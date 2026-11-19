@@ -989,8 +989,13 @@
         renderAnalyticsView();
       }
     } else if (cleanKey === "reports") {
-      if (window.latestHomeAnalyticsData && typeof window.renderBalanceSheet === "function") {
-        window.renderBalanceSheet(window.latestHomeAnalyticsData);
+      if (window.latestHomeAnalyticsData) {
+        if (typeof window.renderBalanceSheet === "function") {
+          window.renderBalanceSheet(window.latestHomeAnalyticsData);
+        }
+        if (typeof window.renderIncomeStatement === "function") {
+          window.renderIncomeStatement(window.latestHomeAnalyticsData);
+        }
       }
     }
   }

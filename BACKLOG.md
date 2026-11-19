@@ -11,8 +11,8 @@
 | **Current Live Release** | **`v110`** (Google Apps Script Build `@111`, Commit `bf401f5`) |
 | **Total Tracked Tasks** | **23 Tasks** |
 | **Completed & Shipped (`[DONE]`)** | **12 Tasks (52.2%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **11 Tasks (47.8%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`RPT-2`)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (43.5%)** |
 | **Current Sprint Focus** | Phase 2: Institutional Reporting Suite (`RPT-2: Statement of Comprehensive Income / P&L`) |
 
 ---
@@ -42,7 +42,7 @@ The remaining 11 tasks are categorized below in strict execution priority:
 
 ### Tier 1: Immediate Strategic Priorities (Active Sprint Focus)
 
-#### 1. `RPT-2: Statement of Comprehensive Income (Profit & Loss / P&L)`
+#### 1. `RPT-2: Statement of Comprehensive Income (Profit & Loss / P&L)` `[IN PROGRESS]`
 * **Priority:** `P0 (Top Strategic Priority)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab (`#home-subview-reports`)
@@ -158,19 +158,19 @@ graph TD
         R1["RPT-1: Statement of Financial Position"]
     end
 
-    subgraph Sprint_Next ["Immediate Next Sprint"]
-        U2["UI-2: Member Loan Application Workflow<br>(Modal, Eligibility & Calculator - P0)"]
-        R2["RPT-2: Statement of Comprehensive Income<br>(Profit & Loss / P&L - P1)"]
+    subgraph Sprint_Next ["Active Sprint Focus (Top Priority)"]
+        R2["RPT-2: Statement of Comprehensive Income<br>(Profit & Loss / P&L - P0)"]
+        R4["RPT-4: Official AGM & Bank Audit Pack<br>(PDF Letterhead & CSV Export - P1)"]
     end
 
     subgraph Sprint_Follow_Up ["Follow-up Sprint (P1 Priorities)"]
-        R4["RPT-4: Official AGM & Bank Audit Pack<br>(PDF Letterhead & CSV Export)"]
         G1["GOV-1: Multi-Signature Dual-Officer Loan Approval"]
         M2["MIG-2: Equity Bank Statement Ingestion"]
         C1["COM-1: Automated WhatsApp/Email Receipts"]
     end
 
-    subgraph Future_Enhancements ["Backlog Enhancements (P2 Priorities)"]
+    subgraph Future_Enhancements ["Deferred & Backlog Enhancements (P2 Priorities)"]
+        U2["UI-2: Member Loan Application Workflow<br>(Deferred by User)"]
         R3["RPT-3: Statement of Changes in Equity"]
         U3["UI-3: Column Sorting & Filter Presets"]
         C2["COM-2: Monthly Member Statements Dispatch"]
@@ -181,7 +181,7 @@ graph TD
     F2 & V3 --> R1
     R1 --> R2
     R1 & R2 --> R4
-    U2 --> G1
+    U2 -.-> G1
     R2 --> C2
     C1 --> C2
 ```

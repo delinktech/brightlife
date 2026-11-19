@@ -995,7 +995,272 @@
       </div>
     </div>
 
-    <!-- Remaining Institutional Reports & Export Suite (RPT-2 & RPT-3) -->
+    <!-- RPT-2: Full-Width Statement of Comprehensive Income (Profit & Loss) -->
+    <div class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
+      <!-- Header & Action Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <i class="fas fa-file-invoice-dollar text-sm"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Statement of Comprehensive Income (Profit &amp; Loss)</h3>
+              <span id="pnl-source-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                Audited IFRS Schedule
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Income &amp; Expenditure (P&amp;L) &bull; IFRS &amp; SASRA Prudential Operating Performance &bull; <span id="pnl-period-label" class="font-medium text-slate-700 dark:text-slate-200">—</span>
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button type="button" onclick="exportIncomeStatementCSV()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+            <i class="fas fa-file-csv text-slate-500 dark:text-slate-400"></i> <span>Export CSV</span>
+          </button>
+          <button type="button" onclick="openPrintIncomeStatementReport()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+            <i class="fas fa-print text-xs"></i> <span>Print P&amp;L</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive 4-Card Income & Efficiency Ribbon -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. Total Comprehensive Revenue -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Comprehensive Revenue</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-arrow-trend-up"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="pnl-kpi-revenue" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Operating income + investment yields</p>
+          </div>
+        </div>
+
+        <!-- 2. Total Operating Expenses -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Operating Expenses</span>
+            <span class="w-6 h-6 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-receipt"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="pnl-kpi-expenses" class="text-base sm:text-lg font-bold text-rose-700 dark:text-rose-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Bank fees, tech, AGM &amp; admin costs</p>
+          </div>
+        </div>
+
+        <!-- 3. Cost-to-Income Ratio (CIR) -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cost-to-Income Ratio (CIR)</span>
+            <span id="pnl-kpi-cir-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              No Activity
+            </span>
+          </div>
+          <div>
+            <h4 id="pnl-kpi-cir" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">0.0%</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">&lt;40% Optimal &bull; 40–60% Moderate &bull; &gt;60% High</p>
+          </div>
+        </div>
+
+        <!-- 4. Net Operating Surplus / (Deficit) -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Net Operating Surplus</span>
+            <span id="pnl-kpi-surplus-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              0.0% Margin
+            </span>
+          </div>
+          <div>
+            <h4 id="pnl-kpi-surplus" class="text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p id="pnl-kpi-surplus-sub" class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5 truncate">80% Distributable Pool: KES 0.00</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Classical Multi-Step IFRS Ledger Table (Sections I-VI) -->
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1320]">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-900/90 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="px-4 py-2.5">Section / Account Classification (IFRS)</th>
+              <th class="px-4 py-2.5 whitespace-nowrap hidden sm:table-cell">Note</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap hidden sm:table-cell">% of Revenue</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap">Amount (KES)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
+            <!-- Section I: Operating Revenue -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50">
+              <td colspan="4" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Section I: Operating Revenue</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Loan Interest Income</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">I.1</td>
+              <td id="pnl-pct-interest" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-rev-interest" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Processing &amp; Application Fees</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">I.2</td>
+              <td id="pnl-pct-fees" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-rev-fees" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Fines &amp; Penalties</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">I.3</td>
+              <td id="pnl-pct-fines" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-rev-fines" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Other Operating Revenue</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">I.4</td>
+              <td id="pnl-pct-other-rev" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-rev-other" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+              <td class="px-4 py-2.5 font-bold text-slate-900 dark:text-white">Subtotal Operating Revenue</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">I</td>
+              <td id="pnl-pct-op-sub" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-300 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-rev-op-sub" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Section II: Investment Yields -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50">
+              <td colspan="4" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Section II: Investment Yields</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">CIC MMF Net Yield</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">II.1</td>
+              <td id="pnl-pct-cic" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-yield-cic" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Other External Investments</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">II.2</td>
+              <td id="pnl-pct-ext-yield" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-yield-ext" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+              <td class="px-4 py-2.5 font-bold text-slate-900 dark:text-white">Subtotal Investment Yields</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">II</td>
+              <td id="pnl-pct-yield-sub" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-300 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-yield-sub" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Total Comprehensive Revenue -->
+            <tr class="bg-slate-100/80 dark:bg-slate-900/90 border-t-2 border-b-2 border-slate-300 dark:border-slate-600 font-bold">
+              <td class="px-4 py-3 text-slate-900 dark:text-white uppercase tracking-wide">Total Comprehensive Revenue (Gross Operating Income)</td>
+              <td class="px-4 py-3 text-[11px] font-mono text-slate-600 dark:text-slate-400 hidden sm:table-cell">I+II</td>
+              <td class="px-4 py-3 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300 hidden sm:table-cell">100.0%</td>
+              <td id="pnl-total-revenue" class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Section III: Operating & Administrative Expenses -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50">
+              <td colspan="4" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Section III: Operating &amp; Administrative Expenses</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Bank &amp; Transaction Fees</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">III.1</td>
+              <td id="pnl-pct-bank-fee" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-exp-bank" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Technology &amp; Infrastructure</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">III.2</td>
+              <td id="pnl-pct-tech-exp" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-exp-tech" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">AGM &amp; Governance</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">III.3</td>
+              <td id="pnl-pct-agm-exp" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-exp-agm" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Other Administrative Expenses</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">III.4</td>
+              <td id="pnl-pct-other-exp" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-exp-other" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+              <td class="px-4 py-2.5 font-bold text-slate-900 dark:text-white">Subtotal Operating Expenses</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">III</td>
+              <td id="pnl-pct-exp-sub" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-300 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-exp-sub" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+
+            <!-- Section IV: Net Operating Surplus Before Impairment -->
+            <tr class="bg-slate-50/90 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-700 font-bold">
+              <td class="px-4 py-2.5 text-slate-900 dark:text-white">Section IV: Net Operating Surplus Before Impairment</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">IV</td>
+              <td id="pnl-pct-ebit" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-surplus-before-impairment" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Section V: Credit Impairment Loss -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 italic text-slate-600 dark:text-slate-400">Section V: Credit Impairment Loss (SASRA Sec 51 Statutory Provision Charge)</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">V</td>
+              <td id="pnl-pct-impairment" class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-500 dark:text-slate-400 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-impairment-charge" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-amber-700 dark:text-amber-400">(KES 0.00)</td>
+            </tr>
+
+            <!-- Section VI: Net Operating Surplus / (Deficit) for the Period -->
+            <tr id="pnl-net-surplus-row" class="bg-emerald-50/60 dark:bg-emerald-950/30 border-t-2 border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-emerald-700 dark:border-b-emerald-400 font-bold">
+              <td class="px-4 py-3 uppercase tracking-wider text-emerald-900 dark:text-emerald-300">Section VI: Net Operating Surplus / (Deficit) for the Period</td>
+              <td class="px-4 py-3 text-[11px] font-mono text-emerald-700 dark:text-emerald-400 hidden sm:table-cell">VI</td>
+              <td id="pnl-pct-net-surplus" class="px-4 py-3 text-right font-mono tabular-nums text-emerald-800 dark:text-emerald-300 hidden sm:table-cell">0.0%</td>
+              <td id="pnl-net-surplus" class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-emerald-800 dark:text-emerald-300">KES 0.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Section VII: Statutory & Policy Appropriations -->
+      <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-4 space-y-3">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fas fa-landmark-dome text-amber-700 dark:text-amber-400 text-xs"></i>
+            <span>Section VII: Statutory &amp; Policy Appropriations</span>
+          </h4>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+            SASRA Section 51(1)
+          </span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="p-3.5 rounded-xl bg-white dark:bg-[#0b1320] border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-bold text-slate-900 dark:text-white">20% Statutory Reserve Fund Transfer</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">SASRA Section 51(1) indivisible institutional capital</div>
+            </div>
+            <div id="pnl-app-reserve" class="font-mono tabular-nums text-sm font-extrabold text-amber-700 dark:text-amber-400 shrink-0">KES 0.00</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-white dark:bg-[#0b1320] border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+            <div>
+              <div class="text-xs font-bold text-slate-900 dark:text-white">80% Distributable Member Surplus Base</div>
+              <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Available for AGM member dividend / rebate distribution</div>
+            </div>
+            <div id="pnl-app-distributable" class="font-mono tabular-nums text-sm font-extrabold text-emerald-700 dark:text-emerald-400 shrink-0">KES 0.00</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-2 text-[11px] text-slate-600 dark:text-slate-400 bg-white/80 dark:bg-slate-950/50 border border-slate-200/70 dark:border-slate-800 rounded-lg px-3 py-2">
+          <i class="fas fa-circle-info text-sky-700 dark:text-sky-400 mt-0.5 shrink-0"></i>
+          <span>Under SASRA Section 51(1) prudential governance, at least 20% of positive net operating surplus is transferred to the Statutory Reserve Fund prior to member dividend allocation; net deficits do not trigger reserve transfers.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Remaining Institutional Reports & Export Suite (RPT-4 Audit Export) -->
     <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-5 sm:p-6 shadow-sm space-y-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div class="flex items-start gap-3">
@@ -1026,32 +1291,17 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs">
-              <i class="fas fa-file-invoice-dollar"></i>
-            </span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Surplus &amp; Yield</span>
-          </div>
-          <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Income &amp; Expenditure (P&amp;L)</h4>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            Period summary of realized loan interest, CIC MMF / Mansa X yields, withholding tax deductions, and net distributable surplus.
-          </p>
+      <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xs">
+            <i class="fas fa-file-export"></i>
+          </span>
+          <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Statutory Pack</span>
         </div>
-
-        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xs">
-              <i class="fas fa-file-export"></i>
-            </span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Statutory Pack</span>
-          </div>
-          <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Audit Export</h4>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            Consolidated AGM ledger archive combining verified contributions, loan schedules, and reconciled account statements.
-          </p>
-        </div>
+        <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Audit Export</h4>
+        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+          Consolidated AGM ledger archive combining verified contributions, loan schedules, and reconciled account statements.
+        </p>
       </div>
     </div>
   </div>
@@ -2551,6 +2801,7 @@
     window.renderSavingsExposureTrajectory(data);
     window.renderSasraAging(data);
     window.renderBalanceSheet(data);
+    window.renderIncomeStatement(data);
   }
 
   const homeBsKesFormatter = new Intl.NumberFormat('en-KE', {
@@ -2944,6 +3195,351 @@
 
     if (typeof showNotification === 'function') {
       showNotification('Balance Sheet exported to CSV.', 'success');
+    }
+    return csvContent;
+  };
+
+  function buildIncomeStatementModel_(sourceData) {
+    const safe = sourceData || {};
+    const pnl = (safe.incomeStatement && typeof safe.incomeStatement === 'object') ? safe.incomeStatement : null;
+
+    if (pnl) {
+      const opObj = (pnl.operatingRevenue && typeof pnl.operatingRevenue === 'object') ? pnl.operatingRevenue : {};
+      const yldObj = (pnl.investmentYields && typeof pnl.investmentYields === 'object') ? pnl.investmentYields : {};
+      const expObj = (pnl.operatingExpenses && typeof pnl.operatingExpenses === 'object') ? pnl.operatingExpenses : {};
+      const appObj = (pnl.appropriations && typeof pnl.appropriations === 'object') ? pnl.appropriations : {};
+
+      const loanInterest = Number(opObj.loanInterest) || 0;
+      const processingFees = Number(opObj.processingFees) || 0;
+      const finesAndPenalties = Number(opObj.finesAndPenalties) || 0;
+      const otherOperatingRevenue = Number(opObj.otherOperatingRevenue) || 0;
+      const operatingSubtotal = opObj.operatingSubtotal !== undefined
+        ? (Number(opObj.operatingSubtotal) || 0)
+        : (loanInterest + processingFees + finesAndPenalties + otherOperatingRevenue);
+
+      const cicMmfNetYield = Number(yldObj.cicMmfNetYield !== undefined ? yldObj.cicMmfNetYield : yldObj.cicMmf) || 0;
+      const externalInvestments = Number(yldObj.externalInvestments !== undefined ? yldObj.externalInvestments : yldObj.otherYields) || 0;
+      const investmentSubtotal = yldObj.investmentSubtotal !== undefined
+        ? (Number(yldObj.investmentSubtotal) || 0)
+        : (cicMmfNetYield + externalInvestments);
+
+      const totalRevenue = pnl.totalRevenue !== undefined
+        ? (Number(pnl.totalRevenue) || 0)
+        : (operatingSubtotal + investmentSubtotal);
+
+      const bankAndTransactionFees = Number(expObj.bankAndTransactionFees !== undefined ? expObj.bankAndTransactionFees : expObj.bankCharges) || 0;
+      const techAndInfrastructure = Number(expObj.techAndInfrastructure !== undefined ? expObj.techAndInfrastructure : expObj.techAndAdmin) || 0;
+      const agmAndAdmin = Number(expObj.agmAndAdmin !== undefined ? expObj.agmAndAdmin : expObj.agmMeetings) || 0;
+      const otherExpenses = Number(expObj.otherExpenses) || 0;
+      const totalExpenses = pnl.totalExpenses !== undefined
+        ? (Number(pnl.totalExpenses) || 0)
+        : (expObj.totalExpenses !== undefined
+            ? (Number(expObj.totalExpenses) || 0)
+            : (bankAndTransactionFees + techAndInfrastructure + agmAndAdmin + otherExpenses));
+
+      const operatingSurplusBeforeImpairment = pnl.operatingSurplusBeforeImpairment !== undefined
+        ? (Number(pnl.operatingSurplusBeforeImpairment) || 0)
+        : (totalRevenue - totalExpenses);
+      const loanLossProvisionCharge = Math.abs(Number(pnl.loanLossProvisionCharge) || 0);
+      const netOperatingSurplus = pnl.netOperatingSurplus !== undefined
+        ? (Number(pnl.netOperatingSurplus) || 0)
+        : (operatingSurplusBeforeImpairment - loanLossProvisionCharge);
+
+      const costToIncomeRatio = (pnl.costToIncomeRatio !== undefined && isFinite(Number(pnl.costToIncomeRatio)))
+        ? Number(pnl.costToIncomeRatio)
+        : (totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0);
+
+      const statutoryReserveTransfer = appObj.statutoryReserveTransfer !== undefined
+        ? Math.max(0, Number(appObj.statutoryReserveTransfer) || 0)
+        : (pnl.statutoryReserveTransfer !== undefined
+            ? Math.max(0, Number(pnl.statutoryReserveTransfer) || 0)
+            : (netOperatingSurplus > 0 ? Math.round(netOperatingSurplus * 0.20 * 100) / 100 : 0));
+      const distributableMemberPool = appObj.distributableMemberPool !== undefined
+        ? Math.max(0, Number(appObj.distributableMemberPool) || 0)
+        : (pnl.distributableMemberPool !== undefined
+            ? Math.max(0, Number(pnl.distributableMemberPool) || 0)
+            : (netOperatingSurplus > 0 ? Math.round((netOperatingSurplus - statutoryReserveTransfer) * 100) / 100 : 0));
+
+      return {
+        isAudited: true,
+        range: String(pnl.range || safe.range || 'year'),
+        periodStart: String(pnl.periodStart || ''),
+        periodEnd: String(pnl.periodEnd || ''),
+        operatingRevenue: {
+          loanInterest: loanInterest,
+          processingFees: processingFees,
+          finesAndPenalties: finesAndPenalties,
+          otherOperatingRevenue: otherOperatingRevenue,
+          operatingSubtotal: operatingSubtotal
+        },
+        investmentYields: {
+          cicMmfNetYield: cicMmfNetYield,
+          externalInvestments: externalInvestments,
+          investmentSubtotal: investmentSubtotal
+        },
+        totalRevenue: totalRevenue,
+        operatingExpenses: {
+          bankAndTransactionFees: bankAndTransactionFees,
+          techAndInfrastructure: techAndInfrastructure,
+          agmAndAdmin: agmAndAdmin,
+          otherExpenses: otherExpenses,
+          totalExpenses: totalExpenses
+        },
+        totalExpenses: totalExpenses,
+        operatingSurplusBeforeImpairment: operatingSurplusBeforeImpairment,
+        loanLossProvisionCharge: loanLossProvisionCharge,
+        netOperatingSurplus: netOperatingSurplus,
+        costToIncomeRatio: costToIncomeRatio,
+        appropriations: {
+          statutoryReserveTransfer: statutoryReserveTransfer,
+          distributableMemberPool: distributableMemberPool
+        }
+      };
+    }
+
+    // Honest live-ledger fallback when incomeStatement is absent
+    const inv = (safe.investments && typeof safe.investments === 'object') ? safe.investments : {};
+    const bd = (inv.breakdown && typeof inv.breakdown === 'object') ? inv.breakdown : {};
+    const invIn = (bd.inflows && typeof bd.inflows === 'object') ? bd.inflows : {};
+    const invOut = (bd.outflows && typeof bd.outflows === 'object') ? bd.outflows : {};
+
+    const otherOperatingRevenue = Number(invIn.ledgerRevenue) || 0;
+    const operatingSubtotal = otherOperatingRevenue;
+    const externalInvestments = Number(invIn.fundYields !== undefined ? invIn.fundYields : invIn.fundYield) || 0;
+    const investmentSubtotal = externalInvestments;
+    const totalRevenue = operatingSubtotal + investmentSubtotal;
+
+    const otherExpenses = Number(invOut.operatingExpenses) || 0;
+    const totalExpenses = otherExpenses;
+    const operatingSurplusBeforeImpairment = totalRevenue - totalExpenses;
+    const loanLossProvisionCharge = 0;
+    const netOperatingSurplus = operatingSurplusBeforeImpairment - loanLossProvisionCharge;
+    const costToIncomeRatio = totalRevenue > 0 ? (totalExpenses / totalRevenue) * 100 : 0;
+    const statutoryReserveTransfer = netOperatingSurplus > 0 ? Math.round(netOperatingSurplus * 0.20 * 100) / 100 : 0;
+    const distributableMemberPool = netOperatingSurplus > 0 ? Math.round((netOperatingSurplus - statutoryReserveTransfer) * 100) / 100 : 0;
+
+    return {
+      isAudited: false,
+      range: String(safe.range || 'year'),
+      periodStart: '',
+      periodEnd: '',
+      operatingRevenue: {
+        loanInterest: 0,
+        processingFees: 0,
+        finesAndPenalties: 0,
+        otherOperatingRevenue: otherOperatingRevenue,
+        operatingSubtotal: operatingSubtotal
+      },
+      investmentYields: {
+        cicMmfNetYield: 0,
+        externalInvestments: externalInvestments,
+        investmentSubtotal: investmentSubtotal
+      },
+      totalRevenue: totalRevenue,
+      operatingExpenses: {
+        bankAndTransactionFees: 0,
+        techAndInfrastructure: 0,
+        agmAndAdmin: 0,
+        otherExpenses: otherExpenses,
+        totalExpenses: totalExpenses
+      },
+      totalExpenses: totalExpenses,
+      operatingSurplusBeforeImpairment: operatingSurplusBeforeImpairment,
+      loanLossProvisionCharge: loanLossProvisionCharge,
+      netOperatingSurplus: netOperatingSurplus,
+      costToIncomeRatio: costToIncomeRatio,
+      appropriations: {
+        statutoryReserveTransfer: statutoryReserveTransfer,
+        distributableMemberPool: distributableMemberPool
+      }
+    };
+  }
+
+  window.renderIncomeStatement = function (data) {
+    if (data) {
+      window.latestHomeAnalyticsData = data;
+    }
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildIncomeStatementModel_(sourceData);
+    window.latestIncomeStatementModel = m;
+
+    const setTxt = function (id, txt) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+    const pctStr = function (num) {
+      if (m.totalRevenue <= 0) return '0.0%';
+      return ((Number(num) / m.totalRevenue) * 100).toFixed(1) + '%';
+    };
+
+    const rk = m.range || (typeof currentHomeRange !== 'undefined' ? currentHomeRange : 'year');
+    const fallbackRange = rk === 'this_month' ? 'Current Month' : (rk === 'quarter' ? 'Current Quarter' : 'FY ' + new Date().getFullYear());
+    const periodText = (m.periodStart && m.periodEnd)
+      ? (m.periodStart + ' – ' + m.periodEnd + ' (' + fallbackRange + ')')
+      : fallbackRange;
+    setTxt('pnl-period-label', periodText);
+
+    const badgeSrc = document.getElementById('pnl-source-badge');
+    if (badgeSrc) {
+      badgeSrc.textContent = m.isAudited ? 'Audited IFRS Schedule' : 'Live Ledger Compilation';
+    }
+
+    // 1. 4-Card Executive Income Ribbon
+    setTxt('pnl-kpi-revenue', formatBsKes_(m.totalRevenue));
+    setTxt('pnl-kpi-expenses', formatBsKes_(m.totalExpenses));
+
+    const elCir = document.getElementById('pnl-kpi-cir');
+    const elCirBadge = document.getElementById('pnl-kpi-cir-badge');
+    if (elCir) {
+      elCir.textContent = (m.totalRevenue <= 0 && m.totalExpenses > 0)
+        ? '>100%'
+        : (m.costToIncomeRatio.toFixed(1) + '%');
+    }
+    if (elCirBadge) {
+      if (m.totalRevenue <= 0 && m.totalExpenses === 0) {
+        elCirBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        elCirBadge.textContent = 'No Activity';
+      } else if ((m.totalRevenue <= 0 && m.totalExpenses > 0) || m.costToIncomeRatio > 60) {
+        elCirBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elCirBadge.textContent = 'High';
+      } else if (m.costToIncomeRatio < 40) {
+        elCirBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
+        elCirBadge.textContent = 'Optimal';
+      } else {
+        elCirBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60';
+        elCirBadge.textContent = 'Moderate';
+      }
+    }
+
+    const netMargin = m.totalRevenue > 0 ? (m.netOperatingSurplus / m.totalRevenue) * 100 : 0;
+    const elSurplus = document.getElementById('pnl-kpi-surplus');
+    const elSurplusBadge = document.getElementById('pnl-kpi-surplus-badge');
+    const elSurplusSub = document.getElementById('pnl-kpi-surplus-sub');
+    if (elSurplus) {
+      elSurplus.textContent = m.netOperatingSurplus < 0
+        ? ('(' + formatBsKes_(Math.abs(m.netOperatingSurplus)) + ')')
+        : formatBsKes_(m.netOperatingSurplus);
+      elSurplus.className = 'text-base sm:text-lg font-bold tracking-tight font-mono tabular-nums ' + (
+        m.netOperatingSurplus >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+      );
+    }
+    if (elSurplusBadge) {
+      if (m.netOperatingSurplus > 0) {
+        elSurplusBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
+        elSurplusBadge.textContent = netMargin.toFixed(1) + '% Margin';
+      } else if (m.netOperatingSurplus < 0) {
+        elSurplusBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elSurplusBadge.textContent = 'Deficit';
+      } else {
+        elSurplusBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        elSurplusBadge.textContent = '0.0% Margin';
+      }
+    }
+    if (elSurplusSub) {
+      elSurplusSub.textContent = '80% Distributable Pool: ' + formatBsKes_(m.appropriations.distributableMemberPool);
+    }
+
+    // 2. Populate Classical Ledger Table Rows (Sections I-VI)
+    setTxt('pnl-rev-interest', formatBsKes_(m.operatingRevenue.loanInterest));
+    setTxt('pnl-pct-interest', pctStr(m.operatingRevenue.loanInterest));
+    setTxt('pnl-rev-fees', formatBsKes_(m.operatingRevenue.processingFees));
+    setTxt('pnl-pct-fees', pctStr(m.operatingRevenue.processingFees));
+    setTxt('pnl-rev-fines', formatBsKes_(m.operatingRevenue.finesAndPenalties));
+    setTxt('pnl-pct-fines', pctStr(m.operatingRevenue.finesAndPenalties));
+    setTxt('pnl-rev-other', formatBsKes_(m.operatingRevenue.otherOperatingRevenue));
+    setTxt('pnl-pct-other-rev', pctStr(m.operatingRevenue.otherOperatingRevenue));
+    setTxt('pnl-rev-op-sub', formatBsKes_(m.operatingRevenue.operatingSubtotal));
+    setTxt('pnl-pct-op-sub', pctStr(m.operatingRevenue.operatingSubtotal));
+
+    setTxt('pnl-yield-cic', formatBsKes_(m.investmentYields.cicMmfNetYield));
+    setTxt('pnl-pct-cic', pctStr(m.investmentYields.cicMmfNetYield));
+    setTxt('pnl-yield-ext', formatBsKes_(m.investmentYields.externalInvestments));
+    setTxt('pnl-pct-ext-yield', pctStr(m.investmentYields.externalInvestments));
+    setTxt('pnl-yield-sub', formatBsKes_(m.investmentYields.investmentSubtotal));
+    setTxt('pnl-pct-yield-sub', pctStr(m.investmentYields.investmentSubtotal));
+
+    setTxt('pnl-total-revenue', formatBsKes_(m.totalRevenue));
+
+    setTxt('pnl-exp-bank', '(' + formatBsKes_(m.operatingExpenses.bankAndTransactionFees) + ')');
+    setTxt('pnl-pct-bank-fee', pctStr(m.operatingExpenses.bankAndTransactionFees));
+    setTxt('pnl-exp-tech', '(' + formatBsKes_(m.operatingExpenses.techAndInfrastructure) + ')');
+    setTxt('pnl-pct-tech-exp', pctStr(m.operatingExpenses.techAndInfrastructure));
+    setTxt('pnl-exp-agm', '(' + formatBsKes_(m.operatingExpenses.agmAndAdmin) + ')');
+    setTxt('pnl-pct-agm-exp', pctStr(m.operatingExpenses.agmAndAdmin));
+    setTxt('pnl-exp-other', '(' + formatBsKes_(m.operatingExpenses.otherExpenses) + ')');
+    setTxt('pnl-pct-other-exp', pctStr(m.operatingExpenses.otherExpenses));
+    setTxt('pnl-exp-sub', '(' + formatBsKes_(m.totalExpenses) + ')');
+    setTxt('pnl-pct-exp-sub', pctStr(m.totalExpenses));
+
+    setTxt('pnl-surplus-before-impairment', m.operatingSurplusBeforeImpairment < 0
+      ? ('(' + formatBsKes_(Math.abs(m.operatingSurplusBeforeImpairment)) + ')')
+      : formatBsKes_(m.operatingSurplusBeforeImpairment));
+    setTxt('pnl-pct-ebit', pctStr(m.operatingSurplusBeforeImpairment));
+
+    setTxt('pnl-impairment-charge', '(' + formatBsKes_(m.loanLossProvisionCharge) + ')');
+    setTxt('pnl-pct-impairment', pctStr(m.loanLossProvisionCharge));
+
+    setTxt('pnl-pct-net-surplus', m.totalRevenue > 0 ? (netMargin.toFixed(1) + '%') : '0.0%');
+    setTxt('pnl-net-surplus', m.netOperatingSurplus < 0
+      ? ('(' + formatBsKes_(Math.abs(m.netOperatingSurplus)) + ')')
+      : formatBsKes_(m.netOperatingSurplus));
+
+    const netRow = document.getElementById('pnl-net-surplus-row');
+    if (netRow) {
+      netRow.className = m.netOperatingSurplus >= 0
+        ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-t-2 border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-emerald-700 dark:border-b-emerald-400 font-bold text-emerald-800 dark:text-emerald-300'
+        : 'bg-rose-50/60 dark:bg-rose-950/30 border-t-2 border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-rose-700 dark:border-b-rose-400 font-bold text-rose-800 dark:text-rose-300';
+    }
+
+    // 3. Populate Section VII: Statutory & Policy Appropriations
+    setTxt('pnl-app-reserve', formatBsKes_(m.appropriations.statutoryReserveTransfer));
+    setTxt('pnl-app-distributable', formatBsKes_(m.appropriations.distributableMemberPool));
+  };
+
+  window.exportIncomeStatementCSV = function () {
+    const m = window.latestIncomeStatementModel || buildIncomeStatementModel_(window.latestHomeAnalyticsData || {});
+    const periodLabel = (document.getElementById('pnl-period-label') || {}).textContent || (m.range || 'FY');
+    const rows = [
+      ['Section', 'Note', 'Line Item', 'Amount (KES)', 'Period'],
+      ['Section I: Operating Revenue', 'I.1', 'Loan Interest Income', m.operatingRevenue.loanInterest.toFixed(2), periodLabel],
+      ['Section I: Operating Revenue', 'I.2', 'Processing & Application Fees', m.operatingRevenue.processingFees.toFixed(2), periodLabel],
+      ['Section I: Operating Revenue', 'I.3', 'Fines & Penalties', m.operatingRevenue.finesAndPenalties.toFixed(2), periodLabel],
+      ['Section I: Operating Revenue', 'I.4', 'Other Operating Revenue', m.operatingRevenue.otherOperatingRevenue.toFixed(2), periodLabel],
+      ['Section I: Operating Revenue', 'I', 'Subtotal Operating Revenue', m.operatingRevenue.operatingSubtotal.toFixed(2), periodLabel],
+      ['Section II: Investment Yields', 'II.1', 'CIC MMF Net Yield', m.investmentYields.cicMmfNetYield.toFixed(2), periodLabel],
+      ['Section II: Investment Yields', 'II.2', 'Other External Investments', m.investmentYields.externalInvestments.toFixed(2), periodLabel],
+      ['Section II: Investment Yields', 'II', 'Subtotal Investment Yields', m.investmentYields.investmentSubtotal.toFixed(2), periodLabel],
+      ['Comprehensive Income', 'I+II', 'Total Comprehensive Revenue', m.totalRevenue.toFixed(2), periodLabel],
+      ['Section III: Operating Expenses', 'III.1', 'Bank & Transaction Fees', (-Math.abs(m.operatingExpenses.bankAndTransactionFees)).toFixed(2), periodLabel],
+      ['Section III: Operating Expenses', 'III.2', 'Technology & Infrastructure', (-Math.abs(m.operatingExpenses.techAndInfrastructure)).toFixed(2), periodLabel],
+      ['Section III: Operating Expenses', 'III.3', 'AGM & Governance', (-Math.abs(m.operatingExpenses.agmAndAdmin)).toFixed(2), periodLabel],
+      ['Section III: Operating Expenses', 'III.4', 'Other Administrative Expenses', (-Math.abs(m.operatingExpenses.otherExpenses)).toFixed(2), periodLabel],
+      ['Section III: Operating Expenses', 'III', 'Subtotal Operating Expenses', (-Math.abs(m.totalExpenses)).toFixed(2), periodLabel],
+      ['Section IV', 'IV', 'Net Operating Surplus Before Impairment', m.operatingSurplusBeforeImpairment.toFixed(2), periodLabel],
+      ['Section V', 'V', 'Credit Impairment Loss (SASRA Sec 51 Provision Charge)', (-Math.abs(m.loanLossProvisionCharge)).toFixed(2), periodLabel],
+      ['Section VI', 'VI', 'Net Operating Surplus / (Deficit) for the Period', m.netOperatingSurplus.toFixed(2), periodLabel],
+      ['Section VII: Statutory Appropriations', 'VII.1', '20% Statutory Reserve Fund Transfer (SASRA Sec 51(1))', m.appropriations.statutoryReserveTransfer.toFixed(2), periodLabel],
+      ['Section VII: Statutory Appropriations', 'VII.2', '80% Distributable Member Surplus Base', m.appropriations.distributableMemberPool.toFixed(2), periodLabel]
+    ];
+
+    const csvContent = rows.map(function (r) {
+      return r.map(bsCsvCell_).join(',');
+    }).join('\r\n');
+
+    if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'brightlife_income_statement_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 500);
+    }
+
+    if (typeof showNotification === 'function') {
+      showNotification('Income Statement (P&L) exported to CSV.', 'success');
     }
     return csvContent;
   };
