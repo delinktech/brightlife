@@ -11,8 +11,8 @@
 | **Current Live Release** | **`v127`** (Google Apps Script Build `@128`, Commit `b2129d5`) |
 | **Total Tracked Tasks** | **32 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7` & `COM-3`) |
 | **Completed & Shipped (`[DONE]`)** | **22 Tasks (68.8%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (31.3%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (RPT-4)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **9 Tasks (28.1%)** |
 | **Current Sprint Focus** | `RPT-4: Official AGM & Bank Audit Export Pack` |
 
 ---
@@ -48,11 +48,11 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 10 tasks are categorized below in strict execution priority:
+The remaining 10 tasks (1 `[IN PROGRESS]`, 9 `[BACKLOG]`) are categorized below in strict execution priority:
 
 ### Tier 1: Architectural Modernization & Active Sprint Priorities
 
-#### 1. `RPT-4: Official AGM & Bank Audit Export Pack`
+#### 1. `RPT-4: Official AGM & Bank Audit Export Pack` `[IN PROGRESS]`
 * **Priority:** `P0 (Top Reporting Priority)`
 * **Domain:** Document Governance (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
 * **Location:** `Reports` tab (`#home-subview-reports`)
@@ -60,10 +60,16 @@ The remaining 10 tasks are categorized below in strict execution priority:
   - Executive PDF report combining Balance Sheet (`RPT-1`), Income Statement (`RPT-2`), and Capital Projects summary, styled with formal BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps.
   - Full multi-statement CSV / Excel audit package export for commercial bank financing or SACCO regulator filing.
 * **Dependencies:** `RPT-1` (Shipped in v110), `RPT-2` (Shipped in v111), `ARC-1` (Shipped in v112), `ARC-2` (Shipped in v113).
+* **Active Sprint UI & Design-Token Checklist:**
+  - Clean dark/light mode buttons (`bg-slate-900` / `dark:bg-slate-100` with contrasting text, full Light/Dark institutional theme parity).
+  - Zero unstyled controls (every button, dropdown, checkbox, and trigger styled with Tailwind institutional tokens).
+  - `min-h-[38px]` touch targets on all interactive buttons and controls.
+  - `tabular-nums` enforced on all financial figures, balances, percentages, and summary tables.
 * **Definition of Done (DoD):**
   - One-click print preview generates comprehensive institutional AGM pack.
   - RFC-4180 CSV / Excel export generates verified multi-tab financial workbook.
-  - Automated Node syntax and VM tests pass; `@sentinel` clearance PASS.
+  - All active sprint UI & design-token checklist items verified (`bg-slate-900` / `dark:bg-slate-100`, no unstyled controls, `min-h-[38px]`, `tabular-nums`).
+  - Automated Node syntax and VM tests pass (`15/15 PASS`); `@sentinel` clearance PASS; deployed to GAS and logged in `RELEASES.md`.
 
 ---
 
