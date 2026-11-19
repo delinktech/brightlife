@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v106** | `@107` | `AKfycbx4........wRCA` | `92181e7` | **Production** | 2026-11-19 | Designer & Sentinel: Clean borderless Group Overview header and interactive sub-navigation tabs (Overview, Analytics, Reports) with responsive tab switching. |
+| **v107** | `@108` | `AKfycbx4........wRCA` | `96d5d56` | **Production** | 2026-11-19 | Fixer, Designer & Sentinel: Task VIS-1 - Implemented Cash Flow Waterfall Chart (opening, inflows, outflows, closing) and full Analytics Suite on Group Overview Analytics tab. |
+| **v106** | `@107` | `AKfycbx4........wRCA` | `92181e7` | Archived | 2026-11-19 | Designer & Sentinel: Clean borderless Group Overview header and interactive sub-navigation tabs (Overview, Analytics, Reports) with responsive tab switching. |
 | **v105** | `@106` | `AKfycbx4........wRCA` | `0702658` | Archived | 2026-11-19 | Fixer & Sentinel: Task FIN-3 - Restored real period cashflow aggregations (totalInflows, totalOutflows, netCashflow, breakdowns) in buildInvestmentHomeCharts_() for Investment Inflows and Operating Outflows cards. |
 | **v104** | `@105` | `AKfycbx4........wRCA` | `b48c18a` | Archived | 2026-11-18 | Fixer & Sentinel: Task FIN-2 - Rectified net liquid cash calculation using computeLiquiditySummary_() from verified accounts and fund statements with SASRA liquidity tiering. |
 | **v103** | `@104` | `AKfycbx4........wRCA` | `c029dbf` | Archived | 2026-11-18 | Designer & Sentinel: Modal theme purity across all 15 modals - pure light mode headers (`bg-white`, `text-slate-900`) and pure dark mode headers (`dark:bg-[#090d16]`, `dark:text-white`). |
