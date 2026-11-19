@@ -659,7 +659,10 @@
     onLoanAmountOrTenorChanged();
   }
 
-  function toggleDynamicApplyDropdown_(wrapperId) {
+  function toggleDynamicApplyDropdown_(wrapperId, evt) {
+    if (evt && typeof evt.stopPropagation === "function") {
+      evt.stopPropagation();
+    }
     const wrapper = document.getElementById(wrapperId);
     if (!wrapper) return;
     const trigger = wrapper.querySelector(".shadcn-select-trigger");
@@ -792,7 +795,7 @@
       const triggerLabel = selectedMember ? selectedMember.name : "-- Select Guarantor --";
 
       const menuItemsHtml = [
-        '<div class="shadcn-dropdown-item ' + (!selectedMember ? "selected" : "") + '" data-value="" onclick="onGuarantorSelected(' + idx + ', \'\')">' +
+        '<div class="shadcn-dropdown-item ' + (!selectedMember ? "selected" : "") + '" data-value="" onclick="event.stopPropagation(); onGuarantorSelected(' + idx + ', \'\')">' +
           '<span class="item-text text-slate-400">-- Select Guarantor --</span>' +
         "</div>"
       ].concat(
@@ -804,7 +807,7 @@
           if (takenElsewhere) return "";
           const free = getMemberUnencumberedSavings_(m);
           return (
-            '<div class="shadcn-dropdown-item ' + (isSelectedHere ? "selected" : "") + '" data-value="' + escapeHtmlAttr(m.id) + '" onclick="onGuarantorSelected(' + idx + ', \'' + escapeHtmlAttr(m.id) + '\')">' +
+            '<div class="shadcn-dropdown-item ' + (isSelectedHere ? "selected" : "") + '" data-value="' + escapeHtmlAttr(m.id) + '" onclick="event.stopPropagation(); onGuarantorSelected(' + idx + ', \'' + escapeHtmlAttr(m.id) + '\')">' +
               '<span class="item-text">' + escapeHtmlAttr(m.name) + "</span>" +
               '<span class="item-id font-mono tabular-nums">' + formatMoney(free) + "</span>" +
             "</div>"
@@ -817,7 +820,7 @@
         '<div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-1.5">' +
           '<div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">' +
             '<div class="sm:col-span-7 relative" id="' + wrapperId + '" data-apply-dropdown="true">' +
-              '<button type="button" onclick="toggleDynamicApplyDropdown_(\'' + wrapperId + '\')" class="shadcn-select-trigger min-h-[38px]">' +
+              '<button type="button" onclick="toggleDynamicApplyDropdown_(\'' + wrapperId + '\', event)" class="shadcn-select-trigger min-h-[38px]">' +
                 '<span class="shadcn-select-label ' + (!selectedMember ? "text-slate-400 dark:text-slate-500 font-normal" : "") + '">' + escapeHtmlAttr(triggerLabel) + "</span>" +
                 '<i class="fas fa-chevron-down"></i>' +
               "</button>" +
@@ -942,20 +945,49 @@
 
     const form = document.getElementById("applyLoanForm");
     if (form) form.reset();
+
+    const isMemberOnly = !window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false;
     const searchInput = document.getElementById("al-borrower-search");
     const hiddenId = document.getElementById("al-borrower-id");
-    if (searchInput) searchInput.value = "";
+    const combobox = document.getElementById("al-borrower-combobox");
+
+    if (searchInput) {
+      searchInput.value = "";
+      searchInput.readOnly = isMemberOnly;
+      searchInput.disabled = isMemberOnly;
+      searchInput.classList.toggle("opacity-75", isMemberOnly);
+      searchInput.classList.toggle("cursor-not-allowed", isMemberOnly);
+    }
     if (hiddenId) hiddenId.value = "";
+    if (combobox) combobox.classList.add("hidden");
+
     if (typeof initShadcnSelects === "function") initShadcnSelects();
     if (typeof setShadcnSelectValue === "function") setShadcnSelectValue("select-al-purpose-wrapper", "Business");
 
     syncApplyLoanPolicyBadges_();
-    setupApplyLoanBorrowerCombobox_();
+    if (!isMemberOnly) {
+      setupApplyLoanBorrowerCombobox_();
+    } else {
+      const ownMemberId = (window.currentUser && window.currentUser.memberId) || (window.session && window.session.memberId) || "";
+      if (ownMemberId) {
+        applyLoanState.borrowerId = String(ownMemberId);
+        if (hiddenId) hiddenId.value = String(ownMemberId);
+        const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+        const ownRecord = list.find(function (m) { return String(m.id) === String(ownMemberId); });
+        const ownName = (ownRecord && ownRecord.name) || (window.currentUser && window.currentUser.name) || String(ownMemberId);
+        if (searchInput) searchInput.value = ownName + " (" + ownMemberId + ")";
+      }
+    }
+
     onLoanBorrowerSelected();
 
     if (typeof ensureMembersLoaded === "function") {
       ensureMembersLoaded().then(function () {
-        renderApplyLoanGuarantors_();
+        if (isMemberOnly && applyLoanState.borrowerId) {
+          selectApplyLoanBorrower_(applyLoanState.borrowerId);
+        } else {
+          renderApplyLoanGuarantors_();
+        }
       }).catch(function () {});
     }
 

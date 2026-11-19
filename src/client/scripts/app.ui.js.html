@@ -1834,7 +1834,7 @@
 
     // Close on outside click
     document.addEventListener("click", function (e) {
-      if (!e.target.closest("[data-shadcn-select]")) {
+      if (!e.target.closest("[data-shadcn-select], [data-apply-dropdown], #select-al-tenor-wrapper")) {
         document.querySelectorAll(".shadcn-dropdown-menu").forEach(function (m) {
           m.classList.add("hidden");
         });
