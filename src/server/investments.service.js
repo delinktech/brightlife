@@ -71,8 +71,8 @@ function getInvestmentLedger(investmentId) {
     }
 
     const ss = getSpreadsheet_();
-    const sheet = getRequiredSheet_(SHEETS.INVESTMENT_LEDGER);
-    const values = sheet.getDataRange().getValues();
+    // ARC-2: merged view of legacy InvestmentLedger + Investment Cashflows (works for project IDs too).
+    const values = readUnifiedInvestmentLedgerValues_(ss);
     if (values.length <= 1) {
       return {
         success: true,

@@ -1,12 +1,23 @@
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
-  var isDebugAction = Boolean(params.fix || params.backfillCic || params.testReconciliation || params.diagnose || params.migrate);
+  var isDebugAction = Boolean(params.fix || params.backfillCic || params.testReconciliation || params.diagnose || params.migrate || params.setupWorkbook);
 
   // Security Gate (@sentinel): Block unauthorized access to diagnostic and maintenance endpoints
   if (isDebugAction) {
     if (!isDiagnosticAuthorized_(e)) {
       return ContentService.createTextOutput("403_FORBIDDEN: Administrative authorization required to access diagnostic endpoints.")
         .setMimeType(ContentService.MimeType.TEXT);
+    }
+  }
+
+  // ARC-1 + ARC-2: ?setupWorkbook=1 idempotently provisions Constants reference tables and the
+  // 3-tier investment engine tabs (Investments columns, Investment Projects, Investment Cashflows).
+  if (params.setupWorkbook === "1") {
+    try {
+      const setupRes = runInstitutionalWorkbookSetup_();
+      return ContentService.createTextOutput("SETUP_WORKBOOK_SUCCESS:\n" + JSON.stringify(setupRes, null, 2));
+    } catch (errSetup) {
+      return ContentService.createTextOutput("SETUP_WORKBOOK_ERROR: " + errSetup.message);
     }
   }
 

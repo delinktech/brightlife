@@ -868,9 +868,8 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
   const monthlyExp = {};
   const revenueByCategoryMap = {};
   try {
-    const ledgerSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_LEDGER);
-    if (ledgerSheet) {
-      const lv = ledgerSheet.getDataRange().getValues();
+    {
+      const lv = readUnifiedInvestmentLedgerValues_(ss); // ARC-2 unified ledger
       if (lv.length > 1) {
         const lc = getHeaderMap_(lv[0]);
         if (
@@ -1217,9 +1216,12 @@ function buildBalanceSheet_(ss, tz, now, effectiveRange, liquiditySummary, portf
             row[currValCol] !== "" &&
             row[currValCol] !== undefined &&
             row[currValCol] !== null;
-          const rawVal = hasCurrVal
-            ? row[currValCol]
-            : (investedCol !== undefined ? row[investedCol] : 0);
+          // ARC-2: Units Held x Current Price (FVTPL) takes precedence when a holding is marked to market.
+          const engineVal = typeof valueInvestmentRow_ === "function" ? valueInvestmentRow_(row, col) : null;
+          const isMarked = engineVal && engineVal.valuationBasis !== "Cost";
+          const rawVal = isMarked
+            ? engineVal.carryingValue
+            : (hasCurrVal ? row[currValCol] : (investedCol !== undefined ? row[investedCol] : 0));
           const val = roundCurrency2_(rawVal);
           if (val <= 0) continue;
 
@@ -1234,6 +1236,17 @@ function buildBalanceSheet_(ss, tz, now, effectiveRange, liquiditySummary, portf
     }
   } catch (invErr) {
     console.error("Balance sheet external investments error: " + invErr.message);
+  }
+  // ARC-2: Tier 2 standalone capital projects (not linked to a Tier 1 row) carried at deployed cost.
+  try {
+    if (typeof getStandaloneProjectCarryingItems_ === "function") {
+      getStandaloneProjectCarryingItems_(spreadsheet).forEach(function (p) {
+        totalInvestments += p.value;
+        investmentItems.push({ id: p.id, name: p.name, value: p.value });
+      });
+    }
+  } catch (prjErr) {
+    console.error("Balance sheet capital projects error: " + prjErr.message);
   }
   totalInvestments = roundCurrency2_(totalInvestments);
 
@@ -1460,9 +1473,8 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
 
   // 1c & 4. InvestmentLedger operating revenue & categorized operating expenses in range
   try {
-    const ledgerSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENT_LEDGER);
-    if (ledgerSheet && ledgerSheet.getLastRow() > 1) {
-      const lv = ledgerSheet.getDataRange().getValues();
+    {
+      const lv = readUnifiedInvestmentLedgerValues_(spreadsheet); // ARC-2 unified ledger
       if (lv.length > 1) {
         const lc = getHeaderMap_(lv[0]);
         if (lc["Date"] !== undefined && lc["Type"] !== undefined && lc["Amount"] !== undefined) {
@@ -1479,7 +1491,10 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
             const labelLower = (cat + " " + desc).toLowerCase();
 
             if (kind === "revenue") {
-              if (
+              if (cat.toLowerCase() === "dividend") {
+                // ARC-2: equity share dividends are investment yields, not operating revenue.
+                externalInvestments += absAmt;
+              } else if (
                 labelLower.indexOf("process") !== -1 ||
                 labelLower.indexOf("application") !== -1 ||
                 labelLower.indexOf("origination") !== -1 ||
