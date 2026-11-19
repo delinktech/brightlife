@@ -556,9 +556,6 @@
 
   function getMemberUnencumberedSavings_(m) {
     if (!m) return 0;
-    if (m.availableToGuarantee !== undefined && m.availableToGuarantee !== "") {
-      return Math.max(0, Number(m.availableToGuarantee) || 0);
-    }
     const gAmt = m.guaranteedAmount !== undefined ? m.guaranteedAmount : m.guaranteed;
     return Math.max(0, (Number(m.savings) || 0) - (Number(gAmt) || 0));
   }
