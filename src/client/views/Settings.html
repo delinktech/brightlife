@@ -1,0 +1,195 @@
+<section id="settings" class="space-y-4 sm:space-y-6">
+  <!-- Executive Header & Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <h2 class="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Group Administration &amp; Loan Policy Settings</h2>
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+          Dynamic Credit Engine
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        Configure dynamic lending policies, savings multiplier, interest rates, and loan tenor tiers.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 shrink-0">
+      <button type="button" onclick="loadLoanPolicySettings(true)"
+        class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+        <i class="fas fa-rotate text-slate-500 dark:text-slate-400"></i> <span>Refresh</span>
+      </button>
+      <button type="button" onclick="saveLoanPolicySettings()"
+        class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">
+        <i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 4 Institutional Setting Cards -->
+  <form id="loan-policy-settings-form" onsubmit="event.preventDefault(); saveLoanPolicySettings();" class="space-y-4 sm:space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+      <!-- Card 1: Borrower Limits & Savings Multiplier -->
+      <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm flex flex-col justify-between space-y-4">
+        <div class="space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Borrower Limits &amp; Savings Multiplier</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Maximum loan ceiling as a multiple of a member's qualifying savings.</p>
+            </div>
+            <span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs shrink-0">
+              <i class="fas fa-scale-balanced"></i>
+            </span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mr-1">Quick Presets</span>
+            <button type="button" data-multiplier-preset="2" onclick="setSavingsMultiplierPreset(2)"
+              class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums font-medium border bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700 transition-colors">
+              2x Savings
+            </button>
+            <button type="button" data-multiplier-preset="3" onclick="setSavingsMultiplierPreset(3)"
+              class="min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums font-semibold border bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100 transition-colors">
+              3x Savings
+            </button>
+          </div>
+
+          <div>
+            <label for="policy-savings-multiplier" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Custom Savings Multiplier
+            </label>
+            <div class="relative flex items-center">
+              <input type="number" id="policy-savings-multiplier" step="0.5" min="0.5" max="20" value="3" oninput="updateLoanPolicyPreviews()"
+                class="min-h-[38px] w-full pl-3 pr-14 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-bold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+              <span class="absolute right-3 text-xs font-mono font-semibold text-slate-500 dark:text-slate-400 pointer-events-none">&times; Savings</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Eligibility Preview Card -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Live Eligibility Preview</div>
+            <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+              For <span class="font-mono tabular-nums font-semibold">KES 50,000</span> savings
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Max Loan</div>
+            <div id="policy-preview-max-loan" class="text-sm font-bold text-emerald-700 dark:text-emerald-400 font-mono tabular-nums">KES 150,000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Interest Rate & Fees -->
+      <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm flex flex-col justify-between space-y-4">
+        <div class="space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Interest Rate &amp; Fees</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Standard loan interest rate applied to new credit disbursements.</p>
+            </div>
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0">
+              <i class="fas fa-percent"></i>
+            </span>
+          </div>
+
+          <div>
+            <label for="policy-interest-rate" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Loan Interest Rate (%)
+            </label>
+            <div class="relative flex items-center">
+              <input type="number" id="policy-interest-rate" step="0.5" min="0" max="100" value="10" oninput="updateLoanPolicyPreviews()"
+                class="min-h-[38px] w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-bold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+              <span class="absolute right-3 text-xs font-mono font-bold text-slate-500 dark:text-slate-400 pointer-events-none">%</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">Default group policy is <span class="font-mono tabular-nums font-semibold">10%</span> flat/standard rate.</p>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div>
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sample Yield Check</div>
+            <div class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+              On <span class="font-mono tabular-nums font-semibold">KES 100,000</span> principal
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Interest</div>
+            <div id="policy-preview-interest" class="text-sm font-bold text-slate-900 dark:text-white font-mono tabular-nums">KES 10,000</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Loan Tenor Brackets by Amount -->
+      <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">Loan Tenor Brackets by Amount</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Define maximum repayment duration (months) by loan principal ceiling.</p>
+          </div>
+          <button type="button" onclick="addLoanTenorTier()"
+            class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors shrink-0">
+            <i class="fas fa-plus text-[10px]"></i> <span>Add Tier</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider">
+                <th class="py-2.5 px-3">Loan Ceiling (KES)</th>
+                <th class="py-2.5 px-3">Max Tenor (Months)</th>
+                <th class="py-2.5 px-3 text-center w-14">Action</th>
+              </tr>
+            </thead>
+            <tbody id="policy-tenor-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+              <!-- Rendered dynamically by settings.ui.js.html -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Card 4: Guarantor Requirements -->
+      <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm flex flex-col justify-between space-y-4">
+        <div class="space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Guarantor Requirements</h3>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Minimum number of active member guarantors required per loan application.</p>
+            </div>
+            <span class="w-8 h-8 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xs shrink-0">
+              <i class="fas fa-user-shield"></i>
+            </span>
+          </div>
+
+          <div>
+            <label for="policy-min-guarantors" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Minimum Required Guarantors
+            </label>
+            <div class="relative flex items-center">
+              <input type="number" id="policy-min-guarantors" step="1" min="0" max="10" value="2"
+                class="min-h-[38px] w-full pl-3 pr-20 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-bold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+              <span class="absolute right-3 text-xs font-medium text-slate-500 dark:text-slate-400 pointer-events-none">Members</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+          <i class="fas fa-circle-info text-slate-400 dark:text-slate-500 mr-1.5"></i>
+          Guarantors pledge available savings to cover borrower default risk in accordance with Brightlife SHG credit bylaws.
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 px-4 py-3.5 sm:px-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <p class="text-[11px] text-slate-500 dark:text-slate-400">
+        Changes apply immediately to new loan eligibility checks and repayment schedules.
+      </p>
+      <button type="submit" id="btn-save-loan-policy"
+        class="min-h-[38px] whitespace-nowrap inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">
+        <i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>
+      </button>
+    </div>
+  </form>
+</section>

@@ -1,0 +1,309 @@
+<script>
+/**
+ * Group Administration & Loan Policy Settings UI Controller
+ * Brightlife SHG Dashboard
+ */
+
+const DEFAULT_LOAN_POLICY = {
+  savingsMultiplier: 3,
+  interestRatePct: 10,
+  minGuarantors: 2,
+  tenorTiers: [
+    { maxAmount: 20000, maxMonths: 6 },
+    { maxAmount: 100000, maxMonths: 12 },
+    { maxAmount: 500000, maxMonths: 24 }
+  ]
+};
+
+const loanPolicyState = {
+  policy: JSON.parse(JSON.stringify(DEFAULT_LOAN_POLICY)),
+  isSaving: false
+};
+
+function normalizeLoanPolicy_(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const rawMult = src.borrowerMultiplier !== undefined ? src.borrowerMultiplier : src.savingsMultiplier;
+  const mult = Number(rawMult);
+  const resolvedMult = Number.isFinite(mult) && mult > 0 ? mult : DEFAULT_LOAN_POLICY.savingsMultiplier;
+  const rate = Number(src.interestRatePct);
+  const guar = Number(src.minGuarantors);
+  const tiers = Array.isArray(src.tenorTiers) && src.tenorTiers.length > 0
+    ? src.tenorTiers.map(function (t) {
+        return {
+          maxAmount: Math.max(1, Number(t && t.maxAmount) || 0),
+          maxMonths: Math.max(1, Math.round(Number(t && t.maxMonths) || 1))
+        };
+      })
+    : JSON.parse(JSON.stringify(DEFAULT_LOAN_POLICY.tenorTiers));
+
+  return {
+    borrowerMultiplier: resolvedMult,
+    savingsMultiplier: resolvedMult,
+    interestRatePct: Number.isFinite(rate) && rate >= 0 ? rate : DEFAULT_LOAN_POLICY.interestRatePct,
+    minGuarantors: Number.isFinite(guar) && guar >= 0 ? Math.round(guar) : DEFAULT_LOAN_POLICY.minGuarantors,
+    tenorTiers: tiers
+  };
+}
+
+function loadLoanPolicySettings(forceRefresh) {
+  const cacheKey = "loan_policy_settings";
+  const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+  const cached = entry ? entry.data : null;
+  const hasCached = Boolean(cached);
+  const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+  if (hasCached) {
+    populateLoanPolicyForm_(cached);
+    if (isFresh) {
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("cached", "Cached");
+      return;
+    }
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Syncing...");
+  } else {
+    populateLoanPolicyForm_(DEFAULT_LOAN_POLICY);
+    if (typeof startAppLoader === "function") startAppLoader();
+    if (typeof setHeaderSyncState === "function") setHeaderSyncState("revalidating", "Loading...");
+  }
+
+  if (typeof google === "undefined" || !google.script || !google.script.run) {
+    if (!hasCached && typeof stopAppLoader === "function") stopAppLoader();
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      if (!hasCached && typeof stopAppLoader === "function") stopAppLoader();
+      if (!res || res.ok === false || res.success === false) {
+        if (typeof setHeaderSyncState === "function") {
+          setHeaderSyncState("cached", hasCached ? "Offline cache" : "Sync error");
+        }
+        if (!hasCached && typeof showNotification === "function") {
+          showNotification("Failed to load loan policy: " + ((res && res.error) || "Unknown error"), "error", 5000);
+        }
+        return;
+      }
+      const settings = res.settings || res.policy || {};
+      const normalized = normalizeLoanPolicy_(settings);
+      if (typeof cacheSet === "function") {
+        cacheSet(cacheKey, normalized, 5 * 60 * 1000);
+      }
+      populateLoanPolicyForm_(normalized);
+      if (typeof setHeaderSyncState === "function") setHeaderSyncState("synced");
+    })
+    .withFailureHandler(function (err) {
+      if (!hasCached && typeof stopAppLoader === "function") stopAppLoader();
+      if (typeof setHeaderSyncState === "function") {
+        setHeaderSyncState("cached", hasCached ? "Offline cache" : "Default policy");
+      }
+      if (!hasCached && typeof handleErr === "function") {
+        handleErr(err);
+      }
+    })
+    .getLoanPolicySettings();
+}
+
+function populateLoanPolicyForm_(rawPolicy) {
+  const p = normalizeLoanPolicy_(rawPolicy);
+  loanPolicyState.policy = p;
+
+  const multEl = document.getElementById("policy-savings-multiplier");
+  const rateEl = document.getElementById("policy-interest-rate");
+  const guarEl = document.getElementById("policy-min-guarantors");
+
+  if (multEl) multEl.value = String(p.savingsMultiplier);
+  if (rateEl) rateEl.value = String(p.interestRatePct);
+  if (guarEl) guarEl.value = String(p.minGuarantors);
+
+  renderLoanTenorTiers_();
+  updateLoanPolicyPreviews();
+}
+
+function syncMultiplierPresetButtons_(val) {
+  const baseCls = "min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums border transition-colors ";
+  const activeCls = "font-semibold bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100";
+  const inactiveCls = "font-medium bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700";
+
+  document.querySelectorAll("[data-multiplier-preset]").forEach(function (btn) {
+    const presetVal = Number(btn.getAttribute("data-multiplier-preset"));
+    const isActive = Math.abs(presetVal - Number(val)) < 0.001;
+    btn.className = baseCls + (isActive ? activeCls : inactiveCls);
+  });
+}
+
+function setSavingsMultiplierPreset(mult) {
+  const multEl = document.getElementById("policy-savings-multiplier");
+  if (multEl) multEl.value = String(mult);
+  updateLoanPolicyPreviews();
+}
+
+function updateLoanPolicyPreviews() {
+  const multEl = document.getElementById("policy-savings-multiplier");
+  const rateEl = document.getElementById("policy-interest-rate");
+  const maxLoanEl = document.getElementById("policy-preview-max-loan");
+  const interestEl = document.getElementById("policy-preview-interest");
+
+  const mult = Math.max(0, Number(multEl && multEl.value) || 0);
+  const rate = Math.max(0, Number(rateEl && rateEl.value) || 0);
+
+  syncMultiplierPresetButtons_(mult);
+
+  if (maxLoanEl) {
+    const sampleMax = Math.round(50000 * mult);
+    maxLoanEl.textContent = "KES " + sampleMax.toLocaleString();
+  }
+  if (interestEl) {
+    const sampleInterest = Math.round(100000 * (rate / 100));
+    interestEl.textContent = "KES " + sampleInterest.toLocaleString();
+  }
+}
+
+function renderLoanTenorTiers_() {
+  const tbody = document.getElementById("policy-tenor-table-body");
+  if (!tbody) return;
+  const tiers = loanPolicyState.policy.tenorTiers || [];
+
+  if (tiers.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="3" class="py-6 text-center text-slate-500 dark:text-slate-400">No tenor tiers configured. Click "Add Tier" to create one.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = tiers.map(function (tier, idx) {
+    const isOnly = tiers.length <= 1;
+    return (
+      '<tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">' +
+        '<td class="py-2 px-3">' +
+          '<input type="number" min="1" step="1000" value="' + Number(tier.maxAmount || 0) + '" ' +
+            'onchange="updateLoanTenorTier(' + idx + ', \'maxAmount\', this.value)" ' +
+            'aria-label="Loan ceiling amount in KES" ' +
+            'class="min-h-[38px] w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-semibold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />' +
+        '</td>' +
+        '<td class="py-2 px-3">' +
+          '<input type="number" min="1" max="120" step="1" value="' + Number(tier.maxMonths || 1) + '" ' +
+            'onchange="updateLoanTenorTier(' + idx + ', \'maxMonths\', this.value)" ' +
+            'aria-label="Maximum tenor in months" ' +
+            'class="min-h-[38px] w-full px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-semibold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />' +
+        '</td>' +
+        '<td class="py-2 px-3 text-center">' +
+          '<button type="button" ' + (isOnly ? 'disabled ' : '') + 'onclick="removeLoanTenorTier(' + idx + ')" ' +
+            'title="' + (isOnly ? 'At least one tier is required' : 'Remove Tier') + '" aria-label="Remove Tier" ' +
+            'class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:text-rose-400 dark:hover:bg-rose-950/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">' +
+            '<i class="fas fa-trash-can text-xs"></i>' +
+          '</button>' +
+        '</td>' +
+      '</tr>'
+    );
+  }).join("");
+}
+
+function updateLoanTenorTier(idx, field, value) {
+  const tiers = loanPolicyState.policy.tenorTiers;
+  if (!tiers || !tiers[idx]) return;
+  const num = Number(value);
+  if (field === "maxAmount") {
+    tiers[idx].maxAmount = Number.isFinite(num) && num > 0 ? num : 0;
+  } else if (field === "maxMonths") {
+    tiers[idx].maxMonths = Number.isFinite(num) && num >= 1 ? Math.round(num) : 1;
+  }
+}
+
+function addLoanTenorTier() {
+  const tiers = loanPolicyState.policy.tenorTiers;
+  const last = tiers.length > 0 ? tiers[tiers.length - 1] : { maxAmount: 20000, maxMonths: 6 };
+  tiers.push({
+    maxAmount: Number(last.maxAmount || 50000) + 50000,
+    maxMonths: Number(last.maxMonths || 12) + 6
+  });
+  renderLoanTenorTiers_();
+}
+
+function removeLoanTenorTier(idx) {
+  const tiers = loanPolicyState.policy.tenorTiers;
+  if (!tiers || tiers.length <= 1) return;
+  tiers.splice(idx, 1);
+  renderLoanTenorTiers_();
+}
+
+function saveLoanPolicySettings() {
+  if (loanPolicyState.isSaving) return;
+
+  const mult = Number(document.getElementById("policy-savings-multiplier")?.value);
+  const rate = Number(document.getElementById("policy-interest-rate")?.value);
+  const guar = Number(document.getElementById("policy-min-guarantors")?.value);
+  const tiers = (loanPolicyState.policy.tenorTiers || []).slice();
+
+  if (!Number.isFinite(mult) || mult <= 0) {
+    if (typeof showNotification === "function") showNotification("Savings multiplier must be greater than 0.", "warning");
+    return;
+  }
+  if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
+    if (typeof showNotification === "function") showNotification("Loan interest rate must be between 0% and 100%.", "warning");
+    return;
+  }
+  if (!Number.isFinite(guar) || guar < 0) {
+    if (typeof showNotification === "function") showNotification("Minimum guarantors must be 0 or greater.", "warning");
+    return;
+  }
+  if (tiers.length === 0 || tiers.some(function (t) { return !(Number(t.maxAmount) > 0) || !(Number(t.maxMonths) >= 1); })) {
+    if (typeof showNotification === "function") showNotification("All loan tenor tiers must have a positive ceiling amount and at least 1 month.", "warning");
+    return;
+  }
+
+  tiers.sort(function (a, b) { return Number(a.maxAmount) - Number(b.maxAmount); });
+
+  const payload = {
+    borrowerMultiplier: mult,
+    savingsMultiplier: mult,
+    interestRatePct: rate,
+    minGuarantors: Math.round(guar),
+    tenorTiers: tiers.map(function (t) {
+      return { maxAmount: Number(t.maxAmount), maxMonths: Math.round(Number(t.maxMonths)) };
+    })
+  };
+
+  loanPolicyState.isSaving = true;
+  const saveBtn = document.getElementById("btn-save-loan-policy");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Saving...</span>';
+  }
+  if (typeof startAppLoader === "function") startAppLoader();
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      loanPolicyState.isSaving = false;
+      if (typeof stopAppLoader === "function") stopAppLoader();
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>';
+      }
+
+      if (!res || res.ok === false || res.success === false) {
+        if (typeof showNotification === "function") {
+          showNotification("Failed to save loan policy: " + ((res && res.error) || "Unknown error"), "error", 6000);
+        }
+        return;
+      }
+
+      const savedSettings = (res && (res.settings || res.policy)) || payload;
+      const savedPolicy = normalizeLoanPolicy_(savedSettings);
+      if (typeof cacheSet === "function") {
+        cacheSet("loan_policy_settings", savedPolicy, 5 * 60 * 1000);
+      }
+      populateLoanPolicyForm_(savedPolicy);
+      if (typeof showNotification === "function") {
+        showNotification("Loan policy settings saved successfully.", "success");
+      }
+    })
+    .withFailureHandler(function (err) {
+      loanPolicyState.isSaving = false;
+      if (typeof stopAppLoader === "function") stopAppLoader();
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>';
+      }
+      if (typeof handleErr === "function") handleErr(err);
+    })
+    .saveLoanPolicySettings(payload);
+}
+</script>

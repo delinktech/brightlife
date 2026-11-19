@@ -327,6 +327,25 @@ function provisionConstantsReferenceTables_(ss) {
         ["Threshold Value", 85, 20, 1, 5, 25, 50, 100, 15, 30],
       ],
     },
+    {
+      keys: ["loan policy parameter"],
+      columns: [
+        [
+          "Loan Policy Parameter",
+          "Borrower Savings Multiplier",
+          "Loan Interest Rate Pct",
+          "Minimum Guarantor Count",
+        ],
+        ["Policy Value", 3, 10, 2],
+      ],
+    },
+    {
+      keys: ["tenor tier max amount"],
+      columns: [
+        ["Tenor Tier Max Amount", 50000, 100000, 999999999],
+        ["Tenor Tier Max Months", 3, 6, 12],
+      ],
+    },
   ];
 
   // Place immediately adjacent to the last occupied column (or Col 6 if empty sheet so Col E is reserved for Status).

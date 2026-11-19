@@ -32,6 +32,7 @@
     "dividends",
     "statements",
     "roles",
+    "settings",
   ];
   const ADMIN_RESTRICTED_PAGES = STAFF_ONLY_PAGES;
 
@@ -1379,6 +1380,7 @@
     dividends: "Dividends & Fund Earnings",
     statements: "Member Statements & Receipts",
     roles: "User Role Administration",
+    settings: "Group & Loan Policy Settings",
     "access-denied": "Access Denied",
   };
 
@@ -1447,6 +1449,9 @@
     if (targetPageId === "roles") {
       ensureMembersLoaded().catch(function () {});
       loadUserRoles();
+    }
+    if (targetPageId === "settings" && typeof loadLoanPolicySettings === "function") {
+      loadLoanPolicySettings();
     }
   }
 

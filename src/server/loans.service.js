@@ -720,3 +720,235 @@ function updateLoanRepaymentStatus(params) {
 
   return { success: true, receipt: receiptResult };
 }
+
+/**
+ * SET-1: Reads Group Loan Policy & Tenor Tiers from the Constants sheet
+ * using the request-scoped SheetContext, falling back gracefully to defaults.
+ */
+function getLoanPolicySettings() {
+  try {
+    requireAccess_();
+    const settings = {
+      borrowerMultiplier: 3,
+      interestRatePct: 10,
+      minGuarantors: 2,
+      tenorTiers: [
+        { maxAmount: 50000, maxMonths: 3 },
+        { maxAmount: 100000, maxMonths: 6 },
+        { maxAmount: 999999999, maxMonths: 12 },
+      ],
+    };
+
+    const ctx = typeof getRequestSheetContext_ === "function" ? getRequestSheetContext_() : null;
+    try {
+      const values = ctx
+        ? ctx.getValues(SHEETS.CONSTANTS)
+        : (function () {
+            const s = getSheetByNameInsensitive_(getSpreadsheet_(), SHEETS.CONSTANTS);
+            return s && s.getLastRow() >= 1 ? s.getDataRange().getValues() : [];
+          })();
+
+      if (values && values.length > 1) {
+        const col = getHeaderMap_(values[0]);
+        const paramIdx = col["loan policy parameter"];
+        const valIdx = col["policy value"];
+        if (paramIdx !== undefined && valIdx !== undefined) {
+          for (let r = 1; r < values.length; r++) {
+            const key = String(values[r][paramIdx] || "").trim().toLowerCase();
+            const rawVal = Number(values[r][valIdx]);
+            if (!key || !isFinite(rawVal)) continue;
+            if (key === "borrower savings multiplier" && rawVal > 0) {
+              settings.borrowerMultiplier = rawVal;
+            } else if (key === "loan interest rate pct" && rawVal >= 0) {
+              settings.interestRatePct = rawVal;
+            } else if (key === "minimum guarantor count" && rawVal >= 0) {
+              settings.minGuarantors = Math.round(rawVal);
+            }
+          }
+        }
+
+        const amtIdx = col["tenor tier max amount"];
+        const moIdx = col["tenor tier max months"];
+        if (amtIdx !== undefined && moIdx !== undefined) {
+          const parsedTiers = [];
+          for (let r = 1; r < values.length; r++) {
+            const maxAmt = Number(values[r][amtIdx]);
+            const maxMo = Number(values[r][moIdx]);
+            if (isFinite(maxAmt) && maxAmt > 0 && isFinite(maxMo) && maxMo > 0) {
+              parsedTiers.push({ maxAmount: maxAmt, maxMonths: Math.round(maxMo) });
+            }
+          }
+          if (parsedTiers.length > 0) {
+            parsedTiers.sort(function (a, b) {
+              return a.maxAmount - b.maxAmount;
+            });
+            settings.tenorTiers = parsedTiers;
+          }
+        }
+      }
+    } finally {
+      if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+    }
+
+    return { ok: true, success: true, settings: settings, policy: settings };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message };
+  }
+}
+
+/**
+ * SET-1: Validates and persists Group Loan Policy & Tenor Tiers to Constants,
+ * restricted to Admin, Treasurer, and Chairperson roles, with full Audit Log entry.
+ */
+function saveLoanPolicySettings(payload) {
+  let lock = null;
+  try {
+    const session = requireRole_(["Admin", "Treasurer", "Chairperson"]);
+    const input = payload && typeof payload === "object" ? payload : {};
+
+    const rawMultiplier = input.borrowerMultiplier !== undefined ? input.borrowerMultiplier : input.savingsMultiplier;
+    const borrowerMultiplier = Number(rawMultiplier);
+    const interestRatePct = Number(input.interestRatePct);
+    const minGuarantors = Number(input.minGuarantors);
+    const rawTiers = Array.isArray(input.tenorTiers) ? input.tenorTiers : [];
+
+    if (!isFinite(borrowerMultiplier) || borrowerMultiplier < 1 || borrowerMultiplier > 10) {
+      throw new Error("Borrower Savings Multiplier must be between 1 and 10.");
+    }
+    if (!isFinite(interestRatePct) || interestRatePct < 0 || interestRatePct > 100) {
+      throw new Error("Loan Interest Rate Pct must be between 0 and 100.");
+    }
+    if (!isFinite(minGuarantors) || minGuarantors < 0 || minGuarantors > 20 || Math.floor(minGuarantors) !== minGuarantors) {
+      throw new Error("Minimum Guarantor Count must be a whole number between 0 and 20.");
+    }
+    if (rawTiers.length === 0) {
+      throw new Error("At least one valid tenor tier is required.");
+    }
+
+    const cleanTiers = rawTiers.map(function (t) {
+      const maxAmt = Number(t && t.maxAmount);
+      const maxMo = Number(t && t.maxMonths);
+      if (!isFinite(maxAmt) || maxAmt <= 0 || !isFinite(maxMo) || maxMo <= 0) {
+        throw new Error("All tenor tiers must have positive Max Amount and Max Months.");
+      }
+      return { maxAmount: maxAmt, maxMonths: Math.round(maxMo) };
+    });
+    cleanTiers.sort(function (a, b) {
+      return a.maxAmount - b.maxAmount;
+    });
+
+    lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = getSpreadsheet_();
+    if (typeof provisionConstantsReferenceTables_ === "function") {
+      provisionConstantsReferenceTables_(ss);
+    }
+    const sheet = getSheetByNameInsensitive_(ss, SHEETS.CONSTANTS);
+    if (!sheet) {
+      throw new Error("Constants sheet could not be provisioned.");
+    }
+
+    const lastRow = Math.max(sheet.getLastRow(), 1);
+    const lastCol = Math.max(sheet.getLastColumn(), 1);
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const col = getHeaderMap_(headers);
+
+    const paramIdx = col["loan policy parameter"];
+    const valIdx = col["policy value"];
+    const amtIdx = col["tenor tier max amount"];
+    const moIdx = col["tenor tier max months"];
+
+    if (paramIdx === undefined || valIdx === undefined || amtIdx === undefined || moIdx === undefined) {
+      throw new Error("Loan policy columns are missing from Constants sheet.");
+    }
+
+    const paramTargets = {
+      "borrower savings multiplier": borrowerMultiplier,
+      "loan interest rate pct": interestRatePct,
+      "minimum guarantor count": minGuarantors,
+    };
+    const paramNames = {
+      "borrower savings multiplier": "Borrower Savings Multiplier",
+      "loan interest rate pct": "Loan Interest Rate Pct",
+      "minimum guarantor count": "Minimum Guarantor Count",
+    };
+
+    const existingRows = lastRow > 1 ? sheet.getRange(2, 1, lastRow - 1, lastCol).getValues() : [];
+    const foundParams = {};
+    for (let r = 0; r < existingRows.length; r++) {
+      const k = String(existingRows[r][paramIdx] || "").trim().toLowerCase();
+      if (paramTargets[k] !== undefined) {
+        sheet.getRange(r + 2, valIdx + 1).setValue(paramTargets[k]);
+        foundParams[k] = true;
+      }
+    }
+
+    let appendRowCursor = lastRow + 1;
+    Object.keys(paramTargets).forEach(function (k) {
+      if (!foundParams[k]) {
+        sheet.getRange(appendRowCursor, paramIdx + 1).setValue(paramNames[k]);
+        sheet.getRange(appendRowCursor, valIdx + 1).setValue(paramTargets[k]);
+        appendRowCursor++;
+      }
+    });
+
+    const clearTierCount = Math.max(existingRows.length, cleanTiers.length);
+    if (clearTierCount > 0) {
+      const tierGrid = [];
+      for (let i = 0; i < clearTierCount; i++) {
+        if (i < cleanTiers.length) {
+          tierGrid.push([cleanTiers[i].maxAmount, cleanTiers[i].maxMonths]);
+        } else {
+          tierGrid.push(["", ""]);
+        }
+      }
+      if (moIdx === amtIdx + 1) {
+        sheet.getRange(2, amtIdx + 1, clearTierCount, 2).setValues(tierGrid);
+      } else {
+        sheet.getRange(2, amtIdx + 1, clearTierCount, 1).setValues(tierGrid.map(function (row) { return [row[0]]; }));
+        sheet.getRange(2, moIdx + 1, clearTierCount, 1).setValues(tierGrid.map(function (row) { return [row[1]]; }));
+      }
+    }
+
+    SpreadsheetApp.flush();
+    if (typeof invalidateSheetContextCache_ === "function") invalidateSheetContextCache_(SHEETS.CONSTANTS);
+    if (typeof clearDashboardCache_ === "function") clearDashboardCache_();
+
+    const cleanSettings = {
+      borrowerMultiplier: borrowerMultiplier,
+      interestRatePct: interestRatePct,
+      minGuarantors: minGuarantors,
+      tenorTiers: cleanTiers,
+    };
+
+    if (typeof appendAuditLog_ === "function") {
+      appendAuditLog_(
+        "loan_policy.updated",
+        "LoanPolicy",
+        SHEETS.CONSTANTS,
+        "Updated group loan policy settings (multiplier=" + borrowerMultiplier + "x, rate=" + interestRatePct + "%, minGuarantors=" + minGuarantors + ")",
+        JSON.stringify({
+          actorEmail: session.email || (typeof getCurrentUserEmail_ === "function" ? getCurrentUserEmail_() : ""),
+          settings: cleanSettings,
+        })
+      );
+    }
+
+    return {
+      ok: true,
+      success: true,
+      message: "Loan policy settings updated successfully.",
+      settings: cleanSettings,
+      policy: cleanSettings,
+    };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message };
+  } finally {
+    if (lock) {
+      try {
+        lock.releaseLock();
+      } catch (eLock) {}
+    }
+  }
+}

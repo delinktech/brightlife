@@ -340,6 +340,20 @@ function requirePermission_(permKey) {
   return ctx;
 }
 
+function requireRole_(allowedRoles) {
+  var ctx = requireAccess_();
+  var list = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  var normalized = list.map(function (r) {
+    return String(r || "").trim().toLowerCase();
+  });
+  var roleKey = String(ctx.roleKey || "").trim().toLowerCase();
+  var roleLabel = String(ctx.roleLabel || "").trim().toLowerCase();
+  if (normalized.indexOf(roleKey) === -1 && normalized.indexOf(roleLabel) === -1) {
+    throw new Error("Permission denied: Your role (" + (ctx.roleLabel || roleKey || "Unknown") + ") does not allow this action.");
+  }
+  return ctx;
+}
+
 function friendlyNameFromEmail_(email) {
   if (!email) return "Member";
   var local = String(email).split("@")[0] || "";
