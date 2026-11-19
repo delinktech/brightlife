@@ -86,16 +86,13 @@ function syncStatementPeriodUI_() {
   if (bulkLabelEl) {
     bulkLabelEl.innerText = "Period: " + (statementsState.selectedPeriodLabel || statementsState.selectedMonthKey || "Current");
   }
+  const basePresetCls = "min-h-[34px] px-2.5 py-1.5 rounded-lg text-xs text-left border transition-colors ";
+  const activePresetCls = "font-semibold bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100";
+  const inactivePresetCls = "font-medium bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700";
   const presetBtns = document.querySelectorAll("[data-stmt-preset]");
   presetBtns.forEach(function (btn) {
     const isActive = btn.getAttribute("data-stmt-preset") === statementsState.activePreset;
-    btn.classList.toggle("bg-slate-900", isActive);
-    btn.classList.toggle("dark:bg-slate-100", isActive);
-    btn.classList.toggle("text-white", isActive);
-    btn.classList.toggle("dark:text-slate-950", isActive);
-    btn.classList.toggle("border-slate-900", isActive);
-    btn.classList.toggle("dark:border-slate-100", isActive);
-    btn.classList.toggle("font-semibold", isActive);
+    btn.className = basePresetCls + (isActive ? activePresetCls : inactivePresetCls);
   });
 }
 
@@ -535,7 +532,6 @@ async function sendSingleMemberStatement(memberId) {
     title: "Send Monthly Statement",
     message: "Send certified monthly statement to member " + memberId + " via email?",
     confirmText: "Send Email",
-    confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-semibold",
     iconType: "info"
   });
   if (!confirmed) return;
@@ -709,7 +705,6 @@ async function sendBulkStatements() {
     title: "Confirm Bulk Dispatch",
     message: "Dispatch monthly financial statements by email to " + withEmail + " selected member(s)?",
     confirmText: "Send Statements",
-    confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 font-semibold",
     iconType: "info"
   });
   if (confirmed) {
