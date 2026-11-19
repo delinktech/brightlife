@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v126** | `@127` | `AKfycbx4........wRCA` | `a927441` | **Production** | 2026-11-19 | Designer & Sentinel: Fixed active period preset hover state & aligned confirm modal buttons to dark/light theme (`Statements.html`, `statements.ui.js.html`). |
+| **v127** | `@128` | `AKfycbx4........wRCA` | `b2129d5` | **Production** | 2026-11-19 | Messenger, Designer & Sentinel: Task COM-3 - Implemented HTML email escaping, dark-mode email polish, statement preview parity, and WhatsApp alignment (`notifications.service.js`, `statements.ui.js.html`). |
+| **v126** | `@127` | `AKfycbx4........wRCA` | `a927441` | Archived | 2026-11-19 | Designer & Sentinel: Fixed active period preset hover state & aligned confirm modal buttons to dark/light theme (`Statements.html`, `statements.ui.js.html`). |
 | **v125** | `@126` | `AKfycbx4........wRCA` | `d5488d8` | Archived | 2026-11-19 | Sentinel & Fixer: UI-7 security hardening — enforced RBAC & self-member isolation and date-range validation in statement RPCs (`src/comms/notifications.service.js`). |
 | **v124** | `@125` | `AKfycbx4........wRCA` | `9fcc2b1` | Archived | 2026-11-19 | Messenger, Designer & Sentinel: Task UI-7 - Implemented Date Period / Range Selector & 1-Click Direct WhatsApp Launch (`notifications.service.js`, `Statements.html`, `statements.ui.js.html`). |
 | **v123** | `@124` | `AKfycbx4........wRCA` | `43aab59` | Archived | 2026-11-19 | Designer & Sentinel: UI-6 follow-up fixes — implemented custom Tailwind Period dropdown, dark/light button consistency, and WhatsApp blank tab fix (`Statements.html`, `Index.html`, `app.ui.js.html`, `statements.ui.js.html`). |
