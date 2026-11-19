@@ -8,11 +8,11 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v120`** (Google Apps Script Build `@121`, Commit `e8ca18b`) |
-| **Total Tracked Tasks** | **28 Tasks** (Expanded with `ARC-1`–`ARC-4` & `UI-4`) |
-| **Completed & Shipped (`[DONE]`)** | **18 Tasks (64.3%)** |
+| **Current Live Release** | **`v121`** (Google Apps Script Build `@122`, Commit `42cb316`) |
+| **Total Tracked Tasks** | **29 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4` & `UI-5`) |
+| **Completed & Shipped (`[DONE]`)** | **19 Tasks (65.5%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (35.7%)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (34.5%)** |
 | **Current Sprint Focus** | `RPT-4: Official AGM & Bank Audit Export Pack` |
 
 ---
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`UI-5`** | UI/UX & Backend | **Server CacheService, SheetContext & 20-Row Pagination for Dividends & Statements**: Combined server `CacheService`, request-scoped `SheetContext`, and background prefetch to optimize first-visit load times, and added 20-row default pagination to both the **Verified Fund Statements** table (`Dividends`) and **Members Statement Dispatch** table (`Statements`). | `@fixer`, `@designer`, `@sentinel` | **`v121`** (`@122`) | 2026-11-19 |
 | **`UI-4`** | UI/UX | **Unified Client-Side SWR Cache & Zero-Skeleton Tab Navigation**: Implemented unified client-side Stale-While-Revalidate (SWR) caching across `dividends`, `statements`, `contributions`, `loans`, `investments`, `accounts`, and `roles`, serving cached view data immediately on tab switch with background revalidation, zero repeated skeletons, and mutation-based cache invalidation. | `@designer`, `@fixer`, `@sentinel` | **`v120`** (`@121`) | 2026-11-19 |
 | **`ARC-4`** | Architecture | **Request-Scoped SheetContext & RPC Optimization Pipeline**: Implemented request-scoped `SheetContext` (`server/context.service.js`) batching and lazily caching open sheet instances and multi-range reads per HTTP execution across `apiGetDashboardData` and `apiGetReportsData`, cutting dashboard/report load roundtrips to <= 8 optimized reads with metadata-driven column header resolution. | `@fixer`, `@sentinel` | **`v119`** (`@120`) | 2026-11-19 |
 | **`ARC-3`** | Architecture | **Google Sheets Formula Offloading & Materialized View (`Summary KPIs`)**: Deprecated per-row formula injections in `Contributions` and `Members`; installed Row 2 spill formulas (`MAP`, `LAMBDA`, `SUMIFS`, `XLOOKUP`) with plain Row 1 Native Table headers across `Members`, `Contributions`, `Loans`, `Loan Repayments`, `Guarantors`, `Investments`, and `Investment Projects`; provisioned 15-metric `Summary KPIs` materialized view tab, single-range O(1) read path (`readSummaryKpisSnapshot_`, `getSummaryKpisData`), migrated `InvestmentLedger`, retired `CIC Transactions`, and applied `#0F2A44` Native Tables with immediate-flush typed-column guards. | `@ledger`, `@analyst`, `@fixer` | **`v114`–`v118`** (`@115`–`@119`) | 2026-11-19 |
