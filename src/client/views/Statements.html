@@ -81,20 +81,49 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <!-- Custom Period Dropdown -->
-        <div id="stmt-month-dropdown" class="relative inline-block">
-          <select id="stmt-month-select" onchange="changeStatementMonth()" class="hidden" aria-hidden="true">
-            <option value="">Loading...</option>
-          </select>
-          <button type="button" id="stmt-month-dropdown-btn" onclick="toggleStatementMonthDropdown()" aria-haspopup="listbox" aria-expanded="false"
+        <!-- Date Period / Range Selector -->
+        <div id="stmt-period-dropdown" class="relative inline-block">
+          <button type="button" id="stmt-period-btn" onclick="toggleStatementPeriodPopover()" aria-haspopup="dialog" aria-expanded="false"
             class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs shadow-2xs transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20">
             <i class="fas fa-calendar-alt text-slate-500 dark:text-slate-400 text-xs shrink-0"></i>
             <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider shrink-0">Period</span>
-            <span id="stmt-month-dropdown-label" class="font-bold text-slate-900 dark:text-slate-100">Loading...</span>
-            <i id="stmt-month-dropdown-chevron" class="fas fa-chevron-down text-[10px] text-slate-400 dark:text-slate-500 transition-transform duration-150 ml-0.5 shrink-0"></i>
+            <span id="stmt-period-label" class="font-bold text-slate-900 dark:text-slate-100">This Month</span>
+            <i id="stmt-period-chevron" class="fas fa-chevron-down text-[10px] text-slate-400 dark:text-slate-500 transition-transform duration-150 ml-0.5 shrink-0"></i>
           </button>
-          <div id="stmt-month-dropdown-menu" role="listbox"
-            class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-1.5 min-w-[210px] max-h-64 overflow-y-auto z-40 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0b1320] p-1.5 space-y-0.5">
+
+          <div id="stmt-period-popover" role="dialog" aria-label="Select statement period"
+            class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-1.5 w-72 z-40 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0b1320] p-3.5 space-y-3">
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Quick Presets</p>
+              <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" data-stmt-preset="this_month" onclick="applyStatementPeriodPreset('this_month')"
+                  class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-xs font-medium text-left border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                  This Month
+                </button>
+                <button type="button" data-stmt-preset="last_month" onclick="applyStatementPeriodPreset('last_month')"
+                  class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-xs font-medium text-left border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                  Last Month
+                </button>
+                <button type="button" data-stmt-preset="last_3_months" onclick="applyStatementPeriodPreset('last_3_months')"
+                  class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-xs font-medium text-left border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                  Last 3 Months
+                </button>
+                <button type="button" data-stmt-preset="this_year" onclick="applyStatementPeriodPreset('this_year')"
+                  class="min-h-[34px] px-2.5 py-1.5 rounded-lg text-xs font-medium text-left border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-colors">
+                  This Year
+                </button>
+              </div>
+            </div>
+
+            <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <label for="stmt-custom-range-input" class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Custom Date Range</label>
+              <input type="text" id="stmt-custom-range-input" placeholder="Select start &amp; end dates..." readonly
+                class="min-h-[36px] w-full px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-100 cursor-pointer" />
+              <button type="button" onclick="applyCustomStatementRange()"
+                class="min-h-[36px] w-full px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold shadow-sm transition-colors">
+                Apply Range
+              </button>
+            </div>
           </div>
         </div>
 

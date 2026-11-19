@@ -7,6 +7,11 @@
 const statementsState = {
   overview: null,
   selectedMonthKey: null,
+  selectedStartDate: null,
+  selectedEndDate: null,
+  selectedPeriodLabel: null,
+  activePreset: "this_month",
+  flatpickrInstance: null,
   previewMemberId: null,
   previewStatementData: null,
   currentPage: 1,
@@ -19,9 +24,92 @@ function formatKshStmt(val) {
   return "KES " + Math.round(num).toLocaleString();
 }
 
+function formatIsoDateLocal_(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return year + "-" + month + "-" + day;
+}
+
+function computeStatementPresetRange_(presetKey) {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  if (presetKey === "last_month") {
+    const start = new Date(y, m - 1, 1);
+    const end = new Date(y, m, 0);
+    return {
+      startDate: formatIsoDateLocal_(start),
+      endDate: formatIsoDateLocal_(end),
+      monthKey: start.getFullYear() + "-" + String(start.getMonth() + 1).padStart(2, "0"),
+      label: "Last Month (" + monthNames[start.getMonth()] + " " + start.getFullYear() + ")"
+    };
+  }
+  if (presetKey === "last_3_months") {
+    const start = new Date(y, m - 2, 1);
+    const end = new Date(y, m + 1, 0);
+    return {
+      startDate: formatIsoDateLocal_(start),
+      endDate: formatIsoDateLocal_(end),
+      monthKey: y + "-" + String(m + 1).padStart(2, "0"),
+      label: "Last 3 Months"
+    };
+  }
+  if (presetKey === "this_year") {
+    const start = new Date(y, 0, 1);
+    const end = new Date(y, 11, 31);
+    return {
+      startDate: formatIsoDateLocal_(start),
+      endDate: formatIsoDateLocal_(end),
+      monthKey: y + "-" + String(m + 1).padStart(2, "0"),
+      label: "This Year (" + y + ")"
+    };
+  }
+  const start = new Date(y, m, 1);
+  const end = new Date(y, m + 1, 0);
+  return {
+    startDate: formatIsoDateLocal_(start),
+    endDate: formatIsoDateLocal_(end),
+    monthKey: y + "-" + String(m + 1).padStart(2, "0"),
+    label: "This Month (" + monthNames[m] + " " + y + ")"
+  };
+}
+
+function syncStatementPeriodUI_() {
+  const labelEl = document.getElementById("stmt-period-label");
+  if (labelEl) {
+    labelEl.textContent = statementsState.selectedPeriodLabel || "This Month";
+  }
+  const bulkLabelEl = document.getElementById("stmt-bulk-period-label");
+  if (bulkLabelEl) {
+    bulkLabelEl.innerText = "Period: " + (statementsState.selectedPeriodLabel || statementsState.selectedMonthKey || "Current");
+  }
+  const presetBtns = document.querySelectorAll("[data-stmt-preset]");
+  presetBtns.forEach(function (btn) {
+    const isActive = btn.getAttribute("data-stmt-preset") === statementsState.activePreset;
+    btn.classList.toggle("bg-slate-900", isActive);
+    btn.classList.toggle("dark:bg-slate-100", isActive);
+    btn.classList.toggle("text-white", isActive);
+    btn.classList.toggle("dark:text-slate-950", isActive);
+    btn.classList.toggle("border-slate-900", isActive);
+    btn.classList.toggle("dark:border-slate-100", isActive);
+    btn.classList.toggle("font-semibold", isActive);
+  });
+}
+
 function applyMonthlyStatementsData(data) {
   statementsState.overview = data;
-  statementsState.selectedMonthKey = data.activeMonthKey;
+  if (!statementsState.selectedStartDate || !statementsState.selectedEndDate) {
+    const preset = computeStatementPresetRange_(statementsState.activePreset || "this_month");
+    statementsState.selectedStartDate = preset.startDate;
+    statementsState.selectedEndDate = preset.endDate;
+    statementsState.selectedPeriodLabel = preset.label;
+    statementsState.selectedMonthKey = data.activeMonthKey || preset.monthKey;
+  } else if (!statementsState.selectedMonthKey) {
+    statementsState.selectedMonthKey = data.activeMonthKey;
+  }
   statementsState.currentPage = 1;
   statementsState.filteredMembers = null;
   renderMonthlyStatementsView(data);
@@ -90,37 +178,8 @@ function loadMonthlyStatementsView(monthKey, forceRefresh) {
 function renderMonthlyStatementsView(data) {
   if (!data) return;
 
-  // 1. Month selector (hidden <select> + custom Tailwind dropdown)
-  const monthSelect = document.getElementById("stmt-month-select");
-  const monthLabelEl = document.getElementById("stmt-month-dropdown-label");
-  const monthMenuEl = document.getElementById("stmt-month-dropdown-menu");
-  if (monthSelect && data.availableMonths) {
-    monthSelect.innerHTML = data.availableMonths.map(function (m) {
-      const isSel = m.key === data.activeMonthKey ? "selected" : "";
-      return '<option value="' + escapeHtmlAttr(m.key) + '" ' + isSel + '>' + escapeHtmlAttr(m.label) + '</option>';
-    }).join("");
-
-    const activeMonth = data.availableMonths.find(function (m) { return m.key === data.activeMonthKey; }) || data.availableMonths[0];
-    if (monthLabelEl) {
-      monthLabelEl.textContent = activeMonth ? activeMonth.label : "Select Period";
-    }
-    if (monthMenuEl) {
-      monthMenuEl.innerHTML = data.availableMonths.map(function (m) {
-        const isActive = m.key === data.activeMonthKey;
-        return (
-          '<button type="button" role="option" aria-selected="' + (isActive ? "true" : "false") + '" ' +
-            'onclick="selectStatementMonth(\'' + escapeHtmlAttr(m.key) + '\')" ' +
-            'class="w-full min-h-[36px] px-3 py-1.5 rounded-lg text-left text-xs flex items-center justify-between gap-2 transition-colors ' +
-            (isActive
-              ? 'bg-slate-100 dark:bg-slate-800 font-bold text-slate-900 dark:text-white'
-              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 font-medium') + '">' +
-            '<span>' + escapeHtmlAttr(m.label) + '</span>' +
-            (isActive ? '<i class="fas fa-check text-[10px] text-emerald-700 dark:text-emerald-400"></i>' : '') +
-          '</button>'
-        );
-      }).join("");
-    }
-  }
+  // 1. Sync Date Period / Range Selector UI
+  syncStatementPeriodUI_();
 
   // 2. KPIs
   const members = data.members || [];
@@ -207,6 +266,16 @@ function renderStatementMembersTable(members) {
       : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 font-medium border border-amber-200 dark:border-amber-500/30"><i class="fas fa-phone-slash mr-1 text-[9px]"></i> No phone</span>';
 
     const loanBalClass = m.loanBalance > 0 ? "text-amber-700 dark:text-amber-400 font-bold" : "text-slate-500 dark:text-slate-400";
+    const directWaUrl = m.hasPhone ? buildDirectWhatsAppUrl_(m) : "";
+    const waActionHtml = (m.hasPhone && directWaUrl)
+      ? '<a href="' + escapeHtmlAttr(directWaUrl) + '" target="_blank" rel="noopener noreferrer" title="Send WhatsApp Statement" ' +
+          'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5">' +
+          '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> WhatsApp' +
+        '</a>'
+      : '<button type="button" disabled title="No phone configured" ' +
+          'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 opacity-45 cursor-not-allowed">' +
+          '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> WhatsApp' +
+        '</button>';
 
     return (
       '<tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">' +
@@ -232,10 +301,7 @@ function renderStatementMembersTable(members) {
               'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">' +
               '<i class="fas fa-envelope text-emerald-700 dark:text-emerald-400"></i> Email' +
             '</button>' +
-            '<button type="button" ' + (!m.hasPhone ? 'disabled ' : '') + 'onclick="sendSingleMemberWhatsApp(\'' + escapeHtmlAttr(m.id) + '\')" title="' + (!m.hasPhone ? 'No phone configured' : 'Send WhatsApp Statement') + '" ' +
-              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">' +
-              '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> WhatsApp' +
-            '</button>' +
+            waActionHtml +
           '</div>' +
         '</td>' +
       '</tr>'
@@ -245,48 +311,92 @@ function renderStatementMembersTable(members) {
   updateSelectedStatementCount();
 }
 
-function toggleStatementMonthDropdown(forceOpen) {
-  const menu = document.getElementById("stmt-month-dropdown-menu");
-  const btn = document.getElementById("stmt-month-dropdown-btn");
-  const chevron = document.getElementById("stmt-month-dropdown-chevron");
-  if (!menu || !btn) return;
-  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : menu.classList.contains("hidden");
-  menu.classList.toggle("hidden", !shouldOpen);
+function initStatementPeriodPicker_() {
+  const input = document.getElementById("stmt-custom-range-input");
+  if (!input || statementsState.flatpickrInstance || typeof flatpickr !== "function") return;
+  statementsState.flatpickrInstance = flatpickr(input, {
+    mode: "range",
+    dateFormat: "Y-m-d"
+  });
+}
+
+function toggleStatementPeriodPopover(forceOpen) {
+  const popover = document.getElementById("stmt-period-popover");
+  const btn = document.getElementById("stmt-period-btn");
+  const chevron = document.getElementById("stmt-period-chevron");
+  if (!popover || !btn) return;
+  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : popover.classList.contains("hidden");
+  if (shouldOpen) {
+    initStatementPeriodPicker_();
+    syncStatementPeriodUI_();
+  }
+  popover.classList.toggle("hidden", !shouldOpen);
   btn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
   if (chevron) chevron.classList.toggle("rotate-180", shouldOpen);
 }
 
-function selectStatementMonth(monthKey) {
-  const sel = document.getElementById("stmt-month-select");
-  if (sel) sel.value = monthKey;
-  toggleStatementMonthDropdown(false);
-  changeStatementMonth();
+function applyStatementPeriodPreset(presetKey) {
+  const range = computeStatementPresetRange_(presetKey);
+  statementsState.activePreset = presetKey;
+  statementsState.selectedStartDate = range.startDate;
+  statementsState.selectedEndDate = range.endDate;
+  statementsState.selectedMonthKey = range.monthKey;
+  statementsState.selectedPeriodLabel = range.label;
+  syncStatementPeriodUI_();
+  toggleStatementPeriodPopover(false);
+  const list = statementsState.filteredMembers || (statementsState.overview && statementsState.overview.members) || [];
+  renderStatementMembersTable(list);
 }
 
-if (typeof document !== "undefined" && !window.__stmtMonthDropdownListenersBound) {
-  window.__stmtMonthDropdownListenersBound = true;
+function applyCustomStatementRange() {
+  const fp = statementsState.flatpickrInstance;
+  const input = document.getElementById("stmt-custom-range-input");
+  let startDate = "";
+  let endDate = "";
+
+  if (fp && Array.isArray(fp.selectedDates) && fp.selectedDates.length > 0) {
+    startDate = formatIsoDateLocal_(fp.selectedDates[0]);
+    endDate = formatIsoDateLocal_(fp.selectedDates[1] || fp.selectedDates[0]);
+  } else if (input && input.value.trim()) {
+    const parts = input.value.trim().split(/\s+to\s+/i);
+    startDate = parts[0] || "";
+    endDate = parts[1] || startDate;
+  }
+
+  if (!startDate) {
+    showNotification("Please select a start and end date.", "warning", 3500);
+    return;
+  }
+
+  statementsState.activePreset = "custom";
+  statementsState.selectedStartDate = startDate;
+  statementsState.selectedEndDate = endDate;
+  statementsState.selectedMonthKey = startDate.slice(0, 7);
+  statementsState.selectedPeriodLabel = startDate === endDate ? startDate : (startDate + " \u2192 " + endDate);
+  syncStatementPeriodUI_();
+  toggleStatementPeriodPopover(false);
+  const list = statementsState.filteredMembers || (statementsState.overview && statementsState.overview.members) || [];
+  renderStatementMembersTable(list);
+}
+
+if (typeof document !== "undefined" && !window.__stmtPeriodPopoverListenersBound) {
+  window.__stmtPeriodPopoverListenersBound = true;
   document.addEventListener("click", function (e) {
-    const wrapper = document.getElementById("stmt-month-dropdown");
-    const menu = document.getElementById("stmt-month-dropdown-menu");
-    if (!wrapper || !menu || menu.classList.contains("hidden")) return;
+    const wrapper = document.getElementById("stmt-period-dropdown");
+    const popover = document.getElementById("stmt-period-popover");
+    if (!wrapper || !popover || popover.classList.contains("hidden")) return;
+    if (e.target && typeof e.target.closest === "function" && e.target.closest(".flatpickr-calendar")) {
+      return;
+    }
     if (!wrapper.contains(e.target)) {
-      toggleStatementMonthDropdown(false);
+      toggleStatementPeriodPopover(false);
     }
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
-      toggleStatementMonthDropdown(false);
+      toggleStatementPeriodPopover(false);
     }
   });
-}
-
-function changeStatementMonth() {
-  const sel = document.getElementById("stmt-month-select");
-  if (!sel) return;
-  statementsState.selectedMonthKey = sel.value;
-  statementsState.currentPage = 1;
-  statementsState.filteredMembers = null;
-  loadMonthlyStatementsView(sel.value);
 }
 
 function filterStatementMembersTable() {
@@ -377,11 +487,18 @@ function previewMemberStatement(memberId) {
       }
 
       if (waBtn) {
-        waBtn.disabled = !isValidWhatsAppUrl_(res.whatsAppUrl);
-        waBtn.title = res.whatsAppUrl ? "Send via WhatsApp" : "No phone configured";
+        const membersList = statementsState.overview && Array.isArray(statementsState.overview.members)
+          ? statementsState.overview.members
+          : [];
+        const memberObj = membersList.find(function (m) { return String(m.id) === String(memberId); });
+        const directWaUrl = isValidWhatsAppUrl_(res.whatsAppUrl)
+          ? res.whatsAppUrl.trim()
+          : (memberObj && memberObj.hasPhone ? buildDirectWhatsAppUrl_(memberObj) : "");
+        waBtn.disabled = !isValidWhatsAppUrl_(directWaUrl);
+        waBtn.title = directWaUrl ? "Send via WhatsApp" : "No phone configured";
         waBtn.onclick = function () {
-          if (isValidWhatsAppUrl_(res.whatsAppUrl)) {
-            openWhatsAppUrlFromClick_(res.whatsAppUrl, stmt.memberName);
+          if (isValidWhatsAppUrl_(directWaUrl)) {
+            openWhatsAppUrlFromClick_(directWaUrl, stmt.memberName);
           } else {
             showNotification("Member does not have a valid phone number for WhatsApp.", "warning", 5000);
           }
@@ -402,6 +519,8 @@ function previewMemberStatement(memberId) {
     .sendMemberMonthlyStatement({
       memberId: memberId,
       monthKey: statementsState.selectedMonthKey,
+      startDate: statementsState.selectedStartDate,
+      endDate: statementsState.selectedEndDate,
       sendEmail: false
     });
 }
@@ -444,12 +563,32 @@ async function sendSingleMemberStatement(memberId) {
     .sendMemberMonthlyStatement({
       memberId: memberId,
       monthKey: statementsState.selectedMonthKey,
+      startDate: statementsState.selectedStartDate,
+      endDate: statementsState.selectedEndDate,
       sendEmail: true
     });
 }
 
 function isValidWhatsAppUrl_(url) {
   return typeof url === "string" && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//i.test(url.trim());
+}
+
+function buildDirectWhatsAppUrl_(m) {
+  if (!m) return "";
+  const rawDigits = m.cleanPhone ? String(m.cleanPhone) : String(m.phone || "").replace(/\D/g, "");
+  const digits = rawDigits.replace(/\D/g, "");
+  if (!digits) return "";
+  const name = m.fullName || m.name || "Member";
+  const period = statementsState.selectedPeriodLabel || statementsState.selectedMonthKey || "Current Period";
+  const lines = [
+    "Hello " + name + ",",
+    "Here is your Brightlife SHG financial summary for " + period + ":",
+    "\u2022 Total Savings: " + formatKshStmt(m.savings),
+    "\u2022 Active Loan Balance: " + (Number(m.loanBalance) > 0 ? formatKshStmt(m.loanBalance) : "KES 0"),
+    "Thank you for saving with Brightlife SHG."
+  ];
+  const url = "https://wa.me/" + encodeURIComponent(digits) + "?text=" + encodeURIComponent(lines.join("\n"));
+  return isValidWhatsAppUrl_(url) ? url : "";
 }
 
 function showWhatsAppFallbackLink_(url, memberName) {
@@ -535,10 +674,9 @@ function confirmBulkEmailStatements() {
   const prog = document.getElementById("bulk-progress-container");
   const btn = document.getElementById("btn-execute-bulk-email");
 
-  const selMonth = document.getElementById("stmt-month-select");
-  const monthText = selMonth ? selMonth.options[selMonth.selectedIndex]?.text : statementsState.selectedMonthKey;
+  const periodText = statementsState.selectedPeriodLabel || statementsState.selectedMonthKey || "Current";
 
-  if (elPeriod) elPeriod.innerText = "Period: " + (monthText || "Current");
+  if (elPeriod) elPeriod.innerText = "Period: " + periodText;
   if (elSel) elSel.innerText = total;
   if (elWithEmail) elWithEmail.innerText = withEmail;
   if (elNoEmail) elNoEmail.innerText = noEmail;
@@ -622,6 +760,8 @@ function executeBulkEmailDispatch() {
     })
     .sendBulkMonthlyStatements({
       monthKey: statementsState.selectedMonthKey,
+      startDate: statementsState.selectedStartDate,
+      endDate: statementsState.selectedEndDate,
       memberIds: memberIds
     });
 }

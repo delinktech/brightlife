@@ -473,8 +473,18 @@ function triggerTransactionReceipt(txData) {
 
 /**
  * Builds Monthly Statement Data for a specific member and month (e.g. "2026-10")
+ * or custom date range (startDate / endDate as "yyyy-MM-dd").
  */
-function getMemberMonthlyStatementData(memberId, monthKey) {
+function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, endDateArg) {
+  let monthKey = monthKeyOrOpts;
+  let startDate = startDateArg;
+  let endDate = endDateArg;
+  if (monthKeyOrOpts && typeof monthKeyOrOpts === "object") {
+    monthKey = monthKeyOrOpts.monthKey || "";
+    startDate = monthKeyOrOpts.startDate || startDateArg;
+    endDate = monthKeyOrOpts.endDate || endDateArg;
+  }
+
   const member = getMemberContactAndFinancials_(memberId);
   if (!member) {
     throw new Error("Member not found: " + memberId);
@@ -483,22 +493,55 @@ function getMemberMonthlyStatementData(memberId, monthKey) {
   const ss = getSpreadsheet_();
   const tz = ss.getSpreadsheetTimeZone() || "Africa/Nairobi";
 
-  // Determine month filter range
-  // monthKey format: "yyyy-MM" e.g. "2026-10"
-  let targetYear, targetMonth;
-  if (monthKey && monthKey.indexOf("-") !== -1) {
-    const parts = monthKey.split("-");
-    targetYear = parseInt(parts[0], 10);
-    targetMonth = parseInt(parts[1], 10) - 1; // 0-indexed
-  } else {
-    const now = new Date();
-    targetYear = now.getFullYear();
-    targetMonth = now.getMonth();
-  }
+  // Determine filter range: custom [startDate, endDate] or monthKey ("yyyy-MM")
+  let monthStartDate, monthEndDate, monthLabel;
+  const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+  const hasRange =
+    startDate &&
+    endDate &&
+    isoPattern.test(String(startDate).trim()) &&
+    isoPattern.test(String(endDate).trim());
 
-  const monthStartDate = new Date(targetYear, targetMonth, 1, 0, 0, 0);
-  const monthEndDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
-  const monthLabel = Utilities.formatDate(monthStartDate, tz, "MMMM yyyy");
+  if (hasRange) {
+    const sp = String(startDate).trim().split("-");
+    const ep = String(endDate).trim().split("-");
+    monthStartDate = new Date(parseInt(sp[0], 10), parseInt(sp[1], 10) - 1, parseInt(sp[2], 10), 0, 0, 0);
+    monthEndDate = new Date(parseInt(ep[0], 10), parseInt(ep[1], 10) - 1, parseInt(ep[2], 10), 23, 59, 59);
+    if (monthStartDate > monthEndDate) {
+      const tmp = monthStartDate;
+      monthStartDate = new Date(monthEndDate.getFullYear(), monthEndDate.getMonth(), monthEndDate.getDate(), 0, 0, 0);
+      monthEndDate = new Date(tmp.getFullYear(), tmp.getMonth(), tmp.getDate(), 23, 59, 59);
+    }
+    const lastDayOfMonth = new Date(monthStartDate.getFullYear(), monthStartDate.getMonth() + 1, 0).getDate();
+    if (
+      monthStartDate.getFullYear() === monthEndDate.getFullYear() &&
+      monthStartDate.getMonth() === monthEndDate.getMonth() &&
+      monthStartDate.getDate() === 1 &&
+      monthEndDate.getDate() === lastDayOfMonth
+    ) {
+      monthLabel = Utilities.formatDate(monthStartDate, tz, "MMMM yyyy");
+    } else {
+      monthLabel =
+        Utilities.formatDate(monthStartDate, tz, "dd MMM yyyy") +
+        " \u2013 " +
+        Utilities.formatDate(monthEndDate, tz, "dd MMM yyyy");
+    }
+  } else {
+    let targetYear, targetMonth;
+    if (monthKey && String(monthKey).indexOf("-") !== -1) {
+      const parts = String(monthKey).split("-");
+      targetYear = parseInt(parts[0], 10);
+      targetMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+    } else {
+      const now = new Date();
+      targetYear = now.getFullYear();
+      targetMonth = now.getMonth();
+    }
+
+    monthStartDate = new Date(targetYear, targetMonth, 1, 0, 0, 0);
+    monthEndDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+    monthLabel = Utilities.formatDate(monthStartDate, tz, "MMMM yyyy");
+  }
 
   // 1. Gather all contributions for this member in this month
   const contribSheet = ss.getSheetByName(SHEETS.CONTRIBUTIONS);
@@ -575,19 +618,47 @@ function getMemberMonthlyStatementData(memberId, monthKey) {
     }
   }
 
+  // 2b. Sum approved loan repayments in the selected period
+  const repSheet = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
+  if (repSheet && repSheet.getLastRow() > 1) {
+    const rVals = repSheet.getDataRange().getValues();
+    const rCol = getHeaderMap_(rVals[0]);
+    const mIdLower = member.id.toLowerCase();
+    const mNameLower = member.name.toLowerCase();
+
+    for (let i = 1; i < rVals.length; i++) {
+      const row = rVals[i];
+      const rMid = rCol["Member ID"] !== undefined ? String(row[rCol["Member ID"]] || "").trim().toLowerCase() : "";
+      const rName = rCol["Borrower Name"] !== undefined ? String(row[rCol["Borrower Name"]] || "").trim().toLowerCase() : "";
+      const rStatus = rCol["Status"] !== undefined ? String(row[rCol["Status"]] || "Approved").trim() : "Approved";
+      if (rStatus !== "Approved") continue;
+      if (rMid !== mIdLower && rName !== mNameLower && rName.indexOf(mNameLower) === -1) continue;
+
+      const rawDate = row[rCol["Payment Date"]];
+      const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
+      if (isNaN(d.getTime())) continue;
+
+      if (d >= monthStartDate && d <= monthEndDate) {
+        monthLoanRepaid += Number(row[rCol["Total Paid"]]) || 0;
+      }
+    }
+  }
+
   // 3. Compute opening & closing savings
   const closingSavings = member.savings;
   const openingSavings = Math.max(0, closingSavings - monthDeposits);
   const activeLoanSum = activeLoans.reduce((sum, ln) => sum + (ln.status !== LOAN_STATUS.SETTLED ? ln.balance : 0), 0);
   const finalStmtLoanBalance = activeLoanSum > 0 ? activeLoanSum : member.loanBalance;
 
-  return {
+  const stmt = {
     memberId: member.id,
     memberName: member.name,
     phone: member.phone,
     cleanPhone: member.cleanPhone,
     email: member.email,
-    monthKey: monthKey,
+    monthKey: monthKey || "",
+    startDate: Utilities.formatDate(monthStartDate, tz, "yyyy-MM-dd"),
+    endDate: Utilities.formatDate(monthEndDate, tz, "yyyy-MM-dd"),
     monthLabel: monthLabel,
     openingSavings: openingSavings,
     monthDeposits: monthDeposits,
@@ -598,6 +669,10 @@ function getMemberMonthlyStatementData(memberId, monthKey) {
     activeLoans: activeLoans,
     statementDate: Utilities.formatDate(new Date(), tz, "dd MMMM yyyy"),
   };
+  const whatsAppText = buildMonthlyStatementWhatsAppMessage_(stmt);
+  stmt.whatsAppText = whatsAppText;
+  stmt.whatsAppUrl = stmt.cleanPhone ? ("https://wa.me/" + stmt.cleanPhone + "?text=" + encodeURIComponent(whatsAppText)) : "";
+  return stmt;
 }
 
 /**
@@ -824,13 +899,15 @@ function sendMemberMonthlyStatement(params) {
   try {
     const memberId = String(params.memberId || "").trim();
     const monthKey = String(params.monthKey || "").trim(); // "yyyy-MM"
+    const startDate = String(params.startDate || "").trim();
+    const endDate = String(params.endDate || "").trim();
     const sendEmail = params.sendEmail !== false;
 
     if (!memberId) {
       return { success: false, error: "Member ID is required." };
     }
 
-    const stmt = getMemberMonthlyStatementData(memberId, monthKey);
+    const stmt = getMemberMonthlyStatementData(memberId, monthKey, startDate, endDate);
     const whatsAppText = buildMonthlyStatementWhatsAppMessage_(stmt);
     const whatsAppUrl = stmt.cleanPhone ? ("https://wa.me/" + stmt.cleanPhone + "?text=" + encodeURIComponent(whatsAppText)) : "";
 
@@ -899,6 +976,8 @@ function sendBulkMonthlyStatements(params) {
   }
 
   const monthKey = String(params.monthKey || "").trim();
+  const startDate = String(params.startDate || "").trim();
+  const endDate = String(params.endDate || "").trim();
   const memberIds = Array.isArray(params.memberIds) ? params.memberIds : [];
 
   if (memberIds.length === 0) {
@@ -917,7 +996,7 @@ function sendBulkMonthlyStatements(params) {
 
   memberIds.forEach(function (mId) {
     try {
-      const stmt = getMemberMonthlyStatementData(mId, monthKey);
+      const stmt = getMemberMonthlyStatementData(mId, monthKey, startDate, endDate);
       if (stmt.email && stmt.email.indexOf("@") !== -1) {
         const htmlBody = buildMonthlyStatementHtmlEmail_(stmt);
         const mailOptions = {
