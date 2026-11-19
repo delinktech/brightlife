@@ -476,6 +476,15 @@ function triggerTransactionReceipt(txData) {
  * or custom date range (startDate / endDate as "yyyy-MM-dd").
  */
 function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, endDateArg) {
+  const session = requireAccess_();
+  if (session.permissions && session.permissions.isMemberOnly) {
+    const callerId = String(session.memberId || "").trim().toLowerCase();
+    const targetId = String(memberId || "").trim().toLowerCase();
+    if (!callerId || !targetId || callerId !== targetId) {
+      throw new Error("Access denied: You can only view your own statement.");
+    }
+  }
+
   let monthKey = monthKeyOrOpts;
   let startDate = startDateArg;
   let endDate = endDateArg;
@@ -527,15 +536,17 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
         Utilities.formatDate(monthEndDate, tz, "dd MMM yyyy");
     }
   } else {
-    let targetYear, targetMonth;
+    const now = new Date();
+    let targetYear = now.getFullYear();
+    let targetMonth = now.getMonth();
     if (monthKey && String(monthKey).indexOf("-") !== -1) {
       const parts = String(monthKey).split("-");
-      targetYear = parseInt(parts[0], 10);
-      targetMonth = parseInt(parts[1], 10) - 1; // 0-indexed
-    } else {
-      const now = new Date();
-      targetYear = now.getFullYear();
-      targetMonth = now.getMonth();
+      const parsedYear = parseInt(parts[0], 10);
+      const parsedMonth = parseInt(parts[1], 10) - 1; // 0-indexed
+      if (!isNaN(parsedYear) && !isNaN(parsedMonth) && parsedMonth >= 0 && parsedMonth <= 11) {
+        targetYear = parsedYear;
+        targetMonth = parsedMonth;
+      }
     }
 
     monthStartDate = new Date(targetYear, targetMonth, 1, 0, 0, 0);
@@ -897,6 +908,7 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
  */
 function sendMemberMonthlyStatement(params) {
   try {
+    const session = requireAccess_();
     const memberId = String(params.memberId || "").trim();
     const monthKey = String(params.monthKey || "").trim(); // "yyyy-MM"
     const startDate = String(params.startDate || "").trim();
@@ -905,6 +917,13 @@ function sendMemberMonthlyStatement(params) {
 
     if (!memberId) {
       return { success: false, error: "Member ID is required." };
+    }
+
+    if (session.permissions && session.permissions.isMemberOnly) {
+      const callerId = String(session.memberId || "").trim().toLowerCase();
+      if (sendEmail || !callerId || callerId !== memberId.toLowerCase()) {
+        return { success: false, error: "Access denied: Staff permissions required to dispatch statements." };
+      }
     }
 
     const stmt = getMemberMonthlyStatementData(memberId, monthKey, startDate, endDate);
