@@ -1757,3 +1757,247 @@ function calculateGrowthPercent_(current, previous) {
   if (!previous && current > 0) return 100;
   return ((current - previous) / previous) * 100;
 }
+
+/**
+ * RPT-4: Official AGM & Bank Audit Export Pack.
+ * Aggregates Balance Sheet, Income Statement, Investment Projects Summary,
+ * and SASRA / prudential financial ratios using the request-scoped SheetContext.
+ */
+function getAgmAuditPackData(rangeKey) {
+  try {
+    requireAccess_();
+    const effectiveRange = normalizeRangeKey_(rangeKey || "year");
+    const homeData = getHomeAnalyticsByRange_(effectiveRange);
+    const ctx = typeof getRequestSheetContext_ === "function" ? getRequestSheetContext_() : null;
+    try {
+      const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
+      const tz = (ss && ss.getSpreadsheetTimeZone()) || "Africa/Nairobi";
+      const now = new Date();
+
+      const balanceSheet = (homeData && homeData.balanceSheet) || {};
+      const incomeStatement = (homeData && homeData.incomeStatement) || {};
+      const portfolio = (homeData && homeData.portfolio) || {};
+
+      let projectsSummary = {
+        projects: [],
+        totals: { approvedBudget: 0, capitalDeployed: 0, revenue: 0, operatingExpenses: 0, netSurplus: 0 },
+      };
+      if (
+        typeof buildProjectsSummary_ === "function" &&
+        typeof aggregateLedgerByEntity_ === "function" &&
+        typeof readUnifiedInvestmentLedgerValues_ === "function"
+      ) {
+        const agg = aggregateLedgerByEntity_(readUnifiedInvestmentLedgerValues_(ss));
+        projectsSummary = buildProjectsSummary_(ss, agg);
+      }
+
+      const totalAssets = Number((balanceSheet.assets && balanceSheet.assets.totalAssets) || 0);
+      const totalLiabilities = Number((balanceSheet.liabilities && balanceSheet.liabilities.totalLiabilities) || 0);
+      const memberSavings = Number((balanceSheet.equity && balanceSheet.equity.memberSavings) || 0);
+      const totalCash = Number(
+        (balanceSheet.assets && balanceSheet.assets.cashAndEquivalents && balanceSheet.assets.cashAndEquivalents.totalCash) || 0
+      );
+      const allowance = Number(
+        (balanceSheet.assets && balanceSheet.assets.loansReceivable && balanceSheet.assets.loansReceivable.allowance) || 0
+      );
+      const totalRevenue = Number(incomeStatement.totalRevenue || 0);
+      const totalExpenses = Number(incomeStatement.totalExpenses || 0);
+      const netOperatingSurplus = Number(incomeStatement.netOperatingSurplus || 0);
+      const recommendedProvision = Number(portfolio.recommendedProvision || 0);
+
+      const solvencyBase = totalLiabilities + memberSavings;
+      const solvencyRatio = solvencyBase > 0 ? Math.round((totalAssets / solvencyBase) * 1000) / 10 : 100;
+
+      // Liquidity Ratio: Cash & Cash Equivalents vs Total Liabilities + 15% of Member Savings immediate obligation buffer
+      const immediateObligations = totalLiabilities + memberSavings * 0.15;
+      const liquidityRatio = immediateObligations > 0 ? Math.round((totalCash / immediateObligations) * 1000) / 10 : 100;
+
+      const costToIncomeRatio = totalRevenue > 0 ? Math.round((totalExpenses / totalRevenue) * 1000) / 10 : 0;
+      const returnOnAssets = totalAssets > 0 ? Math.round((netOperatingSurplus / totalAssets) * 10000) / 100 : 0;
+      const loanLossReserveCoverage =
+        recommendedProvision > 0 ? Math.round((allowance / recommendedProvision) * 1000) / 10 : 100;
+
+      const tsHex = Math.floor(now.getTime() / 1000).toString(16).toUpperCase();
+      const verificationRef = "BLG-AGM-" + effectiveRange.toUpperCase() + "-" + tsHex;
+
+      return {
+        ok: true,
+        data: {
+          rangeKey: effectiveRange,
+          asOfDate: balanceSheet.asOfDate || Utilities.formatDate(now, tz, "dd MMM yyyy"),
+          generatedAt: Utilities.formatDate(now, tz, "dd MMM yyyy HH:mm:ss z"),
+          verificationRef: verificationRef,
+          balanceSheet: balanceSheet,
+          incomeStatement: incomeStatement,
+          projectsSummary: projectsSummary,
+          ratios: {
+            solvencyRatio: solvencyRatio,
+            liquidityRatio: liquidityRatio,
+            costToIncomeRatio: costToIncomeRatio,
+            returnOnAssets: returnOnAssets,
+            loanLossReserveCoverage: loanLossReserveCoverage,
+          },
+        },
+      };
+    } finally {
+      if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+    }
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+function csvEscapeCell_(val) {
+  if (typeof val === "number") {
+    return isFinite(val) ? String(val) : "0";
+  }
+  const sanitized =
+    typeof safeCellText_ === "function"
+      ? safeCellText_(val)
+      : (function (v) {
+          const s = String(v === undefined || v === null ? "" : v).trim().slice(0, 500);
+          return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+        })(val);
+  if (/[",\r\n]/.test(sanitized)) {
+    return '"' + sanitized.replace(/"/g, '""') + '"';
+  }
+  return sanitized;
+}
+
+/**
+ * RPT-4: Exports the Official AGM & Bank Audit Pack as an RFC-4180 CSV
+ * with formula-injection neutralization via safeCellText_().
+ */
+function exportAgmAuditPackCSV(rangeKey) {
+  try {
+    const res = getAgmAuditPackData(rangeKey);
+    if (!res || !res.ok || !res.data) {
+      return { ok: false, error: (res && res.error) || "Failed to generate AGM Audit Pack." };
+    }
+
+    const d = res.data;
+    const bs = d.balanceSheet || {};
+    const is = d.incomeStatement || {};
+    const ratios = d.ratios || {};
+    const proj = d.projectsSummary || { projects: [], totals: {} };
+
+    const lines = [];
+    const pushRow = function (cols) {
+      lines.push(cols.map(csvEscapeCell_).join(","));
+    };
+
+    pushRow(["BRIGHTLIFE SHG - OFFICIAL AGM & BANK AUDIT PACK"]);
+    pushRow(["Verification Reference", d.verificationRef]);
+    pushRow(["Reporting Range", d.rangeKey]);
+    pushRow(["As Of Date", d.asOfDate]);
+    pushRow(["Generated At", d.generatedAt]);
+    pushRow([]);
+
+    pushRow(["SECTION 1: SASRA / PRUDENTIAL FINANCIAL RATIOS", "Value"]);
+    pushRow(["Solvency Ratio (%)", ratios.solvencyRatio]);
+    pushRow(["Liquidity Ratio (%)", ratios.liquidityRatio]);
+    pushRow(["Cost-to-Income Ratio (%)", ratios.costToIncomeRatio]);
+    pushRow(["Return on Assets (%)", ratios.returnOnAssets]);
+    pushRow(["Loan Loss Reserve Coverage (%)", ratios.loanLossReserveCoverage]);
+    pushRow([]);
+
+    const assets = bs.assets || {};
+    const cash = assets.cashAndEquivalents || {};
+    const loansRec = assets.loansReceivable || {};
+    const extInv = assets.externalInvestments || {};
+    const liab = bs.liabilities || {};
+    const eq = bs.equity || {};
+
+    pushRow(["SECTION 2: STATEMENT OF FINANCIAL POSITION (BALANCE SHEET)", "Amount (KES)"]);
+    pushRow(["Operating Cash (Bank / Till)", cash.operatingCash || 0]);
+    pushRow(["Cash Equivalents (MMF / Funds)", cash.cashEquivalents || 0]);
+    pushRow(["Total Cash & Equivalents", cash.totalCash || 0]);
+    pushRow(["Gross Loans Receivable", loansRec.grossLoans || 0]);
+    pushRow(["Less: Loan Loss Allowance", loansRec.allowance || 0]);
+    pushRow(["Net Loans Receivable", loansRec.netLoans || 0]);
+    pushRow(["External Investments", extInv.totalInvestments || 0]);
+    pushRow(["TOTAL ASSETS", assets.totalAssets || 0]);
+    pushRow(["Payables / Liabilities", liab.payables || 0]);
+    pushRow(["TOTAL LIABILITIES", liab.totalLiabilities || 0]);
+    pushRow(["Member Savings", eq.memberSavings || 0]);
+    pushRow(["Statutory Reserve (20%)", eq.statutoryReserve || 0]);
+    pushRow(["Retained Surplus", eq.retainedSurplus || 0]);
+    pushRow(["TOTAL EQUITY", eq.totalEquity || 0]);
+    pushRow(["TOTAL LIABILITIES & EQUITY", bs.totalLiabilitiesAndEquity || 0]);
+    pushRow(["Balance Sheet Variance", bs.variance || 0]);
+    pushRow([]);
+
+    const opRev = is.operatingRevenue || {};
+    const invY = is.investmentYields || {};
+    const opExp = is.operatingExpenses || {};
+    const app = is.appropriations || {};
+
+    pushRow(["SECTION 3: STATEMENT OF COMPREHENSIVE INCOME", "Amount (KES)"]);
+    pushRow(["Loan Interest Income", opRev.loanInterest || 0]);
+    pushRow(["Processing Fees", opRev.processingFees || 0]);
+    pushRow(["Fines & Penalties", opRev.finesAndPenalties || 0]);
+    pushRow(["Other Operating Revenue", opRev.otherOperatingRevenue || 0]);
+    pushRow(["CIC MMF Net Yield", invY.cicMmfNetYield || 0]);
+    pushRow(["External Investment Yields", invY.externalInvestments || 0]);
+    pushRow(["TOTAL REVENUE", is.totalRevenue || 0]);
+    pushRow(["Bank & Transaction Fees", opExp.bankAndTransactionFees || 0]);
+    pushRow(["Tech & Infrastructure", opExp.techAndInfrastructure || 0]);
+    pushRow(["AGM & Admin", opExp.agmAndAdmin || 0]);
+    pushRow(["Other Expenses", opExp.otherExpenses || 0]);
+    pushRow(["TOTAL OPERATING EXPENSES", is.totalExpenses || 0]);
+    pushRow(["Loan Loss Provision Charge", is.loanLossProvisionCharge || 0]);
+    pushRow(["NET OPERATING SURPLUS", is.netOperatingSurplus || 0]);
+    pushRow(["Statutory Reserve Transfer (20%)", app.statutoryReserveTransfer || 0]);
+    pushRow(["Distributable Member Pool (80%)", app.distributableMemberPool || 0]);
+    pushRow([]);
+
+    pushRow([
+      "SECTION 4: INVESTMENT PROJECTS SUMMARY",
+      "Project Name",
+      "Category",
+      "Status",
+      "Approved Budget (KES)",
+      "Capital Deployed (KES)",
+      "Revenue (KES)",
+      "Operating Expenses (KES)",
+      "Net Surplus (KES)",
+      "Return on Capital (%)",
+    ]);
+    (proj.projects || []).forEach(function (p) {
+      pushRow([
+        p.id,
+        p.name,
+        p.category,
+        p.status,
+        p.approvedBudget || 0,
+        p.capitalDeployed || 0,
+        p.revenue || 0,
+        p.operatingExpenses || 0,
+        p.netSurplus || 0,
+        p.returnOnCapitalPct || 0,
+      ]);
+    });
+    const pt = proj.totals || {};
+    pushRow([
+      "TOTALS",
+      "",
+      "",
+      "",
+      pt.approvedBudget || 0,
+      pt.capitalDeployed || 0,
+      pt.revenue || 0,
+      pt.operatingExpenses || 0,
+      pt.netSurplus || 0,
+      "",
+    ]);
+
+    return {
+      ok: true,
+      filename: "Brightlife_AGM_Audit_Pack_" + d.rangeKey + "_" + d.verificationRef + ".csv",
+      csv: lines.join("\r\n"),
+      verificationRef: d.verificationRef,
+    };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}

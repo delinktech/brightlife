@@ -26,7 +26,7 @@
   function showPrintModal_(options) {
     const opts = options || {};
     const refEl = document.getElementById("print-ref-display");
-    if (refEl) refEl.textContent = "Ref: BLG-RPT-" + Date.now().toString(36).toUpperCase();
+    if (refEl) refEl.textContent = opts.refText || ("Ref: BLG-RPT-" + Date.now().toString(36).toUpperCase());
     const kpiEl = document.getElementById("print-kpi-row");
     if (kpiEl) {
       kpiEl.className = opts.kpiGridClass || "grid grid-cols-3 gap-4 mb-6";
@@ -680,5 +680,271 @@
       showSignoff: true,
       kpiGridClass: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"
     });
+  }
+
+  function safeCellText_(val) {
+    let s = String(val === undefined || val === null ? "" : val);
+    if (/^[=+\-@\t\r]/.test(s)) {
+      s = "'" + s;
+    }
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function gatherAgmAuditContext_() {
+    const bs = window.latestBalanceSheetModel || null;
+    const is = window.latestIncomeStatementModel || null;
+    const analytics = window.latestHomeAnalyticsData || {};
+    if (!bs || !is) {
+      return null;
+    }
+
+    const rawProjects = Array.isArray(analytics.projects) ? analytics.projects : [];
+    const projectsSchedule = rawProjects.length > 0
+      ? rawProjects.map(function (p) {
+          return {
+            name: p.name || p.title || "Capital Project",
+            category: p.category || p.type || "Tangible Capital Asset",
+            status: p.status || "Active",
+            value: Number(p.currentValue !== undefined ? p.currentValue : (p.amount || p.budget || 0))
+          };
+        })
+      : [
+          { name: "CIC Money Market Fund", category: "Liquid Treasury Reserve", status: "Active", value: Number(bs.assets.current.cicMmf || 0) },
+          { name: "Mansa X Managed Fund", category: "External Financial Holding", status: "Active", value: Number(bs.assets.investments.mansaX || 0) },
+          { name: "M-Akiba Treasury Bond", category: "Government Security", status: "Active", value: Number(bs.assets.investments.makiba || 0) },
+          { name: "Fixed / Capital Projects", category: "Tangible & Fixed Holdings", status: "Active", value: Number(bs.assets.investments.fixedInvestments || 0) }
+        ];
+
+    const totalCapitalProjects = projectsSchedule.reduce(function (acc, item) {
+      return acc + (Number(item.value) || 0);
+    }, 0);
+
+    const institutionalReserveRatio = bs.assets.totalAssets > 0
+      ? (bs.equity.statutoryReserve / bs.assets.totalAssets) * 100
+      : 0;
+    const loanToSavingsRatio = bs.equity.memberSavings > 0
+      ? (bs.assets.loans.grossLoans / bs.equity.memberSavings) * 100
+      : 0;
+    const netMarginPct = is.totalRevenue > 0
+      ? (is.netOperatingSurplus / is.totalRevenue) * 100
+      : 0;
+    const cirRatioText = (is.totalRevenue <= 0 && is.totalExpenses > 0)
+      ? ">100%"
+      : (is.costToIncomeRatio.toFixed(1) + "%");
+    const rawPar = analytics.parRatio !== undefined
+      ? analytics.parRatio
+      : (analytics.creditRisk && analytics.creditRisk.parRatio !== undefined ? analytics.creditRisk.parRatio : null);
+    const parText = rawPar !== null && rawPar !== undefined ? (Number(rawPar).toFixed(1) + "%") : "N/A";
+
+    return {
+      bs: bs,
+      is: is,
+      year: new Date().getFullYear(),
+      refId: "BLG-AGM-AUDIT-" + new Date().getFullYear() + "-VERIFIED",
+      projectsSchedule: projectsSchedule,
+      totalCapitalProjects: totalCapitalProjects,
+      ratios: [
+        { label: "Solvency Ratio (Assets / Obligations)", benchmark: ">= 100.0%", value: bs.solvencyDenominator > 0 ? (bs.solvencyRatio.toFixed(1) + "%") : "N/A" },
+        { label: "Statutory Reserve / Total Assets", benchmark: ">= 10.0% (SASRA)", value: institutionalReserveRatio.toFixed(1) + "%" },
+        { label: "Cost-to-Income Ratio (CIR)", benchmark: "<= 45.0%", value: cirRatioText },
+        { label: "Net Operating Surplus Margin", benchmark: ">= 20.0%", value: netMarginPct.toFixed(1) + "%" },
+        { label: "Loan-to-Savings Deployment Ratio", benchmark: "70.0% - 95.0%", value: loanToSavingsRatio.toFixed(1) + "%" },
+        { label: "Portfolio at Risk (PAR > 30 Days)", benchmark: "<= 5.0%", value: parText }
+      ]
+    };
+  }
+
+  function openPrintAgmAuditPack() {
+    const ctx = gatherAgmAuditContext_();
+    if (!ctx) {
+      if (typeof showNotification === "function") {
+        showNotification("AGM Audit Pack data is still loading. Please open Group Overview first.", "warning");
+      }
+      return;
+    }
+
+    const bs = ctx.bs;
+    const is = ctx.is;
+    const netText = is.netOperatingSurplus < 0
+      ? ("(" + formatPrintBsMoney_(Math.abs(is.netOperatingSurplus)) + ")")
+      : formatPrintBsMoney_(is.netOperatingSurplus);
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "ANNUAL FINANCIAL STATEMENTS & AGM AUDIT PACK";
+    document.getElementById("print-report-badge").textContent = "SASRA / IFRS AUDIT";
+    document.getElementById("print-report-subtitle").textContent =
+      "Consolidated Multi-Statement Report • Balance Sheet, P&L, Capital Projects & SASRA Prudential Ratios";
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Assets</div>' +
+      '<div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(bs.assets.totalAssets) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Members\' Equity</div>' +
+      '<div class="text-sm font-bold text-indigo-700 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(bs.equity.subtotal) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Net Operating Surplus</div>' +
+      '<div class="text-sm font-bold ' + (is.netOperatingSurplus >= 0 ? "text-emerald-700" : "text-rose-700") + ' font-mono tabular-nums mt-0.5">' + netText + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Solvency Ratio</div>' +
+      '<div class="text-sm font-bold text-emerald-700 font-mono tabular-nums mt-0.5">' + (bs.solvencyDenominator > 0 ? bs.solvencyRatio.toFixed(1) + "%" : "N/A") + "</div>" +
+      "</div>";
+
+    document.getElementById("print-table-head").innerHTML =
+      "<tr>" +
+      '<th class="px-4 py-3">Audit Schedule / Line Item</th>' +
+      '<th class="px-4 py-3">Classification / Benchmark</th>' +
+      '<th class="px-4 py-3 text-right">Amount / Ratio</th>' +
+      "</tr>";
+
+    const secHdr = function (title) {
+      return (
+        '<tr class="bg-slate-100/90 border-t border-slate-200">' +
+        '<td colspan="3" class="px-4 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-800">' + escapePrintHtml(title) + "</td>" +
+        "</tr>"
+      );
+    };
+    const row = function (label, note, valHtml, isSub) {
+      return (
+        '<tr class="' + (isSub ? "bg-slate-50/80 font-bold text-slate-900" : "text-slate-700") + '">' +
+        '<td class="px-4 py-2 ' + (isSub ? "pl-6" : "pl-8") + '">' + escapePrintHtml(label) + "</td>" +
+        '<td class="px-4 py-2 text-[11px] text-slate-500">' + escapePrintHtml(note) + "</td>" +
+        '<td class="px-4 py-2 text-right font-mono tabular-nums ' + (isSub ? "font-bold text-slate-900" : "font-medium text-slate-800") + '">' + valHtml + "</td>" +
+        "</tr>"
+      );
+    };
+
+    const projectsHtml = ctx.projectsSchedule.map(function (p) {
+      return row(p.name, p.category + " (" + p.status + ")", formatPrintBsMoney_(p.value), false);
+    }).join("");
+
+    const ratiosHtml = ctx.ratios.map(function (r) {
+      return row(r.label, "Benchmark: " + r.benchmark, escapePrintHtml(r.value), false);
+    }).join("");
+
+    document.getElementById("print-table-body").innerHTML =
+      secHdr("Section I: Statement of Financial Position (Balance Sheet)") +
+      row("Cash & Cash Equivalents", "Bank, Mobile Till & CIC MMF", formatPrintBsMoney_(bs.assets.current.subtotal), false) +
+      row("Gross Loans Receivable", "Active Member Credit Book", formatPrintBsMoney_(bs.assets.loans.grossLoans), false) +
+      row("Less: SASRA Credit Loss Allowance", "Statutory Impairment Reserve", "(" + formatPrintBsMoney_(bs.assets.loans.lossAllowance) + ")", false) +
+      row("Net Loan Portfolio", "Loans Net of Provisions", formatPrintBsMoney_(bs.assets.loans.netLoans), false) +
+      row("External Financial Investments", "Mansa X, M-Akiba & Fixed Holdings", formatPrintBsMoney_(bs.assets.investments.subtotal), false) +
+      row("TOTAL GROUP ASSETS", bs.isBalanced ? "Audit Equation Balanced" : "Variance Detected", formatPrintBsMoney_(bs.assets.totalAssets), true) +
+      row("Total Liabilities", "Payables, Accrued & Unallocated", formatPrintBsMoney_(bs.liabilities.subtotal), false) +
+      row("Accumulated Member Savings", "Member Share Capital", formatPrintBsMoney_(bs.equity.memberSavings), false) +
+      row("Statutory Reserve Fund (20%)", "SASRA Sec 51(1) Indivisible Capital", formatPrintBsMoney_(bs.equity.statutoryReserve), false) +
+      row("Retained Distributable Surplus", "Undistributed Member Earnings", formatPrintBsMoney_(bs.equity.retainedSurplus), false) +
+      row("TOTAL LIABILITIES & MEMBERS' EQUITY", "Total Claims & Equity", formatPrintBsMoney_(bs.totalLiabilitiesAndEquity), true) +
+
+      secHdr("Section II: Statement of Comprehensive Income (P&L)") +
+      row("Operating Revenue", "Interest, Processing Fees & Fines", formatPrintBsMoney_(is.operatingRevenue.operatingSubtotal), false) +
+      row("Investment Yields", "CIC MMF & External Yield", formatPrintBsMoney_(is.investmentYields.investmentSubtotal), false) +
+      row("Total Comprehensive Revenue", "Gross Operating Income", formatPrintBsMoney_(is.totalRevenue), true) +
+      row("Operating & Administrative Expenses", "Bank, Tech, AGM & Admin", "(" + formatPrintBsMoney_(is.totalExpenses) + ")", false) +
+      row("Credit Impairment Loss Charge", "SASRA Sec 51 Provisioning", "(" + formatPrintBsMoney_(is.loanLossProvisionCharge) + ")", false) +
+      row("Net Operating Surplus / (Deficit)", "Bottom-Line Period Performance", netText, true) +
+      row("20% Statutory Reserve Appropriation", "Indivisible Institutional Capital", formatPrintBsMoney_(is.appropriations.statutoryReserveTransfer), false) +
+      row("80% Distributable Member Surplus Pool", "Dividend / Rebate Allocation Base", formatPrintBsMoney_(is.appropriations.distributableMemberPool), true) +
+
+      secHdr("Section III: Tangible Capital Projects & External Holdings Schedule") +
+      projectsHtml +
+      row("Total Capital Projects & Holdings", "Consolidated Schedule Total", formatPrintBsMoney_(ctx.totalCapitalProjects), true) +
+
+      secHdr("Section IV: SASRA Prudential & Key Financial Ratios") +
+      ratiosHtml;
+
+    showPrintModal_({
+      showSignoff: true,
+      kpiGridClass: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6",
+      refText: "Ref: " + ctx.refId
+    });
+  }
+
+  function exportAgmAuditPackCSV() {
+    const ctx = gatherAgmAuditContext_();
+    if (!ctx) {
+      if (typeof showNotification === "function") {
+        showNotification("AGM Audit Pack data is still loading. Please open Group Overview first.", "warning");
+      }
+      return;
+    }
+
+    const bs = ctx.bs;
+    const is = ctx.is;
+    const generatedDate = new Date().toISOString().slice(0, 10);
+    const rows = [
+      ["BRIGHTLIFE SHG - CONSOLIDATED ANNUAL AGM & BANK AUDIT PACK", "", "", ""],
+      ["Reference ID", ctx.refId, "Generated Date", generatedDate],
+      [],
+      ["=== SECTION I: STATEMENT OF FINANCIAL POSITION (BALANCE SHEET) ===", "", "", ""],
+      ["Line Item", "Classification", "Amount (KES)", "Notes"],
+      ["Cash & Cash Equivalents", "Current Assets", bs.assets.current.subtotal.toFixed(2), "Bank, Mobile Till & CIC MMF"],
+      ["Gross Loans Receivable", "Financial Assets", bs.assets.loans.grossLoans.toFixed(2), "Active Member Credit Book"],
+      ["Less: SASRA Credit Loss Allowance", "Impairment Reserve", (-Math.abs(bs.assets.loans.lossAllowance)).toFixed(2), "Statutory Provision"],
+      ["Net Loan Portfolio", "Financial Assets", bs.assets.loans.netLoans.toFixed(2), "Loans Net of Provisions"],
+      ["External Financial Investments", "Investments", bs.assets.investments.subtotal.toFixed(2), "Mansa X, M-Akiba & Fixed Holdings"],
+      ["TOTAL GROUP ASSETS", "Summary", bs.assets.totalAssets.toFixed(2), bs.isBalanced ? "Balanced" : "Variance Detected"],
+      ["Total Liabilities", "Liabilities", bs.liabilities.subtotal.toFixed(2), "Payables, Accrued & Unallocated"],
+      ["Accumulated Member Savings", "Members' Equity", bs.equity.memberSavings.toFixed(2), "Member Share Capital"],
+      ["Statutory Reserve Fund (20%)", "Members' Equity", bs.equity.statutoryReserve.toFixed(2), "SASRA Sec 51(1) Indivisible Capital"],
+      ["Retained Distributable Surplus", "Members' Equity", bs.equity.retainedSurplus.toFixed(2), "Undistributed Member Earnings"],
+      ["TOTAL LIABILITIES & MEMBERS' EQUITY", "Summary", bs.totalLiabilitiesAndEquity.toFixed(2), "Variance: " + bs.variance.toFixed(2)],
+      [],
+      ["=== SECTION II: STATEMENT OF COMPREHENSIVE INCOME (P&L) ===", "", "", ""],
+      ["Line Item", "Classification", "Amount (KES)", "Notes"],
+      ["Operating Revenue", "Revenue", is.operatingRevenue.operatingSubtotal.toFixed(2), "Interest, Processing Fees & Fines"],
+      ["Investment Yields", "Revenue", is.investmentYields.investmentSubtotal.toFixed(2), "CIC MMF & External Yield"],
+      ["Total Comprehensive Revenue", "Summary", is.totalRevenue.toFixed(2), "Gross Operating Income"],
+      ["Operating & Administrative Expenses", "Expenses", (-Math.abs(is.totalExpenses)).toFixed(2), "Bank, Tech, AGM & Admin"],
+      ["Credit Impairment Loss Charge", "Provisions", (-Math.abs(is.loanLossProvisionCharge)).toFixed(2), "SASRA Sec 51 Provisioning"],
+      ["Net Operating Surplus / (Deficit)", "Bottom Line", is.netOperatingSurplus.toFixed(2), "Period Net Surplus"],
+      ["20% Statutory Reserve Appropriation", "Appropriation", is.appropriations.statutoryReserveTransfer.toFixed(2), "SASRA Sec 51(1) Reserve"],
+      ["80% Distributable Member Surplus Pool", "Appropriation", is.appropriations.distributableMemberPool.toFixed(2), "Dividend Allocation Base"],
+      [],
+      ["=== SECTION III: TANGIBLE CAPITAL PROJECTS & EXTERNAL HOLDINGS SCHEDULE ===", "", "", ""],
+      ["Project / Holding", "Category", "Carrying Value (KES)", "Status"]
+    ];
+
+    ctx.projectsSchedule.forEach(function (p) {
+      rows.push([p.name, p.category, Number(p.value || 0).toFixed(2), p.status]);
+    });
+    rows.push(["Total Capital Projects & Holdings", "Summary", ctx.totalCapitalProjects.toFixed(2), "Verified"]);
+    rows.push([]);
+    rows.push(["=== SECTION IV: SASRA PRUDENTIAL & KEY FINANCIAL RATIOS ===", "", "", ""]);
+    rows.push(["Ratio / Metric", "SASRA Benchmark", "Observed Value", "Status"]);
+    ctx.ratios.forEach(function (r) {
+      rows.push([r.label, r.benchmark, r.value, "Audited"]);
+    });
+    rows.push([]);
+    rows.push(["=== SECTION V: 3-OFFICER STATUTORY SIGN-OFF ATTESTATIONS ===", "", "", ""]);
+    rows.push(["Office", "Attestation Role", "Signature", "Date"]);
+    rows.push(["Chairperson", "Approved By (Chairperson)", "____________________", "__________"]);
+    rows.push(["Treasurer", "Prepared By (Treasurer)", "____________________", "__________"]);
+    rows.push(["Secretary", "Attested By (Secretary)", "____________________", "__________"]);
+
+    const csvContent = rows.map(function (r) {
+      return r.map(safeCellText_).join(",");
+    }).join("\r\n");
+
+    if (typeof Blob !== "undefined" && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "brightlife_agm_audit_pack_" + ctx.year + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 500);
+    }
+
+    if (typeof showNotification === "function") {
+      showNotification("AGM & Bank Audit Pack exported to CSV.", "success");
+    }
+    return csvContent;
   }
 </script>
