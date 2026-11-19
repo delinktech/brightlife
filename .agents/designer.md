@@ -6,6 +6,8 @@
 ## Purpose
 Designs and builds a clean, trustworthy, high-clarity financial institution dashboard for Brightlife SHG while minimizing perceived load times and preventing client-side runtime errors.
 
+> **Mandatory Design Reference:** Before making any UI, CSS, layout, modal, or component change, you **must** read [`DESIGN.md`](../DESIGN.md) as the single source of truth for Brightlife SHG's Light/Dark tokens, button hierarchy, typography, and UI/UX anti-patterns.
+
 ## Core Directives & Methodology
 
 ### 1. Financial Institution UX Standards
