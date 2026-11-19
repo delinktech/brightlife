@@ -213,7 +213,8 @@ function getHomeAnalyticsByRange_(rangeKey) {
   let totalPaid = 0;
   let totalOutstanding = 0;
   let parAmount = 0;
-  let aging = { current: 0, par30: 0, par60: 0, par90: 0 };
+  let aging = { current: 0, par30: 0, par60: 0, par90: 0, loss: 0 };
+  let agingCounts = { current: 0, par30: 0, par60: 0, par90: 0, loss: 0 };
   let totalGuaranteed = 0;
   let totalShortfall = 0;
   let underGuaranteedCount = 0;
@@ -307,14 +308,25 @@ function getHomeAnalyticsByRange_(rangeKey) {
           }
         }
 
-        // Classify into PAR & SASRA aging buckets
+        // Classify into 5 statutory SASRA aging buckets
         if (isOverdue) {
           parAmount += balanceAmount;
-          if (daysPastDue <= 30) aging.par30 += balanceAmount;
-          else if (daysPastDue <= 90) aging.par60 += balanceAmount;
-          else aging.par90 += balanceAmount;
+          if (daysPastDue <= 30) {
+            aging.par30 += balanceAmount;
+            agingCounts.par30++;
+          } else if (daysPastDue <= 60) {
+            aging.par60 += balanceAmount;
+            agingCounts.par60++;
+          } else if (daysPastDue <= 90) {
+            aging.par90 += balanceAmount;
+            agingCounts.par90++;
+          } else {
+            aging.loss += balanceAmount;
+            agingCounts.loss++;
+          }
         } else {
           aging.current += balanceAmount;
+          agingCounts.current++;
         }
       }
     }
@@ -324,7 +336,40 @@ function getHomeAnalyticsByRange_(rangeKey) {
   const parRate = totalOutstanding > 0 ? (parAmount / totalOutstanding) * 100 : 0;
   const performingAmount = Math.max(0, totalOutstanding - parAmount);
   const performingRate = totalOutstanding > 0 ? (performingAmount / totalOutstanding) * 100 : 0;
-  const recommendedProvision = (0.01 * aging.current) + (0.05 * aging.par30) + (0.25 * aging.par60) + (0.50 * aging.par90);
+  const recommendedProvisionRaw =
+    (0.01 * (aging.current || 0)) +
+    (0.05 * (aging.par30 || 0)) +
+    (0.25 * (aging.par60 || 0)) +
+    (0.50 * (aging.par90 || 0)) +
+    (1.00 * (aging.loss || 0));
+  const recommendedProvision = Math.round(recommendedProvisionRaw * 100) / 100;
+  const netLoanAssetValue = Math.max(0, Math.round((totalOutstanding - recommendedProvision) * 100) / 100);
+
+  const sasraTiers = [
+    { key: "current", label: "Current (0 days)", classification: "Performing", daysRange: "0 days", ratePct: 1, rate: 0.01 },
+    { key: "par30", label: "1–30 Days Overdue", classification: "Watch", daysRange: "1–30 days", ratePct: 5, rate: 0.05 },
+    { key: "par60", label: "31–60 Days Overdue", classification: "Substandard", daysRange: "31–60 days", ratePct: 25, rate: 0.25 },
+    { key: "par90", label: "61–90 Days Overdue", classification: "Doubtful", daysRange: "61–90 days", ratePct: 50, rate: 0.50 },
+    { key: "loss", label: "91+ Days Overdue", classification: "Loss", daysRange: "91+ days", ratePct: 100, rate: 1.00 },
+  ];
+  const agingMatrix = sasraTiers.map(function (t) {
+    const amount = Math.round((aging[t.key] || 0) * 100) / 100;
+    const count = agingCounts[t.key] || 0;
+    const sharePct = totalOutstanding > 0 ? Math.round(((amount / totalOutstanding) * 100) * 100) / 100 : 0;
+    const provisionAmount = Math.round((amount * t.rate) * 100) / 100;
+    return {
+      key: t.key,
+      label: t.label,
+      classification: t.classification,
+      daysRange: t.daysRange,
+      count: count,
+      amount: amount,
+      sharePct: sharePct,
+      provisionRate: t.ratePct,
+      provisionRateDecimal: t.rate,
+      provisionAmount: provisionAmount,
+    };
+  });
 
   const monthLabels = [];
   const monthValues = [];
@@ -449,6 +494,8 @@ function getHomeAnalyticsByRange_(rangeKey) {
       performingRate: performingRate,
       aging: aging,
       recommendedProvision: recommendedProvision,
+      netLoanAssetValue: netLoanAssetValue,
+      matrix: agingMatrix,
     },
     collateralRisk: {
       totalGuaranteed: totalGuaranteed,

@@ -653,20 +653,118 @@
       </div>
     </div>
 
-    <!-- Upcoming Module Placeholder (VIS-3) -->
-    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-2">
-      <div class="flex items-center justify-between">
-        <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/70 dark:border-amber-800/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs">
-          <i class="fas fa-layer-group"></i>
-        </span>
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-          VIS-3 Upcoming
+    <!-- VIS-3: Full-Width SASRA Aging & Provisioning Matrix -->
+    <div class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 dark:text-white">SASRA Aging &amp; Provisioning Matrix</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Days Past Due (DPD) portfolio stratification &amp; SASRA Section 51 statutory impairment schedule.</p>
+        </div>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 shrink-0 self-start sm:self-auto">
+          <i class="fas fa-scale-balanced text-[10px]"></i>
+          <span>SASRA Sec 51</span>
         </span>
       </div>
-      <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">SASRA Aging</h4>
-      <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-        Standardized 1–30, 31–60, 61–90, and 90+ day arrears stratification aligned with SACCO/SASRA prudential norms.
-      </p>
+
+      <!-- Executive 4-Card Delinquency Ribbon -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. Gross Loan Portfolio -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Gross Loan Portfolio</span>
+            <span class="w-6 h-6 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-hand-holding-dollar"></i>
+            </span>
+          </div>
+          <div>
+            <h5 id="aging-kpi-gross" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h5>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Total active principal &amp; interest book</p>
+          </div>
+        </div>
+
+        <!-- 2. Portfolio at Risk (PAR) -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Portfolio at Risk (PAR)</span>
+            <span id="aging-kpi-par-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              No Active Book
+            </span>
+          </div>
+          <div>
+            <h5 id="aging-kpi-par" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h5>
+            <p id="aging-kpi-par-pct" class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">0.0% of Gross Portfolio</p>
+          </div>
+        </div>
+
+        <!-- 3. Statutory Impairment Reserve -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Statutory Impairment Reserve</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+              SASRA Sec 51
+            </span>
+          </div>
+          <div>
+            <h5 id="aging-kpi-provision" class="text-base sm:text-lg font-bold text-amber-700 dark:text-amber-400 tracking-tight font-mono tabular-nums">KES 0</h5>
+            <p id="aging-kpi-provision-rate" class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5">0.0% effective reserve coverage</p>
+          </div>
+        </div>
+
+        <!-- 4. Net Carrying Loan Asset -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Net Carrying Loan Asset</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-shield-check"></i>
+            </span>
+          </div>
+          <div>
+            <h5 id="aging-kpi-net" class="text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0</h5>
+            <p id="aging-kpi-net-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Gross book less statutory reserve</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dual-Pane Grid: Aging Chart + Section 51 Provisioning Table -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
+        <!-- Left Column: Horizontal Aging Bar Chart -->
+        <div class="lg:col-span-5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h5 class="text-xs font-bold text-slate-900 dark:text-white">Aging Tiers Distribution</h5>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Outstanding exposure across 5 DPD tiers</p>
+            </div>
+            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">KES</span>
+          </div>
+          <div class="h-64 sm:h-72 w-full relative">
+            <canvas id="sasraAgingChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Right Column: Institutional SASRA Section 51 Provisioning Table -->
+        <div class="lg:col-span-7 overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-900/90 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="px-3.5 py-2.5">Classification</th>
+                <th class="px-3.5 py-2.5 whitespace-nowrap">Days Past Due</th>
+                <th class="px-3.5 py-2.5 text-right whitespace-nowrap">Outstanding (KES &amp; %)</th>
+                <th class="px-3.5 py-2.5 text-right whitespace-nowrap">Statutory Rate</th>
+                <th class="px-3.5 py-2.5 text-right whitespace-nowrap">Required Reserve (KES)</th>
+              </tr>
+            </thead>
+            <tbody id="sasra-matrix-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/80 bg-white dark:bg-[#0b1320]">
+              <tr>
+                <td colspan="5" class="px-4 py-6 text-center text-slate-500 dark:text-slate-400 text-xs">
+                  Loading SASRA Section 51 provisioning schedule...
+                </td>
+              </tr>
+            </tbody>
+            <tfoot id="sasra-matrix-tfoot" class="bg-slate-50/90 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-700/80">
+            </tfoot>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -774,13 +872,18 @@
       trajSavingsLine: isDark ? '#38bdf8' : '#0284c7',
       trajSavingsFill: isDark ? 'rgba(56, 189, 248, 0.16)' : 'rgba(2, 132, 199, 0.15)',
       trajExposureLine: isDark ? '#818cf8' : '#6366f1',
-      trajCeilingLine: isDark ? '#fbbf24' : '#d97706'
+      trajCeilingLine: isDark ? '#fbbf24' : '#d97706',
+      agingNormal: '#10b981',
+      agingWatch: isDark ? '#38bdf8' : '#0284c7',
+      agingSubstandard: isDark ? '#fbbf24' : '#f59e0b',
+      agingDoubtful: isDark ? '#fb923c' : '#f97316',
+      agingLoss: isDark ? '#f87171' : '#ef4444'
     };
   }
 
   window.resizeHomeCharts = function () {
     Object.keys(charts || {}).forEach(function (key) {
-      if (key === 'cashflowWaterfallChart' || key === 'savingsExposureTrajectoryChart') return;
+      if (key === 'cashflowWaterfallChart' || key === 'savingsExposureTrajectoryChart' || key === 'sasraAgingChart') return;
       const ch = charts[key];
       if (ch && typeof ch.resize === "function") {
         try { ch.resize(); } catch (_) {}
@@ -789,7 +892,7 @@
   };
 
   window.resizeAnalyticsCharts = function () {
-    ['cashflowWaterfallChart', 'savingsExposureTrajectoryChart'].forEach(function (key) {
+    ['cashflowWaterfallChart', 'savingsExposureTrajectoryChart', 'sasraAgingChart'].forEach(function (key) {
       const ch = charts && charts[key];
       if (ch && typeof ch.resize === "function") {
         try { ch.resize(); } catch (_) {}
@@ -843,6 +946,15 @@
         if (ds2) {
           ds2.borderColor = t.trajCeilingLine;
         }
+      }
+      if (key === 'sasraAgingChart' && ch.data && Array.isArray(ch.data.datasets) && ch.data.datasets[0]) {
+        ch.data.datasets[0].backgroundColor = [
+          t.agingNormal,
+          t.agingWatch,
+          t.agingSubstandard,
+          t.agingDoubtful,
+          t.agingLoss
+        ];
       }
       try { ch.update('none'); } catch (_) {}
     });
@@ -1713,6 +1825,296 @@
     });
   };
 
+  function buildSasraAgingModel_(data) {
+    const safe = data || {};
+    const portfolio = (safe.portfolio && typeof safe.portfolio === 'object') ? safe.portfolio : {};
+    const agingObj = (portfolio.aging && typeof portfolio.aging === 'object') ? portfolio.aging : {};
+
+    const defaultTiers = [
+      { key: 'normal', label: 'Normal', dpd: '0 Days', rate: 0.01, dotCls: 'bg-emerald-500' },
+      { key: 'watch', label: 'Watch', dpd: '1–30 Days', rate: 0.05, dotCls: 'bg-sky-600 dark:bg-sky-400' },
+      { key: 'substandard', label: 'Substandard', dpd: '31–90 Days', rate: 0.25, dotCls: 'bg-amber-500 dark:bg-amber-400' },
+      { key: 'doubtful', label: 'Doubtful', dpd: '91–180 Days', rate: 0.50, dotCls: 'bg-orange-500 dark:bg-orange-400' },
+      { key: 'loss', label: 'Loss', dpd: '> 180 Days', rate: 1.00, dotCls: 'bg-rose-500 dark:bg-rose-400' }
+    ];
+
+    const resolveBucketAmt = function (key, src) {
+      if (!src || typeof src !== 'object') return 0;
+      if (key === 'normal') return Number(src.normal !== undefined ? src.normal : src.current) || 0;
+      if (key === 'watch') return Number(src.watch !== undefined ? src.watch : src.par30) || 0;
+      if (key === 'substandard') return Number(src.substandard !== undefined ? src.substandard : src.par60) || 0;
+      if (key === 'doubtful') return Number(src.doubtful !== undefined ? src.doubtful : src.par90) || 0;
+      if (key === 'loss') return Number(src.loss !== undefined ? src.loss : src.par180) || 0;
+      return 0;
+    };
+
+    const rawMatrix = portfolio.matrix;
+    let hasCustomMatrix = false;
+    let matrixMap = {};
+    if (Array.isArray(rawMatrix) && rawMatrix.length) {
+      hasCustomMatrix = true;
+      rawMatrix.forEach(function (item) {
+        if (!item || typeof item !== 'object') return;
+        const name = String(item.key || item.classification || item.tier || item.label || '').toLowerCase();
+        if (name.indexOf('norm') !== -1 || name.indexOf('curr') !== -1) matrixMap.normal = item;
+        else if (name.indexOf('watch') !== -1 || name.indexOf('30') !== -1) matrixMap.watch = item;
+        else if (name.indexOf('sub') !== -1 || name.indexOf('60') !== -1) matrixMap.substandard = item;
+        else if (name.indexOf('doubt') !== -1 || name.indexOf('90') !== -1) matrixMap.doubtful = item;
+        else if (name.indexOf('loss') !== -1 || name.indexOf('180') !== -1) matrixMap.loss = item;
+      });
+    } else if (rawMatrix && typeof rawMatrix === 'object') {
+      hasCustomMatrix = true;
+    }
+
+    const rawRows = defaultTiers.map(function (t) {
+      const mItem = matrixMap[t.key];
+      const objSource = (!Array.isArray(rawMatrix) && rawMatrix && typeof rawMatrix === 'object') ? rawMatrix : agingObj;
+      let amount = 0;
+      let rate = t.rate;
+      let dpd = t.dpd;
+      let explicitReserve = null;
+
+      if (mItem) {
+        amount = Number(mItem.amount !== undefined ? mItem.amount : (mItem.outstanding !== undefined ? mItem.outstanding : mItem.balance)) || 0;
+        if (mItem.rate !== undefined && isFinite(Number(mItem.rate))) {
+          const rNum = Number(mItem.rate);
+          rate = rNum > 1 ? rNum / 100 : rNum;
+        }
+        if (mItem.dpd) dpd = String(mItem.dpd);
+        if (mItem.reserve !== undefined || mItem.provision !== undefined) {
+          explicitReserve = Number(mItem.reserve !== undefined ? mItem.reserve : mItem.provision) || 0;
+        }
+      } else {
+        amount = resolveBucketAmt(t.key, objSource);
+      }
+
+      const reserve = explicitReserve !== null ? explicitReserve : Math.round(amount * rate * 100) / 100;
+      return {
+        key: t.key,
+        label: t.label,
+        dpd: dpd,
+        rate: rate,
+        dotCls: t.dotCls,
+        amount: amount,
+        reserve: reserve
+      };
+    });
+
+    const sumBuckets = rawRows.reduce(function (acc, r) { return acc + r.amount; }, 0);
+    const grossPortfolio = (portfolio.totalOutstanding !== undefined && portfolio.totalOutstanding !== null)
+      ? (Number(portfolio.totalOutstanding) || 0)
+      : (sumBuckets > 0 ? sumBuckets : (Number(safe.loans) || 0));
+
+    const parFromBuckets = rawRows.slice(1).reduce(function (acc, r) { return acc + r.amount; }, 0);
+    const parAmount = (portfolio.parAmount !== undefined && portfolio.parAmount !== null)
+      ? (Number(portfolio.parAmount) || 0)
+      : parFromBuckets;
+    const parRate = (portfolio.parRate !== undefined && portfolio.parRate !== null)
+      ? (Number(portfolio.parRate) || 0)
+      : (grossPortfolio > 0 ? (parAmount / grossPortfolio) * 100 : 0);
+
+    const sumReserves = rawRows.reduce(function (acc, r) { return acc + r.reserve; }, 0);
+    const totalReserve = (!hasCustomMatrix && portfolio.recommendedProvision !== undefined && portfolio.recommendedProvision !== null)
+      ? (Number(portfolio.recommendedProvision) || 0)
+      : Math.round(sumReserves * 100) / 100;
+
+    const provisionRate = grossPortfolio > 0 ? (totalReserve / grossPortfolio) * 100 : 0;
+    const netCarryingAsset = grossPortfolio - totalReserve;
+
+    const rows = rawRows.map(function (r) {
+      return {
+        key: r.key,
+        label: r.label,
+        dpd: r.dpd,
+        rate: r.rate,
+        dotCls: r.dotCls,
+        amount: r.amount,
+        reserve: r.reserve,
+        sharePct: grossPortfolio > 0 ? (r.amount / grossPortfolio) * 100 : 0
+      };
+    });
+
+    return {
+      rows: rows,
+      grossPortfolio: grossPortfolio,
+      parAmount: parAmount,
+      parRate: parRate,
+      totalReserve: totalReserve,
+      provisionRate: provisionRate,
+      netCarryingAsset: netCarryingAsset,
+      hasData: grossPortfolio > 0 || sumBuckets > 0
+    };
+  }
+
+  window.renderSasraAging = function (data) {
+    if (data) {
+      window.latestHomeAnalyticsData = data;
+    }
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildSasraAgingModel_(sourceData);
+    const theme = getChartThemeTokens();
+
+    // 1. Update Executive 4-Card Delinquency Ribbon
+    const elGross = document.getElementById('aging-kpi-gross');
+    const elPar = document.getElementById('aging-kpi-par');
+    const elParPct = document.getElementById('aging-kpi-par-pct');
+    const elParBadge = document.getElementById('aging-kpi-par-badge');
+    const elProv = document.getElementById('aging-kpi-provision');
+    const elProvRate = document.getElementById('aging-kpi-provision-rate');
+    const elNet = document.getElementById('aging-kpi-net');
+
+    if (elGross) elGross.textContent = formatChartKes(m.grossPortfolio);
+    if (elPar) {
+      elPar.textContent = formatChartKes(m.parAmount);
+      elPar.className = 'text-base sm:text-lg font-bold tracking-tight font-mono tabular-nums ' + (
+        m.parAmount > 0 ? 'text-rose-700 dark:text-rose-400' : 'text-slate-900 dark:text-white'
+      );
+    }
+    if (elParPct) elParPct.textContent = m.parRate.toFixed(1) + '% of Gross Portfolio';
+    if (elParBadge) {
+      if (m.grossPortfolio <= 0) {
+        elParBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        elParBadge.textContent = 'No Active Book';
+      } else if (m.parRate === 0) {
+        elParBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
+        elParBadge.textContent = 'Zero Arrears';
+      } else if (m.parRate <= 5) {
+        elParBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60';
+        elParBadge.textContent = 'Low Risk';
+      } else if (m.parRate <= 10) {
+        elParBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60';
+        elParBadge.textContent = 'Elevated PAR';
+      } else {
+        elParBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elParBadge.textContent = 'High Risk';
+      }
+    }
+    if (elProv) elProv.textContent = formatChartKes(m.totalReserve);
+    if (elProvRate) elProvRate.textContent = m.provisionRate.toFixed(1) + '% effective reserve coverage';
+    if (elNet) elNet.textContent = formatChartKes(m.netCarryingAsset);
+
+    // 2. Populate SASRA Section 51 Provisioning Table
+    const tbody = document.getElementById('sasra-matrix-tbody');
+    if (tbody) {
+      tbody.innerHTML = m.rows.map(function (r) {
+        return (
+          '<tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">' +
+            '<td class="px-3.5 py-2.5 whitespace-nowrap">' +
+              '<span class="inline-flex items-center gap-2 font-semibold text-slate-900 dark:text-white">' +
+                '<span class="w-2 h-2 rounded-full shrink-0 ' + r.dotCls + '"></span>' +
+                '<span>' + escapeHtmlHome(r.label) + '</span>' +
+              '</span>' +
+            '</td>' +
+            '<td class="px-3.5 py-2.5 text-slate-600 dark:text-slate-400 whitespace-nowrap font-mono tabular-nums text-[11px]">' + escapeHtmlHome(r.dpd) + '</td>' +
+            '<td class="px-3.5 py-2.5 text-right whitespace-nowrap font-mono tabular-nums">' +
+              '<div class="font-bold text-slate-900 dark:text-slate-200">' + formatChartKes(r.amount) + '</div>' +
+              '<div class="text-[10px] text-slate-500 dark:text-slate-400">' + r.sharePct.toFixed(1) + '%</div>' +
+            '</td>' +
+            '<td class="px-3.5 py-2.5 text-right whitespace-nowrap font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-300">' + (r.rate * 100).toFixed(0) + '%</td>' +
+            '<td class="px-3.5 py-2.5 text-right whitespace-nowrap font-mono tabular-nums font-bold ' + (r.reserve > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400') + '">' + formatChartKes(r.reserve) + '</td>' +
+          '</tr>'
+        );
+      }).join('');
+    }
+
+    const tfoot = document.getElementById('sasra-matrix-tfoot');
+    if (tfoot) {
+      tfoot.innerHTML =
+        '<tr>' +
+          '<td colspan="2" class="px-3.5 py-2.5 font-bold text-slate-900 dark:text-white">Total Statutory Book &amp; Reserve</td>' +
+          '<td class="px-3.5 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">' + formatChartKes(m.grossPortfolio) + '</td>' +
+          '<td class="px-3.5 py-2.5 text-right font-mono tabular-nums font-semibold text-slate-600 dark:text-slate-400">' + m.provisionRate.toFixed(1) + '%</td>' +
+          '<td class="px-3.5 py-2.5 text-right font-mono tabular-nums font-extrabold text-amber-700 dark:text-amber-400">' + formatChartKes(m.totalReserve) + '</td>' +
+        '</tr>' +
+        '<tr class="border-t border-slate-200/80 dark:border-slate-800 bg-emerald-50/40 dark:bg-emerald-950/20">' +
+          '<td colspan="4" class="px-3.5 py-2.5 font-bold text-slate-900 dark:text-white">Net Carrying Loan Asset (Gross Portfolio - Impairment Reserve)</td>' +
+          '<td class="px-3.5 py-2.5 text-right font-mono tabular-nums font-extrabold text-emerald-700 dark:text-emerald-400">' + formatChartKes(m.netCarryingAsset) + '</td>' +
+        '</tr>';
+    }
+
+    // 3. Lazy Horizontal Bar Chart Init when Analytics Subtab is Visible
+    const analyticsPane = document.getElementById('home-subview-analytics');
+    const isAnalyticsVisible = Boolean(analyticsPane && !analyticsPane.classList.contains('hidden'));
+    const ctxAging = document.getElementById('sasraAgingChart');
+    if (!ctxAging || !isAnalyticsVisible) {
+      return;
+    }
+
+    if (charts.sasraAgingChart) {
+      charts.sasraAgingChart.destroy();
+      charts.sasraAgingChart = null;
+    }
+
+    if (setChartEmptyState('sasraAgingChart', !m.hasData, 'No active loan exposure for aging stratification')) {
+      return;
+    }
+
+    charts.sasraAgingChart = new Chart(ctxAging, {
+      type: 'bar',
+      data: {
+        labels: m.rows.map(function (r) { return r.label; }),
+        datasets: [{
+          label: 'Outstanding Exposure (KES)',
+          data: m.rows.map(function (r) { return r.amount; }),
+          backgroundColor: [
+            theme.agingNormal,
+            theme.agingWatch,
+            theme.agingSubstandard,
+            theme.agingDoubtful,
+            theme.agingLoss
+          ],
+          borderRadius: 6,
+          barThickness: 22,
+          maxBarThickness: 28
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function (items) {
+                const idx = items && items[0] ? items[0].dataIndex : -1;
+                const row = m.rows[idx];
+                return row ? (row.label + ' (' + row.dpd + ')') : '';
+              },
+              label: function (ctx) {
+                const row = m.rows[ctx.dataIndex];
+                if (!row) return '';
+                return 'Outstanding: ' + formatChartKes(row.amount) + ' (' + row.sharePct.toFixed(1) + '%)';
+              },
+              afterLabel: function (ctx) {
+                const row = m.rows[ctx.dataIndex];
+                if (!row) return '';
+                return 'Statutory Rate: ' + (row.rate * 100).toFixed(0) + '% • Reserve: ' + formatChartKes(row.reserve);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            grid: { color: theme.gridColor },
+            ticks: {
+              font: { size: 10 },
+              color: theme.tickColor,
+              callback: function (value) { return formatMoneyCompactK(value); }
+            }
+          },
+          y: {
+            grid: { display: false },
+            ticks: {
+              font: { size: 11, weight: '600' },
+              color: theme.tickColor
+            }
+          }
+        }
+      }
+    });
+  };
+
   function renderMainCharts(data) {
     window.latestHomeAnalyticsData = data;
     renderPortfolioAndLiquidityHealth(data);
@@ -1934,6 +2336,7 @@
     renderInvestmentCharts(data.investments);
     window.renderCashflowWaterfall(data);
     window.renderSavingsExposureTrajectory(data);
+    window.renderSasraAging(data);
   }
 
   function renderInvestmentCharts(inv) {

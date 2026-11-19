@@ -975,6 +975,9 @@
           if (typeof window.renderSavingsExposureTrajectory === "function") {
             window.renderSavingsExposureTrajectory(window.latestHomeAnalyticsData);
           }
+          if (typeof window.renderSasraAging === "function") {
+            window.renderSasraAging(window.latestHomeAnalyticsData);
+          }
         }
         if (typeof window.resizeAnalyticsCharts === "function") {
           window.resizeAnalyticsCharts();
