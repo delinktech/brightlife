@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v111`** (Google Apps Script Build `@112`, Commit `004929a`) |
+| **Current Live Release** | **`v112`** (Google Apps Script Build `@113`, Commit `15d40fd`) |
 | **Total Tracked Tasks** | **27 Tasks** (Expanded with Architectural Modernization `ARC-1`–`ARC-4`) |
-| **Completed & Shipped (`[DONE]`)** | **13 Tasks (48.1%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`ARC-1`)** |
+| **Completed & Shipped (`[DONE]`)** | **14 Tasks (51.9%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **13 Tasks (48.1%)** |
-| **Current Sprint Focus** | Phase 2.5: Architectural Modernization — `ARC-1: Institutional Schema Standard & Reference Data Architecture` |
+| **Current Sprint Focus** | Phase 2.5: Architectural Modernization — `ARC-2: Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine` |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`ARC-1`** | Architecture | **Institutional Schema Standard & Reference Data Architecture**: Standardized all sheet tab names to Institutional Title Case with Single Spaces, implemented bidirectional backward-compatible alias resolution dictionary in `config.js` (`SHEETS.MEMBERS`, `SHEETS.INVESTMENTS`, etc.), restructured `Constants` sheet into formal reference tables (`Asset_Classes`, `Project_Categories`, `Payment_Channels`, `Statutory_Thresholds`) with dynamic data validation dropdown rules. | `@ledger`, `@migrator`, `@fixer` | **`v112`** (`@113`) | 2026-11-19 |
 | **`RPT-2`** | Financial | **Statement of Comprehensive Income (Profit & Loss / P&L)**: Audited IFRS operating performance statement on `Reports` tab with 4-card revenue/surplus ribbon, operating revenue breakdown, investment yields, operating expenses, impairment deduction, net distributable surplus, zero-variance dividend basis, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v111`** (`@112`) | 2026-11-19 |
 | **`RPT-1`** | Financial | **Statement of Financial Position (Balance Sheet)**: Audited IFRS/SASRA Balance Sheet on `Reports` tab with dual-column classical ledger, 4-card solvency ribbon, zero-variance guarantee, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v110`** (`@111`) | 2026-11-19 |
 | **`FIN-1`** | Financial | **Decoupled PAR & 3-Tier Delinquency Waterfall**: Decoupled Portfolio at Risk from guarantor shortfall; implemented 3-tier delinquency classification (explicit status $\to$ due date $\to$ tenor) and Section 51 statutory provisioning. | `@analyst`, `@fixer` | **`v102`** (`@103`) | 2026-11-18 |
@@ -39,29 +40,12 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 14 tasks are categorized below in strict execution priority:
+The remaining 13 tasks are categorized below in strict execution priority:
 
 ### Tier 1: Architectural Modernization & Active Sprint Priorities
 
-#### 1. `ARC-1: Institutional Schema Standard & Reference Data Architecture` `[IN PROGRESS]`
-* **Priority:** `P0 (Top Architectural Foundation)`
-* **Domain:** Core Data Architecture & Infrastructure (`@ledger` $\to$ `@migrator` $\to$ `@fixer`)
-* **Location:** `Code.js`, `server/config.service.js`, `SHEETS.CONSTANTS`
-* **Objective:** Standardize and institutionalize Google Sheets database schema and reference data:
-  - Normalize all sheet tab names to Institutional Title Case with Single Spaces (`Members`, `Contributions`, `Loans`, `Guarantors`, `Accounts`, `Investments`, `Investment Projects`, `Investment Cashflows`, `Summary KPIs`, `Constants`, `Audit Log`).
-  - Deploy backward-compatible alias resolution dictionary in `config.js` so legacy constant names (`MEMBERS`, `INVESTMENT_PROJECTS`, etc.) resolve seamlessly without breaking running sessions.
-  - Consolidate reference data on `Constants` sheet into structured named tables: `Asset_Classes`, `Project_Categories`, `Payment_Channels`, and `Statutory_Thresholds`.
-  - Configure cell data validation dropdown rules in transactional sheets reading from these reference tables.
-* **Dependencies:** None (Baseline architectural foundation).
-* **Definition of Done (DoD):**
-  - Migration script executed or validated against live spreadsheet.
-  - `config.js` updated with bidirectional legacy/modern sheet name mappings.
-  - `Constants` sheet restructured with clear table headers and validation rules.
-  - Automated Node syntax and VM tests pass (`15/15 PASS`).
-  - `@sentinel` clearance PASS; zero runtime regressions in existing CRUD endpoints.
-
-#### 2. `ARC-2: Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine`
-* **Priority:** `P0 (Strategic Product Engine)`
+#### 1. `ARC-2: Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine`
+* **Priority:** `P0 (Top Strategic Priority)`
 * **Domain:** Investment Accounting & Core Operations (`@ledger` $\to$ `@analyst` $\to$ `@fixer`)
 * **Location:** `server/investments.service.js`, `server/projects.service.js`, `Investments`, `Investment Projects`, `Investment Cashflows`
 * **Objective:** Build the institutional plug-and-play investment engine supporting both financial assets and tangible capital ventures:
@@ -69,14 +53,14 @@ The remaining 14 tasks are categorized below in strict execution priority:
   - **Tier 2 (Tangible Capital Ventures):** `Investment Projects` sheet tracking physical group ventures (Bee Keeping, Land Acquisition, Agribusiness, Commercial Real Estate) with Project Category, Approved Budget, Total Capital Deployed, Projected Revenue, Milestone Status, and Completion Date.
   - **Tier 3 (Unified Cashflows):** `Investment Cashflows` sheet tracking all money movements (Capital Outflows/Investments, Dividend/Yield Inflows, Capital Returns, Operational Project Expenses) linked by Asset ID or Project ID.
   - Integrate valuation rollups into `RPT-1` Balance Sheet (Total Investments Asset) and `RPT-2` Income Statement (Net Investment Yields & Project Surpluses).
-* **Dependencies:** `ARC-1` (Normalized schema & reference tables).
+* **Dependencies:** `ARC-1` (Shipped in v112).
 * **Definition of Done (DoD):**
   - CRUD operations implemented and tested for both Financial Instruments and Capital Projects.
   - Transaction ledger writes and reconciles cash movements against physical accounts.
   - Service functions expose normalized APIs (`getInvestmentsSummary()`, `getProjectsSummary()`, `recordInvestmentCashflow()`).
   - Node syntax and VM mock tests pass (`PASS`); `@sentinel` clearance PASS.
 
-#### 3. `ARC-3: Google Sheets Formula Offloading & Materialized View (Summary KPIs)`
+#### 2. `ARC-3: Google Sheets Formula Offloading & Materialized View (Summary KPIs)`
 * **Priority:** `P0 (Performance & Scalability)`
 * **Domain:** Database Performance & Sheet Architecture (`@ledger` $\to$ `@analyst` $\to$ `@fixer`)
 * **Location:** `Contributions`, `Loans`, `Summary KPIs`
@@ -85,14 +69,14 @@ The remaining 14 tasks are categorized below in strict execution priority:
   - Inject resilient header spill formulas (`MAP`, `LAMBDA`, `SUMIFS`, `FILTER`) in Row 1 for cumulative member savings balances and loan amortization balances.
   - Implement a dedicated single-row `Summary KPIs` sheet acting as a real-time materialized view (Total Member Savings, Total Disbursed, Total Outstanding Loans, Net Cash Position, Total Investment Assets, Active PAR %).
   - Update GAS read paths to query `Summary KPIs` in 1 instant range call instead of iterating hundreds of rows across 6 separate sheets.
-* **Dependencies:** `ARC-1`.
+* **Dependencies:** `ARC-1` (Shipped in v112).
 * **Definition of Done (DoD):**
   - Row-by-row formula generation removed from backend contribution creation handlers.
   - Dynamic spill array formulas established in header rows of transactional sheets.
   - `Summary KPIs` tab generated and dynamically calculating from underlying sheets.
   - GAS KPI fetching latency reduced by >= 50%; Node syntax/VM tests pass; `@sentinel` clearance PASS.
 
-#### 4. `ARC-4: Request-Scoped SheetContext & RPC Optimization Pipeline`
+#### 3. `ARC-4: Request-Scoped SheetContext & RPC Optimization Pipeline`
 * **Priority:** `P0 (Engine Infrastructure)`
 * **Domain:** Backend Optimization & Middleware (`@fixer` $\to$ `@sentinel`)
 * **Location:** `server/context.service.js`, `server/core.service.js`
@@ -100,20 +84,20 @@ The remaining 14 tasks are categorized below in strict execution priority:
   - Introduce request-scoped `SheetContext` pattern that batches and lazily caches open sheet instances and multi-range reads per HTTP execution.
   - Cut dashboard/report load roundtrips from 15+ individual `SpreadsheetApp` calls down to <= 8 optimized reads.
   - Implement metadata-driven column header resolution to safeguard against manual column reordering by users.
-* **Dependencies:** `ARC-1`, `ARC-3`.
+* **Dependencies:** `ARC-1` (Shipped in v112), `ARC-3`.
 * **Definition of Done (DoD):**
   - `SheetContext` class implemented and adopted across all core API endpoints (`apiGetDashboardData`, `apiGetReportsData`).
   - RPC execution profiling logs confirm <= 8 sheet reads per full dashboard payload load.
   - Header resolution unit tests pass; Node syntax and VM tests pass (`15/15 PASS`); `@sentinel` clearance PASS.
 
-#### 5. `RPT-4: Official AGM & Bank Audit Export Pack`
+#### 4. `RPT-4: Official AGM & Bank Audit Export Pack`
 * **Priority:** `P0 (Top Reporting Priority)`
 * **Domain:** Document Governance (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
 * **Location:** `Reports` tab (`#home-subview-reports`)
 * **Objective:** One-click generation of the combined institutional Brightlife SHG Annual Financial Pack:
   - Executive PDF report combining Balance Sheet (`RPT-1`), Income Statement (`RPT-2`), and Capital Projects summary, styled with formal BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps.
   - Full multi-statement CSV / Excel audit package export for commercial bank financing or SACCO regulator filing.
-* **Dependencies:** `RPT-1` (Shipped in v110), `RPT-2` (Shipped in v111), `ARC-1` / `ARC-2`.
+* **Dependencies:** `RPT-1` (Shipped in v110), `RPT-2` (Shipped in v111), `ARC-1` (Shipped in v112), `ARC-2`.
 * **Definition of Done (DoD):**
   - One-click print preview generates comprehensive institutional AGM pack.
   - RFC-4180 CSV / Excel export generates verified multi-tab financial workbook.
@@ -123,7 +107,7 @@ The remaining 14 tasks are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Exports & Data Reconciliation
 
-#### 6. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
+#### 5. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
 * **Priority:** `P1 (High)`
 * **Domain:** Governance & Internal Controls (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
 * **Location:** `Loans.html` & `server/loans.service.js`
@@ -132,14 +116,14 @@ The remaining 14 tasks are categorized below in strict execution priority:
   - Audit trail logging in `SHEETS.AUDIT_LOG`.
 * **Dependencies:** UI-2.
 
-#### 7. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
+#### 6. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
 * **Priority:** `P1 (High)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
 * **Location:** `SHEETS.ACCOUNTS` & `SHEETS.FUND_STATEMENTS`
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
-* **Dependencies:** `ARC-1`.
+* **Dependencies:** `ARC-1` (Shipped in v112).
 
-#### 8. `COM-1: Automated WhatsApp & Email Transaction Receipts`
+#### 7. `COM-1: Automated WhatsApp & Email Transaction Receipts`
 * **Priority:** `P1 (High)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
@@ -150,7 +134,7 @@ The remaining 14 tasks are categorized below in strict execution priority:
 
 ### Tier 3: Advanced Intelligence, Workflows & Platform Hardening
 
-#### 9. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
+#### 8. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
 * **Priority:** `P2 (Deferred by User Request)`
 * **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer`)
 * **Location:** `Loans.html` (`Apply for Loan` Modal)
@@ -162,35 +146,35 @@ The remaining 14 tasks are categorized below in strict execution priority:
   - Server-side validation and write to `SHEETS.LOANS` with `Status = "Pending"`.
 * **Dependencies:** None (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
 
-#### 10. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 9. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 11. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
+#### 10. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
 * **Priority:** `P2 (Medium)`
 * **Domain:** UI/UX (`@designer`)
 * **Location:** `Contributions.html`, `Loans.html`, `Members.html`
 * **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
 * **Dependencies:** UI-1A.
 
-#### 12. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 11. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 13. `MIG-3: Legacy Chama Google Sheet Consolidation`
+#### 12. `MIG-3: Legacy Chama Google Sheet Consolidation`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Migration (`@migrator` $\to$ `@ledger`)
 * **Location:** Legacy Workbooks
 * **Objective:** Final ingestion and archival of any legacy standalone spreadsheet tabs into the unified Brightlife database.
 * **Dependencies:** MIG-2.
 
-#### 14. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 13. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
@@ -203,7 +187,7 @@ The remaining 14 tasks are categorized below in strict execution priority:
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v111)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v112)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -213,13 +197,13 @@ graph TD
         V3["VIS-3: SASRA Aging & Provision Matrix"]
         R1["RPT-1: Statement of Financial Position"]
         R2["RPT-2: Statement of Comprehensive Income"]
+        A1["ARC-1: Schema Standard & Reference Constants"]
     end
 
-    subgraph Architectural_Modernization ["Architectural Modernization Sprint (P0 Foundation)"]
-        A1["ARC-1: Schema Standard & Reference Constants<br>(Title Case & Data Validation)"]
-        A2["ARC-2: 3-Tier Investment & Projects Engine<br>(Financial Assets + Tangible Ventures)"]
-        A3["ARC-3: Formula Offload & Summary KPIs<br>(Spill Formulas & Materialized View)"]
-        A4["ARC-4: Request-Scoped SheetContext<br>(<=8 RPC Reads & Column Mapping)"]
+    subgraph Architectural_Modernization ["Architectural Modernization Sprint (Active Focus)"]
+        A2["ARC-2: 3-Tier Investment & Projects Engine<br>(Financial Assets + Tangible Ventures - P0)"]
+        A3["ARC-3: Formula Offload & Summary KPIs<br>(Spill Formulas & Materialized View - P0)"]
+        A4["ARC-4: Request-Scoped SheetContext<br>(<=8 RPC Reads & Column Mapping - P0)"]
     end
 
     subgraph Reporting_Capstone ["Reporting Suite Capstone (P0)"]
