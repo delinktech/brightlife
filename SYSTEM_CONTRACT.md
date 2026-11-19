@@ -24,6 +24,7 @@ All agents (`@ledger`, `@fixer`, `@migrator`, `@analyst`, `@shipper`) MUST enfor
 2. **Google Sheets Native Tables & Canonical Theme Color (`#0F2A44`):**
    - Every sheet tab must be formatted as a **Google Sheets Native Table** ("Convert to table" via Google Sheets API v4 `addTable` for new tabs and `updateTable` when appending adjacent columns to existing tables like `Constants` or `Investments`).
    - **Canonical Table Color (`#0F2A44`):** Header Row 1 background **`#0F2A44`** (`rgb(15, 42, 68)`), bold white text (`#FFFFFF`), frozen Row 1, with alternating row banding (`#FFFFFF` / `#F4F7FA`).
+   - **Native Table Typed-Column Guard (`This operation is not allowed on cells in typed columns`):** In Google Sheets Native Tables, columns may carry native Table Column Types. Calling `setNumberFormat` or `setDataValidation` across unbounded `getMaxRows()` (crossing the table boundary) or on a typed table column throws `Exception: This operation is not allowed on cells in typed columns.`. Always bound column ranges to `Math.max(sheet.getLastRow() - 1, 1)` and wrap `setNumberFormat` / `setDataValidation` in `try/catch`.
 3. **Row 2 Spill Formula Architecture:**
    - Google Sheets Native Tables prohibit formulas in Row 1 (`Formulas are not supported in a table header row.`).
    - **Row 1** must always remain a plain-text header value (`setValue(headerTitle)`).

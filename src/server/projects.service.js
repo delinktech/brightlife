@@ -155,7 +155,7 @@ function getConstantsReferenceRanges_(ss) {
       if (foundDepositChannel && key !== "deposit channel") continue;
       if (key === "deposit channel") foundDepositChannel = true;
     }
-    out[mapped] = sheet.getRange(2, c + 1, Math.max(sheet.getMaxRows() - 1, 1), 1);
+    out[mapped] = sheet.getRange(2, c + 1, Math.max(sheet.getLastRow() - 1, 1), 1);
   }
   return out;
 }
@@ -455,27 +455,33 @@ function columnRange_(sheet, headerName) {
   const map = getHeaderMap_(sheet.getRange(1, 1, 1, lastCol).getValues()[0]);
   const idx = map[headerName];
   if (idx === undefined) return null;
-  return sheet.getRange(2, idx + 1, Math.max(sheet.getMaxRows() - 1, 1), 1);
+  return sheet.getRange(2, idx + 1, Math.max(sheet.getLastRow() - 1, 1), 1);
 }
 
 function applyListValidation_(range, values) {
   if (!range) return;
-  range.setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(true).build()
-  );
+  try {
+    range.setDataValidation(
+      SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(true).build()
+    );
+  } catch (e) {}
 }
 
 function applyRangeValidation_(range, sourceRange) {
   if (!range || !sourceRange) return;
-  range.setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInRange(sourceRange, true).setAllowInvalid(true).build()
-  );
+  try {
+    range.setDataValidation(
+      SpreadsheetApp.newDataValidation().requireValueInRange(sourceRange, true).setAllowInvalid(true).build()
+    );
+  } catch (e) {}
 }
 
 function applyNumberFormat_(sheet, headers, fmt) {
   headers.forEach(function (h) {
-    const r = columnRange_(sheet, h);
-    if (r) r.setNumberFormat(fmt);
+    try {
+      const r = columnRange_(sheet, h);
+      if (r) r.setNumberFormat(fmt);
+    } catch (e) {}
   });
 }
 
@@ -1492,12 +1498,16 @@ function provisionSummaryKpisSheet_(ss) {
   });
   sheet.getRange(2, 1, valueRows.length, 3).setValues(valueRows);
   for (let i = 0; i < kpiDefinitions.length; i++) {
-    const cell = sheet.getRange(i + 2, 2);
-    if (cell && typeof cell.setFormula === "function") {
-      cell.setFormula(kpiDefinitions[i][2]);
-    }
+    try {
+      const cell = sheet.getRange(i + 2, 2);
+      if (cell && typeof cell.setFormula === "function") {
+        cell.setFormula(kpiDefinitions[i][2]);
+      }
+    } catch (eF) {}
   }
-  sheet.getRange(2, 2, valueRows.length, 1).setNumberFormat("#,##0.00");
+  try {
+    sheet.getRange(2, 2, valueRows.length, 1).setNumberFormat("#,##0.00");
+  } catch (eFmt) {}
 
   return {
     created: res.created,

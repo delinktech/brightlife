@@ -18,6 +18,8 @@ Every sheet, table, column header, formula, and provisioning script across the B
 - **Canonical Table Color (`#0F2A44`):**
   - **Header Row (Row 1):** Deep Institutional Navy **`#0F2A44`** (`rgb(15, 42, 68)` / `{ red: 0.0588, green: 0.1647, blue: 0.2667 }`), bold white text (`#FFFFFF`), frozen Row 1 (`sheet.setFrozenRows(1)`).
   - **Alternating Row Bands:** First band `#FFFFFF` (`rgb(255, 255, 255)`), second band `#F4F7FA` (`rgb(244, 247, 250)`).
+- **Native Table Typed-Column Guard (`This operation is not allowed on cells in typed columns`):**
+  - In Google Sheets Native Tables, columns may carry native Table Column Types. Calling `setNumberFormat` or `setDataValidation` across unbounded `getMaxRows()` (crossing the table boundary) or on a typed table column throws `Exception: This operation is not allowed on cells in typed columns.`. Always bound column ranges to `Math.max(sheet.getLastRow() - 1, 1)` and wrap `setNumberFormat` / `setDataValidation` in `try/catch`.
 
 ### 3. Row 2 Spill Formula Architecture (Native Table Compatibility)
 - **No Formulas in Row 1:** Google Sheets Native Tables strictly forbid formulas in the table header row (`Formulas are not supported in a table header row.`). Row 1 must **always** be written as a plain-text header string (`headerCell.setValue(headerTitle)`).
