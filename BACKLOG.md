@@ -11,8 +11,8 @@
 | **Current Live Release** | **`v128`** (Google Apps Script Build `@129`, Commits `3236d9f` + `7eb083a`) |
 | **Total Tracked Tasks** | **33 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
 | **Completed & Shipped (`[DONE]`)** | **24 Tasks (72.7%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **9 Tasks (27.3%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (SET-1)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **8 Tasks (24.2%)** |
 | **Current Sprint Focus** | `SET-1: Admin Loan Policy & Group Settings Management` (Dashboard-Native Loan Flow) |
 
 ---
@@ -50,11 +50,11 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 9 tasks are categorized below in strict execution priority:
+The remaining 9 tasks (1 `[IN PROGRESS]`, 8 `[BACKLOG]`) are categorized below in strict execution priority:
 
 ### Tier 1: Next Sprint Focus — Dashboard-Native Loan & Policy Engine (`P0`)
 
-#### 1. `SET-1: Admin Loan Policy & Group Settings Management`
+#### 1. `SET-1: Admin Loan Policy & Group Settings Management` `[IN PROGRESS]`
 * **Priority:** `P0 (Next Sprint Focus)`
 * **Domain:** Configuration & Core Policy (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
 * **Location:** New `Settings` view (`Settings.html`) & `Constants` sheet tab
@@ -67,6 +67,10 @@ The remaining 9 tasks are categorized below in strict execution priority:
   - Build dedicated Admin Settings Page in dashboard with institutional Light/Dark theme styling (`DESIGN.md`, `bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, `tabular-nums`).
   - Expose secure server RPCs (`getLoanPolicySettings`, `saveLoanPolicySettings`) with RBAC admin check and audit logging in `SHEETS.AUDIT_LOG`.
 * **Dependencies:** `ARC-1` (Shipped in v112).
+* **Active Sprint Checklist:**
+  - Dynamic loan policies provisioned in `Constants` tab (`Borrower Savings Multiplier` 2x/3x, `Interest Rate`, `Tenor Brackets` by amount, `Min Guarantors`).
+  - Strict RBAC enforced on `saveLoanPolicySettings` (non-admin callers rejected; all policy updates logged in `SHEETS.AUDIT_LOG`).
+  - Full `DESIGN.md` compliance: light/dark theme buttons (`bg-slate-900` / `dark:bg-slate-100`), zero unstyled controls, `min-h-[38px]` touch targets, and `tabular-nums` on all numeric/policy values.
 * **Acceptance Criteria:**
   - Policy key-value and tenor-tier tables provisioned idempotently in `Constants`.
   - Admin Settings UI renders cleanly in Light & Dark modes and persists changes via `saveLoanPolicySettings`.
