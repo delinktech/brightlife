@@ -90,13 +90,36 @@ function loadMonthlyStatementsView(monthKey, forceRefresh) {
 function renderMonthlyStatementsView(data) {
   if (!data) return;
 
-  // 1. Month selector
+  // 1. Month selector (hidden <select> + custom Tailwind dropdown)
   const monthSelect = document.getElementById("stmt-month-select");
+  const monthLabelEl = document.getElementById("stmt-month-dropdown-label");
+  const monthMenuEl = document.getElementById("stmt-month-dropdown-menu");
   if (monthSelect && data.availableMonths) {
     monthSelect.innerHTML = data.availableMonths.map(function (m) {
       const isSel = m.key === data.activeMonthKey ? "selected" : "";
-      return '<option value="' + escapeHtmlAttr(m.key) + '" class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100" ' + isSel + '>' + escapeHtmlAttr(m.label) + '</option>';
+      return '<option value="' + escapeHtmlAttr(m.key) + '" ' + isSel + '>' + escapeHtmlAttr(m.label) + '</option>';
     }).join("");
+
+    const activeMonth = data.availableMonths.find(function (m) { return m.key === data.activeMonthKey; }) || data.availableMonths[0];
+    if (monthLabelEl) {
+      monthLabelEl.textContent = activeMonth ? activeMonth.label : "Select Period";
+    }
+    if (monthMenuEl) {
+      monthMenuEl.innerHTML = data.availableMonths.map(function (m) {
+        const isActive = m.key === data.activeMonthKey;
+        return (
+          '<button type="button" role="option" aria-selected="' + (isActive ? "true" : "false") + '" ' +
+            'onclick="selectStatementMonth(\'' + escapeHtmlAttr(m.key) + '\')" ' +
+            'class="w-full min-h-[36px] px-3 py-1.5 rounded-lg text-left text-xs flex items-center justify-between gap-2 transition-colors ' +
+            (isActive
+              ? 'bg-slate-100 dark:bg-slate-800 font-bold text-slate-900 dark:text-white'
+              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 font-medium') + '">' +
+            '<span>' + escapeHtmlAttr(m.label) + '</span>' +
+            (isActive ? '<i class="fas fa-check text-[10px] text-emerald-700 dark:text-emerald-400"></i>' : '') +
+          '</button>'
+        );
+      }).join("");
+    }
   }
 
   // 2. KPIs
@@ -222,6 +245,41 @@ function renderStatementMembersTable(members) {
   updateSelectedStatementCount();
 }
 
+function toggleStatementMonthDropdown(forceOpen) {
+  const menu = document.getElementById("stmt-month-dropdown-menu");
+  const btn = document.getElementById("stmt-month-dropdown-btn");
+  const chevron = document.getElementById("stmt-month-dropdown-chevron");
+  if (!menu || !btn) return;
+  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : menu.classList.contains("hidden");
+  menu.classList.toggle("hidden", !shouldOpen);
+  btn.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  if (chevron) chevron.classList.toggle("rotate-180", shouldOpen);
+}
+
+function selectStatementMonth(monthKey) {
+  const sel = document.getElementById("stmt-month-select");
+  if (sel) sel.value = monthKey;
+  toggleStatementMonthDropdown(false);
+  changeStatementMonth();
+}
+
+if (typeof document !== "undefined" && !window.__stmtMonthDropdownListenersBound) {
+  window.__stmtMonthDropdownListenersBound = true;
+  document.addEventListener("click", function (e) {
+    const wrapper = document.getElementById("stmt-month-dropdown");
+    const menu = document.getElementById("stmt-month-dropdown-menu");
+    if (!wrapper || !menu || menu.classList.contains("hidden")) return;
+    if (!wrapper.contains(e.target)) {
+      toggleStatementMonthDropdown(false);
+    }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") {
+      toggleStatementMonthDropdown(false);
+    }
+  });
+}
+
 function changeStatementMonth() {
   const sel = document.getElementById("stmt-month-select");
   if (!sel) return;
@@ -323,13 +381,7 @@ function previewMemberStatement(memberId) {
         waBtn.title = res.whatsAppUrl ? "Send via WhatsApp" : "No phone configured";
         waBtn.onclick = function () {
           if (isValidWhatsAppUrl_(res.whatsAppUrl)) {
-            let waWin = null;
-            try {
-              waWin = window.open("", "_blank", "noopener,noreferrer");
-            } catch (e) {
-              waWin = null;
-            }
-            openWhatsAppUrlFromClick_(waWin, res.whatsAppUrl, stmt.memberName);
+            openWhatsAppUrlFromClick_(res.whatsAppUrl, stmt.memberName);
           } else {
             showNotification("Member does not have a valid phone number for WhatsApp.", "warning", 5000);
           }
@@ -414,16 +466,19 @@ function showWhatsAppFallbackLink_(url, memberName) {
   });
 }
 
-function openWhatsAppUrlFromClick_(waWin, url, memberName) {
+function openWhatsAppUrlFromClick_(url, memberName) {
   if (!isValidWhatsAppUrl_(url)) {
-    try { if (waWin && !waWin.closed) waWin.close(); } catch (e) {}
     showNotification("Invalid WhatsApp URL returned for " + (memberName || "member") + ".", "error", 5000);
     return;
   }
   const safeUrl = url.trim();
-  if (waWin && !waWin.closed) {
-    waWin.location.href = safeUrl;
-  } else {
+  let opened = null;
+  try {
+    opened = window.open(safeUrl, "_blank", "noopener,noreferrer");
+  } catch (e) {
+    opened = null;
+  }
+  if (!opened) {
     showWhatsAppFallbackLink_(safeUrl, memberName);
   }
 }
@@ -439,28 +494,19 @@ function sendSingleMemberWhatsApp(memberId) {
   }
   const memberName = (memberObj && memberObj.name) || memberId;
 
-  let waWin = null;
-  try {
-    waWin = window.open("", "_blank", "noopener,noreferrer");
-  } catch (e) {
-    waWin = null;
-  }
-
   startAppLoader();
   google.script.run
     .withSuccessHandler(function (res) {
       stopAppLoader();
       if (res && res.whatsAppUrl) {
         const resolvedName = (res.statementData && res.statementData.memberName) || memberName;
-        openWhatsAppUrlFromClick_(waWin, res.whatsAppUrl, resolvedName);
+        openWhatsAppUrlFromClick_(res.whatsAppUrl, resolvedName);
       } else {
-        try { if (waWin && !waWin.closed) waWin.close(); } catch (e) {}
         showNotification("Member does not have a valid phone number. Please update their phone in Members tab.", "warning", 5000);
       }
     })
     .withFailureHandler(function (err) {
       stopAppLoader();
-      try { if (waWin && !waWin.closed) waWin.close(); } catch (e) {}
       handleErr(err);
     })
     .sendMemberMonthlyStatement({

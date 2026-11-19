@@ -16,8 +16,8 @@
       <button type="button" onclick="loadMonthlyStatementsView()" class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
         <i class="fas fa-rotate text-slate-500 dark:text-slate-400"></i> <span>Refresh</span>
       </button>
-      <button type="button" onclick="openNotificationSettingsModal()" class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0F2A44] hover:bg-[#0b1f33] dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
-        <i class="fas fa-sliders-h text-emerald-300 dark:text-[#004D40]"></i> <span>Notification Settings</span>
+      <button type="button" onclick="openNotificationSettingsModal()" class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+        <i class="fas fa-sliders-h text-slate-300 dark:text-slate-700"></i> <span>Notification Settings</span>
       </button>
     </div>
   </div>
@@ -81,19 +81,25 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <!-- Modern Period Selector -->
-        <div class="relative inline-flex items-center whitespace-nowrap min-h-[38px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-2 shadow-2xs transition-all focus-within:ring-2 focus-within:ring-emerald-600/20 focus-within:border-emerald-600 dark:focus-within:border-emerald-400">
-          <i class="fas fa-calendar-alt text-[#004D40] dark:text-emerald-400 text-xs mr-1.5 shrink-0"></i>
-          <label for="stmt-month-select" class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider mr-1.5 shrink-0">Period</label>
-          <select id="stmt-month-select" onchange="changeStatementMonth()" aria-label="Select statement period"
-            class="appearance-none bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 pr-6 py-1.5 focus:outline-none cursor-pointer">
-            <option value="" class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Loading...</option>
+        <!-- Custom Period Dropdown -->
+        <div id="stmt-month-dropdown" class="relative inline-block">
+          <select id="stmt-month-select" onchange="changeStatementMonth()" class="hidden" aria-hidden="true">
+            <option value="">Loading...</option>
           </select>
-          <i class="fas fa-chevron-down text-[10px] text-slate-400 dark:text-slate-500 pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"></i>
+          <button type="button" id="stmt-month-dropdown-btn" onclick="toggleStatementMonthDropdown()" aria-haspopup="listbox" aria-expanded="false"
+            class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-2 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs shadow-2xs transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20">
+            <i class="fas fa-calendar-alt text-slate-500 dark:text-slate-400 text-xs shrink-0"></i>
+            <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider shrink-0">Period</span>
+            <span id="stmt-month-dropdown-label" class="font-bold text-slate-900 dark:text-slate-100">Loading...</span>
+            <i id="stmt-month-dropdown-chevron" class="fas fa-chevron-down text-[10px] text-slate-400 dark:text-slate-500 transition-transform duration-150 ml-0.5 shrink-0"></i>
+          </button>
+          <div id="stmt-month-dropdown-menu" role="listbox"
+            class="hidden absolute left-0 sm:right-0 sm:left-auto top-full mt-1.5 min-w-[210px] max-h-64 overflow-y-auto z-40 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#0b1320] p-1.5 space-y-0.5">
+          </div>
         </div>
 
         <!-- Bulk Email Button -->
-        <button type="button" id="btn-bulk-email-stmts" onclick="confirmBulkEmailStatements()" class="min-h-[38px] whitespace-nowrap px-3.5 py-1.5 rounded-lg bg-[#004D40] hover:bg-[#003b31] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+        <button type="button" id="btn-bulk-email-stmts" onclick="confirmBulkEmailStatements()" class="min-h-[38px] whitespace-nowrap px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
           <i class="fas fa-paper-plane text-[11px]"></i>
           <span>Email Statements (<span id="stmt-selected-count" class="tabular-nums">0</span>)</span>
         </button>
@@ -155,10 +161,10 @@
 
   <!-- Statement Preview Modal -->
   <div id="stmt-preview-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 border-t-4 border-t-[#004D40] dark:border-t-emerald-500 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
       <div class="bg-white dark:bg-[#090d16] px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-slate-900 dark:text-white">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-[#004D40] dark:text-emerald-300 flex items-center justify-center text-sm font-bold shrink-0">
+          <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm font-bold shrink-0">
             <i class="fas fa-file-invoice"></i>
           </div>
           <div class="min-w-0">
@@ -183,10 +189,10 @@
           Recipient: <span class="font-semibold text-slate-800 dark:text-slate-200" id="stmt-preview-email-val">—</span>
         </div>
         <div class="flex items-center gap-2">
-          <button type="button" id="stmt-preview-wa-btn" class="min-h-[38px] whitespace-nowrap px-3.5 py-1.5 rounded-lg bg-[#004D40] hover:bg-[#003b31] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+          <button type="button" id="stmt-preview-wa-btn" class="min-h-[38px] whitespace-nowrap px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
             <i class="fab fa-whatsapp"></i> <span>Send via WhatsApp</span>
           </button>
-          <button type="button" id="stmt-preview-email-btn" class="min-h-[38px] whitespace-nowrap px-3.5 py-1.5 rounded-lg bg-[#0F2A44] hover:bg-[#0b1f33] dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+          <button type="button" id="stmt-preview-email-btn" class="min-h-[38px] whitespace-nowrap px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
             <i class="fas fa-envelope"></i> <span>Send Email</span>
           </button>
         </div>
@@ -196,10 +202,10 @@
 
   <!-- Bulk Email Statements Confirmation Modal -->
   <div id="stmt-bulk-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 border-t-4 border-t-[#004D40] dark:border-t-emerald-500 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
+    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
       <div class="bg-white dark:bg-[#090d16] px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-slate-900 dark:text-white">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-[#004D40] dark:text-emerald-300 flex items-center justify-center text-sm font-bold shrink-0">
+          <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm font-bold shrink-0">
             <i class="fas fa-mail-bulk"></i>
           </div>
           <div class="min-w-0">
@@ -235,7 +241,7 @@
             <span id="bulk-progress-status" class="font-bold text-slate-800 dark:text-slate-200">Processing</span>
           </div>
           <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-            <div id="bulk-progress-bar" class="bg-[#004D40] dark:bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 30%"></div>
+            <div id="bulk-progress-bar" class="bg-emerald-600 dark:bg-emerald-500 h-2 rounded-full transition-all duration-300" style="width: 30%"></div>
           </div>
         </div>
 
@@ -243,7 +249,7 @@
           <button type="button" onclick="closeBulkEmailModal()" class="min-h-[38px] px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button type="button" id="btn-execute-bulk-email" onclick="executeBulkEmailDispatch()" class="min-h-[38px] px-4 py-2 bg-[#004D40] hover:bg-[#003b31] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+          <button type="button" id="btn-execute-bulk-email" onclick="executeBulkEmailDispatch()" class="min-h-[38px] px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
             <i class="fas fa-paper-plane text-xs"></i> <span>Send Now</span>
           </button>
         </div>
@@ -253,10 +259,10 @@
 
   <!-- Notification & Receipt Settings Modal -->
   <div id="stmt-settings-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 border-t-4 border-t-[#004D40] dark:border-t-emerald-500 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
+    <div class="bg-white dark:bg-[#0b1320] rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700/80 w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
       <div class="bg-white dark:bg-[#090d16] px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 text-slate-900 dark:text-white">
         <div class="flex items-center gap-3 min-w-0">
-          <div class="h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-[#004D40] dark:text-emerald-300 flex items-center justify-center text-sm shrink-0">
+          <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm shrink-0">
             <i class="fas fa-sliders-h"></i>
           </div>
           <div class="min-w-0">
@@ -290,7 +296,7 @@
           <button type="button" onclick="closeNotificationSettingsModal()" class="min-h-[38px] px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors">
             Cancel
           </button>
-          <button type="submit" id="btn-save-settings" class="min-h-[38px] px-4 py-2 bg-[#004D40] hover:bg-[#003b31] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+          <button type="submit" id="btn-save-settings" class="min-h-[38px] px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
             <i class="fas fa-check text-xs"></i> <span>Save Settings</span>
           </button>
         </div>
