@@ -8,7 +8,7 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v114`** (Google Apps Script Build `@115`, Commit `af4575f`) |
+| **Current Live Release** | **`v115`** (Google Apps Script Build `@116`, Commit `ab175d4`) |
 | **Total Tracked Tasks** | **27 Tasks** (Expanded with Architectural Modernization `ARC-1`–`ARC-4`) |
 | **Completed & Shipped (`[DONE]`)** | **16 Tasks (59.3%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
@@ -21,7 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
-| **`ARC-3`** | Architecture | **Google Sheets Formula Offloading & Materialized View (`Summary KPIs`)**: Deprecated per-row formula injections in `Contributions` and `Members`; installed Row 1 header spill formulas (`MAP`, `LAMBDA`, `SUMIFS`, `XLOOKUP`) across `Members`, `Contributions`, `Loans`, `Loan Repayments`, `Guarantors`, `Investments`, and `Investment Projects`; provisioned 15-metric `Summary KPIs` materialized view tab and single-range O(1) read path (`readSummaryKpisSnapshot_`, `getSummaryKpisData`). | `@ledger`, `@analyst`, `@fixer` | **`v114`** (`@115`) | 2026-11-19 |
+| **`ARC-3`** | Architecture | **Google Sheets Formula Offloading & Materialized View (`Summary KPIs`)**: Deprecated per-row formula injections in `Contributions` and `Members`; installed Row 2 spill formulas (`MAP`, `LAMBDA`, `SUMIFS`, `XLOOKUP`) with plain Row 1 Native Table headers across `Members`, `Contributions`, `Loans`, `Loan Repayments`, `Guarantors`, `Investments`, and `Investment Projects`; provisioned 15-metric `Summary KPIs` materialized view tab and single-range O(1) read path (`readSummaryKpisSnapshot_`, `getSummaryKpisData`). | `@ledger`, `@analyst`, `@fixer` | **`v114`–`v115`** (`@115`–`@116`) | 2026-11-19 |
 | **`ARC-2`** | Architecture | **Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine**: Implemented Tier 1 `Investments` market valuation columns (Units Held, Unit Cost, Current Price, FVTPL Carrying Value), Tier 2 `Investment Projects` register (Bee Keeping, Land, Agribusiness), Tier 3 unified `Investment Cashflows` ledger merged non-destructively with legacy `InvestmentLedger`, RPT-1/RPT-2 valuation & dividend rollups, and idempotent `?setupWorkbook=1` provisioner. | `@ledger`, `@analyst`, `@fixer` | **`v113`** (`@114`) | 2026-11-19 |
 | **`ARC-1`** | Architecture | **Institutional Schema Standard & Reference Data Architecture**: Standardized all sheet tab names to Institutional Title Case with Single Spaces, implemented bidirectional backward-compatible alias resolution dictionary in `config.js` (`SHEETS.MEMBERS`, `SHEETS.INVESTMENTS`, etc.), restructured `Constants` sheet into formal reference tables (`Asset_Classes`, `Project_Categories`, `Payment_Channels`, `Statutory_Thresholds`) with dynamic data validation dropdown rules. | `@ledger`, `@migrator`, `@fixer` | **`v112`** (`@113`) | 2026-11-19 |
 | **`RPT-2`** | Financial | **Statement of Comprehensive Income (Profit & Loss / P&L)**: Audited IFRS operating performance statement on `Reports` tab with 4-card revenue/surplus ribbon, operating revenue breakdown, investment yields, operating expenses, impairment deduction, net distributable surplus, zero-variance dividend basis, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v111`** (`@112`) | 2026-11-19 |
