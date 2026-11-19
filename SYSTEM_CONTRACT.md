@@ -25,18 +25,21 @@ Any deposit, payment, or reconciliation record must strictly match one of the 5 
 5. `Refund / Expense Offset` *(Non-cash operational offsets)*
 
 ### Core Table Schemas & Headers
-* **`Members`**: `Member ID | Full Name | ID Number | KRA PIN | Phone Number | Email | Status | Registration Date | Total Savings | Current Loan Balance | Guaranteed Amount | Max Loan Eligibility | Available to Guarantee`
-* **`Contributions`**: `Contribution ID | Member ID | Member Name | Amount | Deposit Channel | Transaction Reference | Date | Status | Notes`
-* **`Loans`**: `Loan ID | Member ID | Borrower Name | Principal Amount | Interest Rate (%) | Loan Term (Months) | Disbursed Date | Due Date | Total Loan Repaid | Loan Balance | Shortfall Amount | Status | Notes`
-* **`Loan Repayments`**: `Repayment ID | Loan ID | Member ID | Amount | Repayment Date | Deposit Channel | Reference / TID | Principal Portion | Interest Portion | Penalty / Fee Portion | Notes`
-* **`Guarantors`**: `Guarantor Record ID | Loan ID | Borrower ID | Guarantor Member ID | Guaranteed Amount | Status`
-* **`Investments`**: `Investment ID | Investment Name | Asset Class | Institution / Platform | Amount Invested | Current Value | Date Invested | Maturity Date | Expected Yield (%) | Status | Notes`
-* **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows | Outflows | System Balance | Statement Balance | Balance Date | Variance | Reconciliation Status`
+* **`Members`**: `Member ID | First Name | Middle Name | Last Name | National ID | Phone Number | Email | Status | Registration Date | Total Savings [CALC] | Active Loan Balance [CALC] | Total Guaranteed [CALC] | Available to Guarantee [CALC] | Max Loan Eligibility [CALC] | Notes`
+* **`Contributions`**: `Contribution ID | Member ID | Member Name [LOOKUP] | Amount | Deposit Channel | Transaction Reference | Date | Status | Approved By | Notes`
+* **`Loans`**: `Loan ID | Member ID | Borrower Name [LOOKUP] | Requested Amount | Approved Principal | Interest Rate (%) | Loan Term (Months) | Disbursed Date | Due Date | Total Paid [CALC] | Loan Balance [CALC] | Total Guaranteed [CALC] | Shortfall Amount [CALC] | Arrears Days [CALC] | PAR Status [CALC] | Status | Notes`
+* **`Loan Repayments`**: `Repayment ID | Loan ID | Member ID | Repayment Date | Amount Paid | Principal Portion | Interest Portion | Penalty / Fee Portion | Deposit Channel | Reference / TID | Status | Notes`
+* **`Guarantors`**: `Guarantor Record ID | Loan ID | Borrower ID | Guarantor Member ID | Guaranteed Amount | Status | Signed Date`
+* **`Investments`** *(Master Catalog - Instruments & Shares)*: `Investment ID | Instrument Name | Asset Class | Institution / Broker | Account / Folio No | Inception Date | Maturity Date | Units Held | Unit Cost Basis | Current Market Price | Benchmark Yield (%) | Valuation Method | Status | Current Carrying Value [CALC] | Cumulative Dividends / Yield [CALC] | Linked Account No`
+* **`Investment Projects`** *(Master Catalog - Tangible & Agribusiness)*: `Project ID | Project Name | Project Category | Operating Capacity (Units) | Project Lead Member ID | Physical Location Ref | Target Capital (KES) | Start Date | Target Exit Date | Valuation Standard | Last Appraisal Date | Last Appraised Value | Carrying Asset Value [CALC] | Cumulative Gross Revenue [CALC] | Cumulative OpEx [CALC] | Status`
+* **`Investment Cashflows`** *(Unified Transactional Ledger)*: `Tx ID | Entity Type | Entity ID | Entity Name [LOOKUP] | Cashflow Type | Tx Date | Gross Amount | Tax WHT Amount | Net Amount [CALC] | Settlement Channel | External Reference | Authorized By | Notes`
+* **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows [CALC] | Outflows [CALC] | System Balance [CALC] | Statement Balance | Balance Date | Variance [CALC] | Reconciliation Status [CALC] | Notes`
+* **`Summary KPIs`** *(Materialized O(1) Cache)*: `Metric Key | Value | Metric Label | Last Updated`
+* **`Constants`**: Config key-value parameters and standardized reference catalogs (`ASSET_CLASSES`, `PROJECT_CATEGORIES`, `PAYMENT_CHANNELS`, `STATUTORY_THRESHOLDS`).
 * **`Fund Statements`**: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
-* **`CIC Transactions`**: `Transaction ID | Date | Description | Purchase | Interest | Withdrawal | Withholding Tax | Balance`
+* **`CIC Transactions`** *(Legacy Ingestion - Transitionally mapped to `Investment Cashflows`)*: `Transaction ID | Date | Description | Purchase | Interest | Withdrawal | Withholding Tax | Balance`
 * **`Roles`**: `Email | Role | Permissions | Status`
 * **`AuditLog`**: `Log ID | Timestamp | User Email | Action | Entity | Entity ID | Details`
-* **`Constants`**: Config key-value parameters.
 
 ---
 
