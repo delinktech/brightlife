@@ -16,8 +16,26 @@
 - **Production / WIP Workbook ID:** `18zbE2MS........bu_0` *(Masked)*
 - **Legacy Workbook ID:** Pending legacy workbook ingestion *(Read-Only for `@migrator`)*
 
+### 2.0 Permanent Workbook Design & Governance Standards
+All agents (`@ledger`, `@fixer`, `@migrator`, `@analyst`, `@shipper`) MUST enforce these permanent workbook rules across every tab and column:
+1. **Tab & Column Naming (Institutional Title Case with Single Spaces — Zero Underscores):**
+   - All sheet tab names, table headers, and `Constants` reference headers/labels MUST use **Institutional Title Case with Single Spaces** (e.g., `Member ID`, `Investment Projects`, `Investment Cashflows`, `Summary KPIs`, `Asset Classes`, `Project Categories`, `Deposit Channel`, `Statutory Thresholds`, `Threshold Value`).
+   - **Strictly Prohibited:** Underscores (`_`), `snake_case`, or `camelCase` in sheet names or column headers.
+2. **Google Sheets Native Tables & Canonical Theme Color (`#0F2A44`):**
+   - Every sheet tab must be formatted as a **Google Sheets Native Table** ("Convert to table" via Google Sheets API v4 `addTable` for new tabs and `updateTable` when appending adjacent columns to existing tables like `Constants` or `Investments`).
+   - **Canonical Table Color (`#0F2A44`):** Header Row 1 background **`#0F2A44`** (`rgb(15, 42, 68)`), bold white text (`#FFFFFF`), frozen Row 1, with alternating row banding (`#FFFFFF` / `#F4F7FA`).
+3. **Row 2 Spill Formula Architecture:**
+   - Google Sheets Native Tables prohibit formulas in Row 1 (`Formulas are not supported in a table header row.`).
+   - **Row 1** must always remain a plain-text header value (`setValue(headerTitle)`).
+   - **Row 2** is the anchor cell for all column-wide `=MAP(A2:A, LAMBDA(...))` array spill formulas. Row-level writers must leave spill-governed cells empty (`""`) on rows `2..N` (and preserve Row 2's `=MAP(...)` formula when updating Row 2).
+4. **Single Source of Truth — Zero Duplicate Columns or Redundant Tabs:**
+   - **Reuse `Deposit Channel` in `Constants`:** Never add duplicate `Payment Channels` columns to `Constants`; all payment/deposit channel validations point to `Constants!Deposit Channel`.
+   - **Consolidated MMF & Investment Ledgers:**
+     - `Fund Statements` is the single canonical MMF statement tab (`CIC Transactions` is retired and deleted).
+     - `Investment Cashflows` is the single unified investment transaction ledger (all legacy `InvestmentLedger` rows are migrated to `Investment Cashflows`, all `Investments` / `Investment Projects` formulas reference `Cashflows_*` Named Ranges, and `InvestmentLedger` is retired and deleted).
+
 ### Approved Deposit Channels
-Any deposit, payment, or reconciliation record must strictly match one of the 5 approved channels:
+Any deposit, payment, or reconciliation record must strictly match one of the 5 approved channels in `Constants!Deposit Channel`:
 1. `Cash`
 2. `Equity Bank`
 3. `CIC MMF`
@@ -25,21 +43,20 @@ Any deposit, payment, or reconciliation record must strictly match one of the 5 
 5. `Refund / Expense Offset` *(Non-cash operational offsets)*
 
 ### Core Table Schemas & Headers
-* **`Members`**: `Member ID | First Name | Middle Name | Last Name | National ID | Phone Number | Email | Status | Registration Date | Total Savings [CALC] | Active Loan Balance [CALC] | Total Guaranteed [CALC] | Available to Guarantee [CALC] | Max Loan Eligibility [CALC] | Notes`
-* **`Contributions`**: `Contribution ID | Member ID | Member Name [LOOKUP] | Amount | Deposit Channel | Transaction Reference | Date | Status | Approved By | Notes`
-* **`Loans`**: `Loan ID | Member ID | Borrower Name [LOOKUP] | Requested Amount | Approved Principal | Interest Rate (%) | Loan Term (Months) | Disbursed Date | Due Date | Total Paid [CALC] | Loan Balance [CALC] | Total Guaranteed [CALC] | Shortfall Amount [CALC] | Arrears Days [CALC] | PAR Status [CALC] | Status | Notes`
-* **`Loan Repayments`**: `Repayment ID | Loan ID | Member ID | Repayment Date | Amount Paid | Principal Portion | Interest Portion | Penalty / Fee Portion | Deposit Channel | Reference / TID | Status | Notes`
-* **`Guarantors`**: `Guarantor Record ID | Loan ID | Borrower ID | Guarantor Member ID | Guaranteed Amount | Status | Signed Date`
-* **`Investments`** *(Master Catalog - Instruments & Shares)*: `Investment ID | Instrument Name | Asset Class | Institution / Broker | Account / Folio No | Inception Date | Maturity Date | Units Held | Unit Cost Basis | Current Market Price | Benchmark Yield (%) | Valuation Method | Status | Current Carrying Value [CALC] | Cumulative Dividends / Yield [CALC] | Linked Account No`
-* **`Investment Projects`** *(Master Catalog - Tangible & Agribusiness)*: `Project ID | Project Name | Project Category | Operating Capacity (Units) | Project Lead Member ID | Physical Location Ref | Target Capital (KES) | Start Date | Target Exit Date | Valuation Standard | Last Appraisal Date | Last Appraised Value | Carrying Asset Value [CALC] | Cumulative Gross Revenue [CALC] | Cumulative OpEx [CALC] | Status`
-* **`Investment Cashflows`** *(Unified Transactional Ledger)*: `Tx ID | Entity Type | Entity ID | Entity Name [LOOKUP] | Cashflow Type | Tx Date | Gross Amount | Tax WHT Amount | Net Amount [CALC] | Settlement Channel | External Reference | Authorized By | Notes`
+* **`Members`**: `Member ID | First Name | Middle Name | Last Name | Full Name [CALC] | National Id | Gender | Date of Birth | Phone Number | Email | Registration Date | Status | Total Savings [CALC] | Current Loan Balance [CALC] | Guaranteed Amount [CALC] | Max Loan Eligibility [CALC] | Available to Guarantee [CALC]`
+* **`Contributions`**: `Date | Member ID | Member Name [LOOKUP] | Amount | Deposit Channel | Transaction ID | Type | Status | Verified By`
+* **`Loans`**: `Loan ID | Request Date | Approved Date | Member ID | Borrower Name [LOOKUP] | Requested Amount | Interest | Transaction Fee | Repayment Amount [CALC] | Total Paid [CALC] | Principal Paid [CALC] | Interest Paid [CALC] | Fee Paid [CALC] | Balance [CALC] | Status | Borrower’s Own Savings [CALC] | Total Guaranteed [CALC] | Shortfall Amount [CALC]`
+* **`Loan Repayments`**: `Payment ID | Loan ID | Payment Date | Member ID | Borrower Name [LOOKUP] | Total Paid | Principal Paid | Interest Paid | Fee Paid | Deposit Channel | Transaction ID | Balance Remaining | Status | Verified By`
+* **`Guarantors`**: `Loan ID | Member ID | Guarantor Name [LOOKUP] | Guaranteed Amount | Loan Status [LOOKUP] | Guarantor’s Savings Balance [LOOKUP] | Guarantor Eligibility [CALC]`
+* **`Investments`** *(Tier 1 Master Catalog - Instruments & Shares)*: `Investment ID | Name | Start Date | Money Invested [CALC] | Revenue [CALC] | ROI Amount [CALC] | ROI % [CALC] | Status | Asset Class | Institution | Ticker | Units Held | Unit Cost | Current Price | Last Valued | Carrying Value [CALC]`
+* **`Investment Projects`** *(Tier 2 Master Catalog - Tangible & Agribusiness)*: `Project ID | Project Name | Category | Linked Investment ID | Start Date | Operating Capacity | Capacity Unit | Lead Member | Approved Budget | Status | Notes | Created At | Capital Deployed [CALC] | Cumulative Revenue [CALC] | Cumulative OpEx [CALC] | Carrying Value [CALC]`
+* **`Investment Cashflows`** *(Tier 3 Unified Transactional Ledger — replaces `InvestmentLedger`)*: `Transaction ID | Date | Entity Type | Entity ID | Flow Type | Category | Description | Amount | Transaction Fee | Payment Channel | Reference | Recorded By | Recorded At`
 * **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows [CALC] | Outflows [CALC] | System Balance [CALC] | Statement Balance | Balance Date | Variance [CALC] | Reconciliation Status [CALC] | Notes`
-* **`Summary KPIs`** *(Materialized O(1) Cache)*: `Metric Key | Value | Metric Label | Last Updated`
-* **`Constants`**: Re-organized 4-table reference catalog and system configuration (`Table A: Asset Classes (Cols A–E)` | `Table B: Project Categories (Cols G–K)` | `Table C: Payment Channels (Cols M–P)` | `Table D: Statutory & Governance Thresholds (Cols R–U)` | `Status & Lookup Vectors (Cols W–AA)`). Named Ranges: `Constants_Asset_Classes`, `Constants_Project_Categories`, `Constants_Payment_Channels`, `Constants_Statutory_Thresholds`, `Constants_Transaction_Status`, `Constants_Loan_Status`, `Constants_Membership_Status`, `Constants_Project_Status`, `Constants_Member_Selector`.
-* **`Fund Statements`**: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
-* **`CIC Transactions`** *(Legacy Ingestion - Transitionally mapped to `Investment Cashflows`)*: `Transaction ID | Date | Description | Purchase | Interest | Withdrawal | Withholding Tax | Balance`
+* **`Summary KPIs`** *(Materialized O(1) Cache)*: `Metric Key | Value | Formula Basis & Description`
+* **`Constants`** *(Single Unified Native Table — Title Case with Single Spaces)*: `Gender | Membership Status | Deposit Channel | Transaction Type | Contribution Status | Loans Statuses | Investment Statuses | Ledger Types | Ledger Categories | Roles | Member Selector | Asset Classes | Project Categories | Statutory Thresholds | Threshold Value`
+* **`Fund Statements`** *(Single Canonical MMF Statement Table — replaces `CIC Transactions`)*: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
 * **`Roles`**: `Email | Role | Permissions | Status`
-* **`AuditLog`**: `Log ID | Timestamp | User Email | Action | Entity | Entity ID | Details`
+* **`Audit Log`**: `Timestamp | Actor Email | Action | Entity | Entity ID | Summary | Details`
 
 ---
 

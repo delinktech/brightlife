@@ -1073,6 +1073,9 @@ function setupAllNamedRanges_(ss) {
     if (cfCol["Amount"] !== undefined) {
       setOrUpdateNamedRange_(ss, "Cashflows_Amount", getNamedColumnRange_(ss, cfSheet.getName(), getColLetter_(cfCol["Amount"] + 1)));
     }
+    if (cfCol["Transaction Fee"] !== undefined) {
+      setOrUpdateNamedRange_(ss, "Cashflows_Fee", getNamedColumnRange_(ss, cfSheet.getName(), getColLetter_(cfCol["Transaction Fee"] + 1)));
+    }
   }
 
   const ledSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_LEDGER);
@@ -1633,7 +1636,6 @@ function testDiagnoseSheetHeaders_() {
     SHEETS.SUMMARY_KPIS,
     SHEETS.CONSTANTS,
     SHEETS.FUND_STATEMENTS,
-    SHEETS.CIC_TRANSACTIONS,
   ].forEach(function(sName) {
     const s = getSheetByNameInsensitive_(ss, sName);
     if (!s) {

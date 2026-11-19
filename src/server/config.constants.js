@@ -157,10 +157,11 @@ function getSheetByNameInsensitive_(ss, targetName) {
 }
 
 /**
- * Idempotently provisions the 4 standardized institutional reference tables
- * (Asset_Classes, Project_Categories, Payment_Channels, Statutory_Thresholds)
- * in the Constants sheet, starting past Column E so existing Status validation
- * values in Constants!$E$2:$E are strictly preserved.
+ * Idempotently provisions the standardized institutional reference tables
+ * (Asset Classes, Project Categories, Deposit Channel, Statutory Thresholds + Threshold Value)
+ * in the Constants sheet using Title Case with Single Spaces (zero underscores),
+ * cleaning up any legacy underscore headers or duplicate Payment_Channels columns while
+ * preserving existing Status validation values in Constants!$E$2:$E.
  */
 function provisionConstantsReferenceTables_(ss) {
   const spreadsheet = ss || getSpreadsheet_();
@@ -171,8 +172,82 @@ function provisionConstantsReferenceTables_(ss) {
     createdSheet = true;
   }
 
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
+  const headerRenames = {
+    asset_classes: "Asset Classes",
+    project_categories: "Project Categories",
+    statutory_thresholds: "Statutory Thresholds",
+    threshold_value: "Threshold Value",
+  };
+
+  const thresholdKeyRenames = {
+    SASRA_MAX_LOAN_EXPOSURE_PCT: "SASRA Max Loan Exposure Pct",
+    STATUTORY_RESERVE_TRANSFER_PCT: "Statutory Reserve Transfer Pct",
+    PROVISION_CURRENT_PCT: "Provision Current Pct",
+    PROVISION_WATCH_1_30_PCT: "Provision Watch 1 30 Pct",
+    PROVISION_SUBSTANDARD_31_60_PCT: "Provision Substandard 31 60 Pct",
+    PROVISION_DOUBTFUL_61_90_PCT: "Provision Doubtful 61 90 Pct",
+    PROVISION_LOSS_91_PLUS_PCT: "Provision Loss 91 Plus Pct",
+    LIQUIDITY_MIN_PCT: "Liquidity Min Pct",
+    LIQUIDITY_OPTIMAL_PCT: "Liquidity Optimal Pct",
+  };
+
+  let lastRow = sheet.getLastRow();
+  let lastCol = sheet.getLastColumn();
+  const initialHeaders =
+    lastRow >= 1 && lastCol >= 1
+      ? sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+      : [];
+  const initialMap = getHeaderMap_(initialHeaders);
+  const hasCanonicalChannelCol =
+    initialMap["deposit channel"] !== undefined ||
+    initialMap["payment modes"] !== undefined;
+
+  let seenPaymentChannelsCol = false;
+  for (let c = initialHeaders.length - 1; c >= 0; c--) {
+    const rawHeader = String(initialHeaders[c] || "").trim();
+    const lowerHeader = rawHeader.toLowerCase();
+
+    if (lowerHeader === "payment_channels" || lowerHeader === "payment channels") {
+      if (hasCanonicalChannelCol || seenPaymentChannelsCol) {
+        if (typeof sheet.deleteColumn === "function") {
+          sheet.deleteColumn(c + 1);
+        } else {
+          sheet.getRange(1, c + 1, Math.max(sheet.getLastRow(), 1), 1).clearContent();
+        }
+        continue;
+      }
+      seenPaymentChannelsCol = true;
+      sheet.getRange(1, c + 1).setValue("Deposit Channel");
+      continue;
+    }
+
+    if (headerRenames[lowerHeader]) {
+      const canonicalHeader = headerRenames[lowerHeader];
+      if (rawHeader !== canonicalHeader) {
+        sheet.getRange(1, c + 1).setValue(canonicalHeader);
+      }
+    }
+
+    if (lowerHeader === "statutory_thresholds" || lowerHeader === "statutory thresholds") {
+      const rCount = Math.max(sheet.getLastRow() - 1, 0);
+      if (rCount > 0) {
+        const colRange = sheet.getRange(2, c + 1, rCount, 1);
+        const colVals = colRange.getValues();
+        let changed = false;
+        for (let r = 0; r < colVals.length; r++) {
+          const cellKey = String(colVals[r][0] || "").trim();
+          if (thresholdKeyRenames[cellKey]) {
+            colVals[r][0] = thresholdKeyRenames[cellKey];
+            changed = true;
+          }
+        }
+        if (changed) colRange.setValues(colVals);
+      }
+    }
+  }
+
+  lastRow = sheet.getLastRow();
+  lastCol = sheet.getLastColumn();
   const existingHeaders =
     lastRow >= 1 && lastCol >= 1
       ? getHeaderMap_(sheet.getRange(1, 1, 1, lastCol).getValues()[0])
@@ -180,10 +255,10 @@ function provisionConstantsReferenceTables_(ss) {
 
   const tables = [
     {
-      key: "asset_classes",
+      keys: ["asset classes", "asset_classes"],
       columns: [
         [
-          "Asset_Classes",
+          "Asset Classes",
           "Operating Cash",
           "Money Market Fund",
           "Listed Equities / Shares",
@@ -196,10 +271,10 @@ function provisionConstantsReferenceTables_(ss) {
       ],
     },
     {
-      key: "project_categories",
+      keys: ["project categories", "project_categories"],
       columns: [
         [
-          "Project_Categories",
+          "Project Categories",
           "Real Estate & Land",
           "Agribusiness",
           "Financial Instruments",
@@ -209,10 +284,10 @@ function provisionConstantsReferenceTables_(ss) {
       ],
     },
     {
-      key: "payment_channels",
+      keys: ["deposit channel", "payment modes", "payment channels", "payment_channels"],
       columns: [
         [
-          "Payment_Channels",
+          "Deposit Channel",
           DEPOSIT_CHANNELS.CASH,
           DEPOSIT_CHANNELS.EQUITY_BANK,
           DEPOSIT_CHANNELS.CIC_MMF,
@@ -222,33 +297,36 @@ function provisionConstantsReferenceTables_(ss) {
       ],
     },
     {
-      key: "statutory_thresholds",
+      keys: ["statutory thresholds", "statutory_thresholds"],
       columns: [
         [
-          "Statutory_Thresholds",
-          "SASRA_MAX_LOAN_EXPOSURE_PCT",
-          "STATUTORY_RESERVE_TRANSFER_PCT",
-          "PROVISION_CURRENT_PCT",
-          "PROVISION_WATCH_1_30_PCT",
-          "PROVISION_SUBSTANDARD_31_60_PCT",
-          "PROVISION_DOUBTFUL_61_90_PCT",
-          "PROVISION_LOSS_91_PLUS_PCT",
-          "LIQUIDITY_MIN_PCT",
-          "LIQUIDITY_OPTIMAL_PCT",
+          "Statutory Thresholds",
+          "SASRA Max Loan Exposure Pct",
+          "Statutory Reserve Transfer Pct",
+          "Provision Current Pct",
+          "Provision Watch 1 30 Pct",
+          "Provision Substandard 31 60 Pct",
+          "Provision Doubtful 61 90 Pct",
+          "Provision Loss 91 Plus Pct",
+          "Liquidity Min Pct",
+          "Liquidity Optimal Pct",
         ],
-        ["Threshold_Value", 85, 20, 1, 5, 25, 50, 100, 15, 30],
+        ["Threshold Value", 85, 20, 1, 5, 25, 50, 100, 15, 30],
       ],
     },
   ];
 
-  // Never overwrite Columns A-E (Column 5 / E is reserved for Status data validation).
-  let nextCol = Math.max(6, lastCol + 1);
+  // Place immediately adjacent to the last occupied column (or Col 6 if empty sheet so Col E is reserved for Status).
+  let nextCol = lastCol >= 1 ? lastCol + 1 : 6;
   const addedTables = [];
   const skippedTables = [];
 
   for (let t = 0; t < tables.length; t++) {
     const tbl = tables[t];
-    if (existingHeaders[tbl.key] !== undefined) {
+    const alreadyExists = tbl.keys.some(function (k) {
+      return existingHeaders[k] !== undefined;
+    });
+    if (alreadyExists) {
       skippedTables.push(tbl.columns[0][0]);
       continue;
     }

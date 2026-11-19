@@ -80,9 +80,12 @@ function runInstitutionalWorkbookSetup_() {
     investments: null,
     projects: null,
     cashflows: null,
+    migratedLedger: null,
+    retiredSheets: [],
     prepopulated: [],
     spillFormulas: null,
     summaryKpis: null,
+    nativeTables: null,
   };
 
   report.constants = provisionConstantsReferenceTables_(ss);
@@ -91,9 +94,27 @@ function runInstitutionalWorkbookSetup_() {
   report.investments = provisionInvestmentsRegister_(ss, refRanges);
   report.projects = provisionInvestmentProjects_(ss, refRanges);
   report.cashflows = provisionInvestmentCashflows_(ss, refRanges);
+  report.migratedLedger = migrateAndRetireLegacyInvestmentLedger_(ss);
+
+  // Retire redundant CIC Transactions tab when Fund Statements exists
+  try {
+    const cicSheet = ss.getSheetByName(SHEETS.CIC_TRANSACTIONS);
+    const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+    if (cicSheet && (!fundSheet || fundSheet.getName() !== cicSheet.getName())) {
+      if (typeof ss.deleteSheet === "function") {
+        ss.deleteSheet(cicSheet);
+      }
+      report.retiredSheets.push(SHEETS.CIC_TRANSACTIONS);
+    }
+  } catch (eCic) {}
+  if (report.migratedLedger && report.migratedLedger.retiredSheet) {
+    report.retiredSheets.push(SHEETS.INVESTMENT_LEDGER);
+  }
+
   report.prepopulated = prepopulateInvestmentEngine_(ss);
   report.spillFormulas = provisionWorkbookSpillFormulas_(ss);
   report.summaryKpis = provisionSummaryKpisSheet_(ss);
+  report.nativeTables = syncWorkbookNativeTables_(ss);
 
   SpreadsheetApp.flush();
   try { clearDashboardCache_(); } catch (e) {}
@@ -116,17 +137,285 @@ function getConstantsReferenceRanges_(ss) {
   if (lastCol < 1) return out;
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   const wanted = {
+    "asset classes": "assetClasses",
     asset_classes: "assetClasses",
+    "project categories": "projectCategories",
     project_categories: "projectCategories",
+    "deposit channel": "paymentChannels",
+    "payment modes": "paymentChannels",
+    "payment channels": "paymentChannels",
     payment_channels: "paymentChannels",
   };
+  let foundDepositChannel = false;
   for (let c = 0; c < headers.length; c++) {
     const key = String(headers[c] || "").trim().toLowerCase();
-    if (wanted[key]) {
-      out[wanted[key]] = sheet.getRange(2, c + 1, Math.max(sheet.getMaxRows() - 1, 1), 1);
+    const mapped = wanted[key];
+    if (!mapped) continue;
+    if (mapped === "paymentChannels") {
+      if (foundDepositChannel && key !== "deposit channel") continue;
+      if (key === "deposit channel") foundDepositChannel = true;
     }
+    out[mapped] = sheet.getRange(2, c + 1, Math.max(sheet.getMaxRows() - 1, 1), 1);
   }
   return out;
+}
+
+/**
+ * Migrates all legacy rows from "InvestmentLedger" into "Investment Cashflows",
+ * updates any Investments formulas referencing InvestmentLedger to Cashflows_*,
+ * and deletes the retired "InvestmentLedger" tab.
+ */
+function migrateAndRetireLegacyInvestmentLedger_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const result = { migratedCount: 0, updatedFormulas: 0, retiredSheet: false };
+  try {
+    const legacy = spreadsheet.getSheetByName(SHEETS.INVESTMENT_LEDGER);
+    const cf = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENT_CASHFLOWS);
+    const tz = spreadsheet.getSpreadsheetTimeZone();
+
+    if (legacy && cf && legacy.getName() !== cf.getName()) {
+      if (legacy.getLastRow() > 1) {
+        const lv = legacy.getDataRange().getValues();
+        const lc = getHeaderMap_(lv[0]);
+
+        const existingKeys = {};
+        if (cf.getLastRow() > 1) {
+          const cv = cf.getDataRange().getValues();
+          const cc = getHeaderMap_(cv[0]);
+          for (let j = 1; j < cv.length; j++) {
+            const eId = cc["Entity ID"] !== undefined ? String(cv[j][cc["Entity ID"]] || "").trim() : "";
+            const fType = cc["Flow Type"] !== undefined ? String(cv[j][cc["Flow Type"]] || "").trim() : "";
+            const amt = cc["Amount"] !== undefined ? Math.abs(Number(cv[j][cc["Amount"]]) || 0) : 0;
+            const desc = cc["Description"] !== undefined ? String(cv[j][cc["Description"]] || "").trim() : "";
+            if (eId || fType || amt) {
+              existingKeys[eId + "|" + fType + "|" + amt + "|" + desc] = true;
+            }
+          }
+        }
+
+        for (let r = 1; r < lv.length; r++) {
+          const invId = lc["Investment ID"] !== undefined ? String(lv[r][lc["Investment ID"]] || "").trim() : "";
+          const rawType = lc["Type"] !== undefined ? String(lv[r][lc["Type"]] || "").trim() : "";
+          const cat = lc["Category"] !== undefined ? String(lv[r][lc["Category"]] || "").trim() : "";
+          const desc = lc["Description"] !== undefined ? String(lv[r][lc["Description"]] || "").trim() : "";
+          const amt = lc["Amount"] !== undefined ? Math.abs(Number(lv[r][lc["Amount"]]) || 0) : 0;
+          const fee = lc["Transaction Fee"] !== undefined ? (Number(lv[r][lc["Transaction Fee"]]) || 0) : 0;
+          const dt = lc["Date"] !== undefined ? lv[r][lc["Date"]] : "";
+
+          if (!invId && !rawType && !amt) continue;
+          const kindLower = typeof normalizeLedgerType_ === "function" ? normalizeLedgerType_(rawType) : rawType.toLowerCase();
+          let flowType = "Expense";
+          if (kindLower === "capital in") flowType = "Capital In";
+          else if (kindLower === "revenue") flowType = "Revenue";
+          else if (kindLower === "withdrawal") flowType = "Withdrawal";
+          else if (kindLower === "dividend") flowType = "Dividend";
+
+          const dedupKey = invId + "|" + flowType + "|" + amt + "|" + desc;
+          if (existingKeys[dedupKey]) continue;
+
+          appendRowByHeaders_(cf, {
+            "Transaction ID": "ICF-HIST-" + String(r).padStart(3, "0"),
+            "Date": dt,
+            "Entity Type": "Investment",
+            "Entity ID": invId,
+            "Flow Type": flowType,
+            "Category": cat,
+            "Description": desc,
+            "Amount": amt,
+            "Transaction Fee": fee,
+            "Payment Channel": "Cash",
+            "Reference": "MIGRATED-LEDGER",
+            "Recorded By": "System Migration",
+            "Recorded At": Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss"),
+          });
+          existingKeys[dedupKey] = true;
+          result.migratedCount++;
+        }
+      }
+
+      if (typeof setupAllNamedRanges_ === "function") {
+        try { setupAllNamedRanges_(spreadsheet); } catch (eNR) {}
+      }
+
+      const invSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENTS);
+      if (invSheet && invSheet.getLastRow() > 1) {
+        const iHeaders = invSheet.getRange(1, 1, 1, invSheet.getLastColumn()).getValues()[0];
+        const iCol = getHeaderMap_(iHeaders);
+        const miCol = iCol["Money Invested"];
+        const revCol = iCol["Revenue"];
+        const lastInvRow = invSheet.getLastRow();
+        for (let r = 2; r <= lastInvRow; r++) {
+          if (miCol !== undefined) {
+            try {
+              const cell = invSheet.getRange(r, miCol + 1);
+              const f = cell && typeof cell.getFormula === "function" ? String(cell.getFormula() || "") : "";
+              if (/InvestmentLedger/i.test(f)) {
+                cell.setFormula(
+                  '=SUMIFS(Cashflows_Amount, Cashflows_EntityID, A' + r + ', Cashflows_FlowType, "Capital In") + SUMIFS(Cashflows_Amount, Cashflows_EntityID, A' + r + ', Cashflows_FlowType, "Expense") + SUMIFS(Cashflows_Fee, Cashflows_EntityID, A' + r + ')'
+                );
+                result.updatedFormulas++;
+              }
+            } catch (eMI) {}
+          }
+          if (revCol !== undefined) {
+            try {
+              const cell = invSheet.getRange(r, revCol + 1);
+              const f = cell && typeof cell.getFormula === "function" ? String(cell.getFormula() || "") : "";
+              if (/InvestmentLedger/i.test(f)) {
+                cell.setFormula(
+                  '=SUMIFS(Cashflows_Amount, Cashflows_EntityID, A' + r + ', Cashflows_FlowType, "Revenue") + SUMIFS(Cashflows_Amount, Cashflows_EntityID, A' + r + ', Cashflows_FlowType, "Dividend")'
+                );
+                result.updatedFormulas++;
+              }
+            } catch (eRev) {}
+          }
+        }
+      }
+
+      if (typeof spreadsheet.deleteSheet === "function") {
+        spreadsheet.deleteSheet(legacy);
+        result.retiredSheet = true;
+      }
+    }
+  } catch (err) {
+    console.warn("migrateAndRetireLegacyInvestmentLedger_ error: " + err.message);
+  }
+  return result;
+}
+
+/**
+ * Applies canonical Navy (#0F2A44) header styling to all sheets and synchronizes
+ * Google Sheets Native Tables ("Convert to table") via the Sheets v4 REST API.
+ */
+function syncWorkbookNativeTables_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const summary = { updatedTables: [], addedTables: [] };
+  const allSheets = spreadsheet.getSheets();
+
+  allSheets.forEach(function (sheet) {
+    try {
+      const lastCol = Math.max(sheet.getLastColumn(), 1);
+      sheet.getRange(1, 1, 1, lastCol).setFontWeight("bold").setBackground("#0f2a44").setFontColor("#ffffff");
+      sheet.setFrozenRows(1);
+    } catch (eStyle) {}
+  });
+
+  if (typeof UrlFetchApp === "undefined" || typeof ScriptApp === "undefined") {
+    return summary;
+  }
+
+  try {
+    const ssId = typeof spreadsheet.getId === "function" ? spreadsheet.getId() : SPREADSHEET_ID;
+    const token = ScriptApp.getOAuthToken();
+    const metaUrl = "https://sheets.googleapis.com/v4/spreadsheets/" + encodeURIComponent(ssId) + "?fields=sheets(properties(sheetId,title),tables)";
+    const metaRes = UrlFetchApp.fetch(metaUrl, {
+      method: "get",
+      headers: { Authorization: "Bearer " + token },
+      muteHttpExceptions: true,
+    });
+    if (metaRes.getResponseCode() !== 200) return summary;
+
+    const meta = JSON.parse(metaRes.getContentText() || "{}");
+    const sheetMetaList = meta.sheets || [];
+    const navyRowsProps = {
+      headerColorStyle: { rgbColor: { red: 15 / 255, green: 42 / 255, blue: 68 / 255 } },
+      firstBandColorStyle: { rgbColor: { red: 1, green: 1, blue: 1 } },
+      secondBandColorStyle: { rgbColor: { red: 244 / 255, green: 247 / 255, blue: 250 / 255 } },
+    };
+
+    const batchUrl = "https://sheets.googleapis.com/v4/spreadsheets/" + encodeURIComponent(ssId) + ":batchUpdate";
+    function postBatch_(requests) {
+      return UrlFetchApp.fetch(batchUrl, {
+        method: "post",
+        contentType: "application/json",
+        headers: { Authorization: "Bearer " + token },
+        payload: JSON.stringify({ requests: requests }),
+        muteHttpExceptions: true,
+      });
+    }
+
+    sheetMetaList.forEach(function (sm) {
+      if (!sm || !sm.properties) return;
+      const sheetId = sm.properties.sheetId;
+      const title = sm.properties.title;
+      const liveSheet = spreadsheet.getSheetByName(title);
+      if (!liveSheet) return;
+
+      const endRow = Math.max(liveSheet.getLastRow(), 2);
+      const endCol = Math.max(liveSheet.getLastColumn(), 1);
+      const gridRange = {
+        sheetId: sheetId,
+        startRowIndex: 0,
+        endRowIndex: endRow,
+        startColumnIndex: 0,
+        endColumnIndex: endCol,
+      };
+
+      const existingTables = sm.tables || [];
+      if (existingTables.length > 0) {
+        const tbl = existingTables[0];
+        let res = postBatch_([
+          {
+            updateTable: {
+              table: {
+                tableId: tbl.tableId,
+                name: tbl.name,
+                range: gridRange,
+                rowsProperties: navyRowsProps,
+              },
+              fields: "range,rowsProperties",
+            },
+          },
+        ]);
+        if (res.getResponseCode() !== 200) {
+          res = postBatch_([
+            {
+              updateTable: {
+                table: {
+                  tableId: tbl.tableId,
+                  name: tbl.name,
+                  range: gridRange,
+                },
+                fields: "range",
+              },
+            },
+          ]);
+        }
+        if (res.getResponseCode() === 200) summary.updatedTables.push(title);
+      } else {
+        const safeTableName = String(title || "Table")
+          .replace(/[^A-Za-z0-9_]/g, "_")
+          .replace(/^_+|_+$/g, "") + "_Table";
+        let res = postBatch_([
+          {
+            addTable: {
+              table: {
+                name: safeTableName,
+                range: gridRange,
+                rowsProperties: navyRowsProps,
+              },
+            },
+          },
+        ]);
+        if (res.getResponseCode() !== 200) {
+          res = postBatch_([
+            {
+              addTable: {
+                table: {
+                  name: safeTableName,
+                  range: gridRange,
+                },
+              },
+            },
+          ]);
+        }
+        if (res.getResponseCode() === 200) summary.addedTables.push(title);
+      }
+    });
+  } catch (eApi) {
+    console.warn("syncWorkbookNativeTables_ warning: " + eApi.message);
+  }
+  return summary;
 }
 
 function ensureHeaderedSheet_(ss, sheetName, headers) {
@@ -1117,7 +1406,7 @@ function provisionWorkbookSpillFormulas_(ss) {
             prjSheet,
             pCol["Capital Deployed"],
             "Capital Deployed",
-            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Capital In"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Ledger_Amount, Ledger_InvestmentID, lnk, Ledger_Type, "Capital In"), 0)))))'
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Capital In"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, lnk, Cashflows_FlowType, "Capital In"), 0)))))'
           );
         }
         if (pCol["Cumulative Revenue"] !== undefined) {
@@ -1125,7 +1414,7 @@ function provisionWorkbookSpillFormulas_(ss) {
             prjSheet,
             pCol["Cumulative Revenue"],
             "Cumulative Revenue",
-            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Revenue") + SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Dividend"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Ledger_Amount, Ledger_InvestmentID, lnk, Ledger_Type, "Revenue"), 0)))))'
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Revenue") + SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Dividend"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, lnk, Cashflows_FlowType, "Revenue") + SUMIFS(Cashflows_Amount, Cashflows_EntityID, lnk, Cashflows_FlowType, "Dividend"), 0)))))'
           );
         }
         if (pCol["Cumulative OpEx"] !== undefined) {
@@ -1133,7 +1422,7 @@ function provisionWorkbookSpillFormulas_(ss) {
             prjSheet,
             pCol["Cumulative OpEx"],
             "Cumulative OpEx",
-            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Expense"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Ledger_Amount, Ledger_InvestmentID, lnk, Ledger_Type, "Expense"), 0)))))'
+            "MAP(" + pidL + "2:" + pidL + ", " + linkL + "2:" + linkL + ', LAMBDA(pid, lnk, IF(pid="", "", IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, pid, Cashflows_FlowType, "Expense"), 0) + IF(lnk="", 0, IFERROR(SUMIFS(Cashflows_Amount, Cashflows_EntityID, lnk, Cashflows_FlowType, "Expense"), 0)))))'
           );
         }
         if (pCol["Carrying Value"] !== undefined) {
