@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v109`** (Google Apps Script Build `@110`, Commit `97dc786`) |
+| **Current Live Release** | **`v110`** (Google Apps Script Build `@111`, Commit `bf401f5`) |
 | **Total Tracked Tasks** | **23 Tasks** |
-| **Completed & Shipped (`[DONE]`)** | **11 Tasks (47.8%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`RPT-1`)** |
+| **Completed & Shipped (`[DONE]`)** | **12 Tasks (52.2%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **11 Tasks (47.8%)** |
-| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite (`RPT-1: Statement of Financial Position`) |
+| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite & Member Loan Application |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`RPT-1`** | Financial | **Statement of Financial Position (Balance Sheet)**: Audited IFRS/SASRA Balance Sheet on `Reports` tab with dual-column classical ledger, 4-card solvency ribbon, zero-variance guarantee, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v110`** (`@111`) | 2026-11-19 |
 | **`FIN-1`** | Financial | **Decoupled PAR & 3-Tier Delinquency Waterfall**: Decoupled Portfolio at Risk from guarantor shortfall; implemented 3-tier delinquency classification (explicit status $\to$ due date $\to$ tenor) and Section 51 statutory provisioning. | `@analyst`, `@fixer` | **`v102`** (`@103`) | 2026-11-18 |
 | **`FIN-2`** | Financial | **Net Liquid Cash Reconciliation**: Replaced artificial `savings - loans` formula with true verified physical bank accounts + CIC MMF liquidity summary and fallback waterfall. | `@analyst`, `@fixer` | **`v104`** (`@105`) | 2026-11-19 |
 | **`FIN-3`** | Financial | **Multi-Source Cashflow Restoration**: Re-wired period inflows (repayments, yields, revenue) and outflows (disbursements, expenses) across active date ranges. | `@analyst`, `@fixer` | **`v105`** (`@106`) | 2026-11-19 |
