@@ -616,13 +616,24 @@ function getAccountsBalanceChartData_() {
   return { labels: labels, values: values, rows: rows };
 }
 
+function parseSheetDate_(raw) {
+  if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+  if (!raw) return null;
+  const d = new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 /**
- * Home dashboard: investment charts (optional sheets — missing tabs return empty series).
+ * Home dashboard: investment charts and period inflow/outflow cashflow cards.
+ * Optional sheets return empty series / 0 totals without breaking the dashboard.
  */
 function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
+  const ss = getSpreadsheet_();
+  const bounds = rangeBounds || getDateRangeBounds_(normalizeRangeKey_(effectiveRange), now);
+
   const investedVsRevenue = [];
   try {
-    const sheet = getSpreadsheet_().getSheetByName(SHEETS.INVESTMENTS);
+    const sheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENTS);
     if (sheet) {
       const values = sheet.getDataRange().getValues();
       if (values.length > 1) {
@@ -654,11 +665,108 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
     // optional sheet
   }
 
+  let repaymentsInflow = 0;
+  try {
+    const repSheet = getSheetByNameInsensitive_(ss, SHEETS.LOAN_REPAYMENTS);
+    if (repSheet && repSheet.getLastRow() > 1) {
+      const rv = repSheet.getDataRange().getValues();
+      if (rv.length > 1) {
+        const rc = getHeaderMap_(rv[0]);
+        const rDateCol =
+          rc["Payment Date"] !== undefined
+            ? rc["Payment Date"]
+            : (rc["Repayment Date"] !== undefined ? rc["Repayment Date"] : rc["Date"]);
+        const rAmtCol = rc["Total Paid"] !== undefined ? rc["Total Paid"] : rc["Amount"];
+        const rStatCol = rc["Status"];
+
+        if (rDateCol !== undefined && rAmtCol !== undefined) {
+          for (let r = 1; r < rv.length; r++) {
+            const row = rv[r];
+            const parsedDate = parseSheetDate_(row[rDateCol]);
+            if (!parsedDate || !isWithinRange_(parsedDate, bounds.start, bounds.end)) continue;
+
+            const stat = rStatCol !== undefined ? String(row[rStatCol] || "").trim().toLowerCase() : "";
+            if (stat !== "" && stat !== "approved") continue;
+
+            repaymentsInflow += Number(row[rAmtCol]) || 0;
+          }
+        }
+      }
+    }
+  } catch (eRep) {
+    // optional sheet
+  }
+
+  let fundYieldInflow = 0;
+  try {
+    const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+    if (fundSheet && fundSheet.getLastRow() > 1) {
+      const fv = fundSheet.getDataRange().getValues();
+      if (fv.length > 1) {
+        const fc = getHeaderMap_(fv[0]);
+        const fDateCol = fc["Statement Date"] !== undefined ? fc["Statement Date"] : fc["Date"];
+        const netCol = fc["Net Yield"];
+        const grossCol = fc["Gross Interest"];
+        const taxCol = fc["Withholding Tax"];
+
+        if (fDateCol !== undefined) {
+          for (let f = 1; f < fv.length; f++) {
+            const row = fv[f];
+            const parsedDate = parseSheetDate_(row[fDateCol]);
+            if (!parsedDate || !isWithinRange_(parsedDate, bounds.start, bounds.end)) continue;
+
+            const gross = grossCol !== undefined ? (Number(row[grossCol]) || 0) : 0;
+            const tax = taxCol !== undefined ? (Number(row[taxCol]) || 0) : 0;
+            const netRaw = netCol !== undefined ? row[netCol] : undefined;
+            const hasNet = netRaw !== "" && netRaw !== undefined && netRaw !== null && Number(netRaw) !== 0;
+            const netYield = hasNet ? (Number(netRaw) || 0) : (gross - tax);
+
+            fundYieldInflow += netYield;
+          }
+        }
+      }
+    }
+  } catch (eFund) {
+    // optional sheet
+  }
+
+  let loansDisbursedOutflow = 0;
+  try {
+    const loanSheet = getSheetByNameInsensitive_(ss, SHEETS.LOANS);
+    if (loanSheet && loanSheet.getLastRow() > 1) {
+      const lvLoans = loanSheet.getDataRange().getValues();
+      if (lvLoans.length > 1) {
+        const lcLoans = getHeaderMap_(lvLoans[0]);
+        const appDateCol = lcLoans["Approved Date"];
+        const reqAmtCol =
+          lcLoans["Requested Amount"] !== undefined ? lcLoans["Requested Amount"] : lcLoans["Principal Amount"];
+        const statCol = lcLoans["Status"];
+
+        if (appDateCol !== undefined && reqAmtCol !== undefined && statCol !== undefined) {
+          for (let k = 1; k < lvLoans.length; k++) {
+            const row = lvLoans[k];
+            const stat = String(row[statCol] || "").trim().toLowerCase();
+            if (stat !== "active" && stat !== "settled") continue;
+
+            const parsedDate = parseSheetDate_(row[appDateCol]);
+            if (!parsedDate || !isWithinRange_(parsedDate, bounds.start, bounds.end)) continue;
+
+            loansDisbursedOutflow += Number(row[reqAmtCol]) || 0;
+          }
+        }
+      }
+    }
+  } catch (eLoan) {
+    // optional sheet
+  }
+
+  let ledgerRevenueInflow = 0;
+  let ledgerOutflow = 0;
   const monthlyRev = {};
   const monthlyExp = {};
   const revenueByCategoryMap = {};
   try {
-    const ledgerSheet = getSpreadsheet_().getSheetByName(SHEETS.INVESTMENT_LEDGER);
+    const ledgerSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_LEDGER);
     if (ledgerSheet) {
       const lv = ledgerSheet.getDataRange().getValues();
       if (lv.length > 1) {
@@ -666,30 +774,31 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
         if (
           lc["Date"] !== undefined &&
           lc["Type"] !== undefined &&
-          lc["Category"] !== undefined &&
-          lc["Amount"] !== undefined &&
-          lc["Transaction Fee"] !== undefined
+          lc["Amount"] !== undefined
         ) {
           for (let j = 1; j < lv.length; j++) {
             const row = lv[j];
-            const rawDate = row[lc["Date"]];
-            if (!(rawDate instanceof Date)) continue;
+            const rawDate = parseSheetDate_(row[lc["Date"]]);
+            if (!rawDate) continue;
             const kind = normalizeLedgerType_(row[lc["Type"]]);
             const absAmt = Math.abs(Number(row[lc["Amount"]]) || 0);
-            const fee = Number(row[lc["Transaction Fee"]]) || 0;
-            const catLabel = ledgerCategoryLabel_(row[lc["Category"]]);
+            const fee = lc["Transaction Fee"] !== undefined ? (Number(row[lc["Transaction Fee"]]) || 0) : 0;
+            const catLabel = lc["Category"] !== undefined ? ledgerCategoryLabel_(row[lc["Category"]]) : "Uncategorized";
             const monthKey =
               rawDate.getFullYear() + "-" + String(rawDate.getMonth() + 1).padStart(2, "0");
+            const inRange = isWithinRange_(rawDate, bounds.start, bounds.end);
 
             if (kind === "revenue") {
               monthlyRev[monthKey] = (monthlyRev[monthKey] || 0) + absAmt;
-              if (isWithinRange_(rawDate, rangeBounds.start, rangeBounds.end)) {
+              if (inRange) {
                 revenueByCategoryMap[catLabel] = (revenueByCategoryMap[catLabel] || 0) + absAmt;
+                ledgerRevenueInflow += absAmt;
               }
-            } else if (kind === "expense") {
+            } else if (kind === "expense" || kind === "capital in") {
               monthlyExp[monthKey] = (monthlyExp[monthKey] || 0) + absAmt + fee;
-            } else if (kind === "capital in") {
-              monthlyExp[monthKey] = (monthlyExp[monthKey] || 0) + absAmt + fee;
+              if (inRange) {
+                ledgerOutflow += absAmt + fee;
+              }
             }
           }
         }
@@ -719,7 +828,24 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
     return revenueByCategoryMap[k];
   });
 
+  const totalInflows = repaymentsInflow + fundYieldInflow + ledgerRevenueInflow;
+  const totalOutflows = loansDisbursedOutflow + ledgerOutflow;
+
   return {
+    totalInflows: Math.round(totalInflows * 100) / 100,
+    totalOutflows: Math.round(totalOutflows * 100) / 100,
+    netCashflow: Math.round((totalInflows - totalOutflows) * 100) / 100,
+    breakdown: {
+      inflows: {
+        loanRepayments: Math.round(repaymentsInflow * 100) / 100,
+        fundYields: Math.round(fundYieldInflow * 100) / 100,
+        ledgerRevenue: Math.round(ledgerRevenueInflow * 100) / 100,
+      },
+      outflows: {
+        loansDisbursed: Math.round(loansDisbursedOutflow * 100) / 100,
+        operatingExpenses: Math.round(ledgerOutflow * 100) / 100,
+      },
+    },
     investedVsRevenue: investedVsRevenue,
     monthlyInvestmentTrend: {
       labels: monthLabels,
