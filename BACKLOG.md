@@ -8,7 +8,7 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v122`** (Google Apps Script Build `@123`, Commit `f238f00`) |
+| **Current Live Release** | **`v123`** (Google Apps Script Build `@124`, Commit `43aab59`) |
 | **Total Tracked Tasks** | **30 Tasks** (Expanded with `ARC-1`–`ARC-4` & `UI-4`–`UI-6`) |
 | **Completed & Shipped (`[DONE]`)** | **20 Tasks (66.7%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
@@ -21,7 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
-| **`UI-6`** | UI/UX | **Statements & Confirm Modal Theme Polish, Period Selector & WhatsApp Action Fix**: Polished Light/Dark institutional theme parity across the Statements view and Confirm Modal, fixed the Period Selector interaction, and resolved WhatsApp action dispatch. | `@designer`, `@fixer`, `@sentinel` | **`v122`** (`@123`) | 2026-11-19 |
+| **`UI-6`** | UI/UX | **Statements & Confirm Modal Theme Polish, Period Selector & WhatsApp Action Fix**: Polished Light/Dark institutional theme parity across the Statements view and Confirm Modal, implemented custom Tailwind Period dropdown, dark/light button consistency, and resolved WhatsApp blank tab & action dispatch. | `@designer`, `@fixer`, `@sentinel` | **`v122`–`v123`** (`@123`–`@124`) | 2026-11-19 |
 | **`UI-5`** | UI/UX & Backend | **Server CacheService, SheetContext & 20-Row Pagination for Dividends & Statements**: Combined server `CacheService`, request-scoped `SheetContext`, and background prefetch to optimize first-visit load times, and added 20-row default pagination to both the **Verified Fund Statements** table (`Dividends`) and **Members Statement Dispatch** table (`Statements`). | `@fixer`, `@designer`, `@sentinel` | **`v121`** (`@122`) | 2026-11-19 |
 | **`UI-4`** | UI/UX | **Unified Client-Side SWR Cache & Zero-Skeleton Tab Navigation**: Implemented unified client-side Stale-While-Revalidate (SWR) caching across `dividends`, `statements`, `contributions`, `loans`, `investments`, `accounts`, and `roles`, serving cached view data immediately on tab switch with background revalidation, zero repeated skeletons, and mutation-based cache invalidation. | `@designer`, `@fixer`, `@sentinel` | **`v120`** (`@121`) | 2026-11-19 |
 | **`ARC-4`** | Architecture | **Request-Scoped SheetContext & RPC Optimization Pipeline**: Implemented request-scoped `SheetContext` (`server/context.service.js`) batching and lazily caching open sheet instances and multi-range reads per HTTP execution across `apiGetDashboardData` and `apiGetReportsData`, cutting dashboard/report load roundtrips to <= 8 optimized reads with metadata-driven column header resolution. | `@fixer`, `@sentinel` | **`v119`** (`@120`) | 2026-11-19 |
