@@ -8,11 +8,11 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v126`** (Google Apps Script Build `@127`, Commit `a927441`) |
-| **Total Tracked Tasks** | **31 Tasks** (Expanded with `ARC-1`–`ARC-4` & `UI-4`–`UI-7`) |
-| **Completed & Shipped (`[DONE]`)** | **21 Tasks (67.7%)** |
+| **Current Live Release** | **`v127`** (Google Apps Script Build `@128`, Commit `b2129d5`) |
+| **Total Tracked Tasks** | **32 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7` & `COM-3`) |
+| **Completed & Shipped (`[DONE]`)** | **22 Tasks (68.8%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (32.3%)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (31.3%)** |
 | **Current Sprint Focus** | `RPT-4: Official AGM & Bank Audit Export Pack` |
 
 ---
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`COM-3`** | Communications | **Institutional Communications Polish, HTML Email Escaping, Statement Preview Parity & WhatsApp Alignment**: Enforced strict HTML escaping on dynamic fields in outgoing HTML emails, ensured Statement Preview modal parity with delivered statements, and aligned WhatsApp message formatting and dispatch templates with institutional standards. | `@messenger`, `@fixer`, `@designer`, `@sentinel` | **`v127`** (`@128`) | 2026-11-19 |
 | **`UI-7`** | UI/UX | **Date Period / Range Selector & 1-Click Direct WhatsApp Launch**: Implemented Date Period / Range Selector for flexible statement filtering, enabled 1-Click Direct WhatsApp Launch for member statement delivery, fixed active period preset hover state, and aligned confirm modal buttons to dark/light theme. | `@designer`, `@fixer`, `@sentinel` | **`v124`–`v126`** (`@125`–`@127`) | 2026-11-19 |
 | **`UI-6`** | UI/UX | **Statements & Confirm Modal Theme Polish, Period Selector & WhatsApp Action Fix**: Polished Light/Dark institutional theme parity across the Statements view and Confirm Modal, implemented custom Tailwind Period dropdown, dark/light button consistency, and resolved WhatsApp blank tab & action dispatch. | `@designer`, `@fixer`, `@sentinel` | **`v122`–`v123`** (`@123`–`@124`) | 2026-11-19 |
 | **`UI-5`** | UI/UX & Backend | **Server CacheService, SheetContext & 20-Row Pagination for Dividends & Statements**: Combined server `CacheService`, request-scoped `SheetContext`, and background prefetch to optimize first-visit load times, and added 20-row default pagination to both the **Verified Fund Statements** table (`Dividends`) and **Members Statement Dispatch** table (`Statements`). | `@fixer`, `@designer`, `@sentinel` | **`v121`** (`@122`) | 2026-11-19 |
