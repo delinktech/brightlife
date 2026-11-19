@@ -1,5 +1,5 @@
 # Brightlife SHG — System Contract & Shared State
-*Maintained and synchronized by specialist sub-agents (`@shipper`, `@ledger`, `@analyst`, `@fixer`, `@migrator`, `@messenger`, `@designer`, `@sentinel`).*
+*Maintained and synchronized by specialist sub-agents (`@scrum`, `@shipper`, `@ledger`, `@analyst`, `@fixer`, `@migrator`, `@messenger`, `@designer`, `@sentinel`).*
 
 ---
 
