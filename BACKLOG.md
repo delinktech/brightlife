@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v127`** (Google Apps Script Build `@128`, Commit `b2129d5`) |
+| **Current Live Release** | **`v128`** (Google Apps Script Build `@129`, Commits `3236d9f` + `7eb083a`) |
 | **Total Tracked Tasks** | **32 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7` & `COM-3`) |
-| **Completed & Shipped (`[DONE]`)** | **22 Tasks (68.8%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (RPT-4)** |
+| **Completed & Shipped (`[DONE]`)** | **23 Tasks (71.9%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **9 Tasks (28.1%)** |
-| **Current Sprint Focus** | `RPT-4: Official AGM & Bank Audit Export Pack` |
+| **Current Sprint Focus** | Tier 2 Priorities — `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`RPT-4`** | Financial | **Official AGM & Bank Audit Export Pack**: One-click generation of the combined institutional Brightlife SHG Annual Financial Pack (Executive PDF combining Balance Sheet `RPT-1`, Income Statement `RPT-2`, and Capital Projects summary with BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps, plus multi-statement RFC-4180 CSV / Excel audit package export), adhering to `bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, and `tabular-nums` design tokens. | `@designer`, `@fixer`, `@sentinel` | **`v128`** (`@129`) | 2026-11-19 |
 | **`COM-3`** | Communications | **Institutional Communications Polish, HTML Email Escaping, Statement Preview Parity & WhatsApp Alignment**: Enforced strict HTML escaping on dynamic fields in outgoing HTML emails, ensured Statement Preview modal parity with delivered statements, and aligned WhatsApp message formatting and dispatch templates with institutional standards. | `@messenger`, `@fixer`, `@designer`, `@sentinel` | **`v127`** (`@128`) | 2026-11-19 |
 | **`UI-7`** | UI/UX | **Date Period / Range Selector & 1-Click Direct WhatsApp Launch**: Implemented Date Period / Range Selector for flexible statement filtering, enabled 1-Click Direct WhatsApp Launch for member statement delivery, fixed active period preset hover state, and aligned confirm modal buttons to dark/light theme. | `@designer`, `@fixer`, `@sentinel` | **`v124`–`v126`** (`@125`–`@127`) | 2026-11-19 |
 | **`UI-6`** | UI/UX | **Statements & Confirm Modal Theme Polish, Period Selector & WhatsApp Action Fix**: Polished Light/Dark institutional theme parity across the Statements view and Confirm Modal, implemented custom Tailwind Period dropdown, dark/light button consistency, and resolved WhatsApp blank tab & action dispatch. | `@designer`, `@fixer`, `@sentinel` | **`v122`–`v123`** (`@123`–`@124`) | 2026-11-19 |
@@ -48,34 +49,11 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 10 tasks (1 `[IN PROGRESS]`, 9 `[BACKLOG]`) are categorized below in strict execution priority:
-
-### Tier 1: Architectural Modernization & Active Sprint Priorities
-
-#### 1. `RPT-4: Official AGM & Bank Audit Export Pack` `[IN PROGRESS]`
-* **Priority:** `P0 (Top Reporting Priority)`
-* **Domain:** Document Governance (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
-* **Location:** `Reports` tab (`#home-subview-reports`)
-* **Objective:** One-click generation of the combined institutional Brightlife SHG Annual Financial Pack:
-  - Executive PDF report combining Balance Sheet (`RPT-1`), Income Statement (`RPT-2`), and Capital Projects summary, styled with formal BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps.
-  - Full multi-statement CSV / Excel audit package export for commercial bank financing or SACCO regulator filing.
-* **Dependencies:** `RPT-1` (Shipped in v110), `RPT-2` (Shipped in v111), `ARC-1` (Shipped in v112), `ARC-2` (Shipped in v113).
-* **Active Sprint UI & Design-Token Checklist:**
-  - Clean dark/light mode buttons (`bg-slate-900` / `dark:bg-slate-100` with contrasting text, full Light/Dark institutional theme parity).
-  - Zero unstyled controls (every button, dropdown, checkbox, and trigger styled with Tailwind institutional tokens).
-  - `min-h-[38px]` touch targets on all interactive buttons and controls.
-  - `tabular-nums` enforced on all financial figures, balances, percentages, and summary tables.
-* **Definition of Done (DoD):**
-  - One-click print preview generates comprehensive institutional AGM pack.
-  - RFC-4180 CSV / Excel export generates verified multi-tab financial workbook.
-  - All active sprint UI & design-token checklist items verified (`bg-slate-900` / `dark:bg-slate-100`, no unstyled controls, `min-h-[38px]`, `tabular-nums`).
-  - Automated Node syntax and VM tests pass (`15/15 PASS`); `@sentinel` clearance PASS; deployed to GAS and logged in `RELEASES.md`.
-
----
+The remaining 9 tasks are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Exports & Data Reconciliation
 
-#### 2. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
+#### 1. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
 * **Priority:** `P1 (High)`
 * **Domain:** Governance & Internal Controls (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
 * **Location:** `Loans.html` & `server/loans.service.js`
@@ -84,14 +62,14 @@ The remaining 10 tasks (1 `[IN PROGRESS]`, 9 `[BACKLOG]`) are categorized below 
   - Audit trail logging in `SHEETS.AUDIT_LOG`.
 * **Dependencies:** UI-2.
 
-#### 3. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
+#### 2. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
 * **Priority:** `P1 (High)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
 * **Location:** `SHEETS.ACCOUNTS` & `SHEETS.FUND_STATEMENTS`
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
 * **Dependencies:** `ARC-1` (Shipped in v112).
 
-#### 4. `COM-1: Automated WhatsApp & Email Transaction Receipts`
+#### 3. `COM-1: Automated WhatsApp & Email Transaction Receipts`
 * **Priority:** `P1 (High)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
@@ -102,7 +80,7 @@ The remaining 10 tasks (1 `[IN PROGRESS]`, 9 `[BACKLOG]`) are categorized below 
 
 ### Tier 3: Advanced Intelligence, Workflows & Platform Hardening
 
-#### 5. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
+#### 4. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
 * **Priority:** `P2 (Deferred by User Request)`
 * **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer`)
 * **Location:** `Loans.html` (`Apply for Loan` Modal)
@@ -114,35 +92,35 @@ The remaining 10 tasks (1 `[IN PROGRESS]`, 9 `[BACKLOG]`) are categorized below 
   - Server-side validation and write to `SHEETS.LOANS` with `Status = "Pending"`.
 * **Dependencies:** None (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
 
-#### 6. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 5. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 7. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
+#### 6. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
 * **Priority:** `P2 (Medium)`
 * **Domain:** UI/UX (`@designer`)
 * **Location:** `Contributions.html`, `Loans.html`, `Members.html`
 * **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
 * **Dependencies:** UI-1A.
 
-#### 8. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 7. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 9. `MIG-3: Legacy Chama Google Sheet Consolidation`
+#### 8. `MIG-3: Legacy Chama Google Sheet Consolidation`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Migration (`@migrator` $\to$ `@ledger`)
 * **Location:** Legacy Workbooks
 * **Objective:** Final ingestion and archival of any legacy standalone spreadsheet tabs into the unified Brightlife database.
 * **Dependencies:** MIG-2.
 
-#### 10. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 9. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
