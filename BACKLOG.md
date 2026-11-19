@@ -11,9 +11,9 @@
 | **Current Live Release** | **`v111`** (Google Apps Script Build `@112`, Commit `004929a`) |
 | **Total Tracked Tasks** | **27 Tasks** (Expanded with Architectural Modernization `ARC-1`–`ARC-4`) |
 | **Completed & Shipped (`[DONE]`)** | **13 Tasks (48.1%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **14 Tasks (51.9%)** |
-| **Current Sprint Focus** | Phase 2.5: Architectural Modernization & AGM Audit Pack (`ARC-1` $\to$ `ARC-4`, `RPT-4`) |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`ARC-1`)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **13 Tasks (48.1%)** |
+| **Current Sprint Focus** | Phase 2.5: Architectural Modernization — `ARC-1: Institutional Schema Standard & Reference Data Architecture` |
 
 ---
 
@@ -43,7 +43,7 @@ The remaining 14 tasks are categorized below in strict execution priority:
 
 ### Tier 1: Architectural Modernization & Active Sprint Priorities
 
-#### 1. `ARC-1: Institutional Schema Standard & Reference Data Architecture`
+#### 1. `ARC-1: Institutional Schema Standard & Reference Data Architecture` `[IN PROGRESS]`
 * **Priority:** `P0 (Top Architectural Foundation)`
 * **Domain:** Core Data Architecture & Infrastructure (`@ledger` $\to$ `@migrator` $\to$ `@fixer`)
 * **Location:** `Code.js`, `server/config.service.js`, `SHEETS.CONSTANTS`
