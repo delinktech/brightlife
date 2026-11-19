@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v133** | `@134` | `AKfycbx4........wRCA` | `3b067dd` | **Production** | 2026-11-20 | Designer & Sentinel: Implemented searchable combobox with type-ahead filtering for loan guarantors (`loans.ui.js.html`). |
+| **v134** | `@135` | `AKfycbx4........wRCA` | `86fc96f` | **Production** | 2026-11-20 | Fixer & Sentinel: Protected member financial privacy in guarantor directory and enforced strict guarantor solvency limits (`loans.service.js`, `loans.ui.js.html`). |
+| **v133** | `@134` | `AKfycbx4........wRCA` | `3b067dd` | Archived | 2026-11-20 | Designer & Sentinel: Implemented searchable combobox with type-ahead filtering for loan guarantors (`loans.ui.js.html`). |
 | **v132** | `@133` | `AKfycbx4........wRCA` | `799e174` | Archived | 2026-11-20 | Designer, Fixer & Sentinel: Enabled dynamic guarantor dropdowns and enforced member-only borrower pre-population locking in Apply Loan modal (`app.ui.js.html`, `loans.ui.js.html`, `Loans.html`). |
 | **v131** | `@132` | `AKfycbx4........wRCA` | `090ec98` | Archived | 2026-11-20 | Designer & Sentinel: UI-2 modal polish — upgraded Apply Loan modal with modern shadcn dropdowns, borrower search icon, and balanced KPI cards (`Loans.html`, `loans.ui.js.html`). |
 | **v130** | `@131` | `AKfycbx4........wRCA` | `f188d2a` | Archived | 2026-11-19 | Fixer, Designer & Sentinel: Task UI-2 - Implemented Native Dashboard Loan Application Workflow with dynamic policy validation, guarantor selection, and live repayment preview (`loans.service.js`, `Loans.html`, `loans.ui.js.html`). |
