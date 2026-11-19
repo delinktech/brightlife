@@ -400,71 +400,218 @@
 
   </div><!-- /#home-subview-overview -->
 
-  <!-- Subview 2: Analytics (Actuarial Intelligence Preview) -->
+  <!-- Subview 2: Analytics (VIS-1 Cash Flow Waterfall & Actuarial Suite) -->
   <div id="home-subview-analytics" class="hidden space-y-4 sm:space-y-6">
-    <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-5 sm:p-6 shadow-sm space-y-5">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
-        <div class="flex items-start gap-3">
-          <div class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 flex items-center justify-center shrink-0">
-            <i class="fas fa-chart-line text-sm"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Actuarial Visualizations</h3>
-              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30">
-                Institutional Preview
-              </span>
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Dedicated deep-dive financial modeling modules structured for multi-period Chama risk analysis.
-            </p>
-          </div>
+    <!-- Section Header + Range Context Bar -->
+    <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-start gap-3">
+        <div class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 flex items-center justify-center shrink-0">
+          <i class="fas fa-water text-sm"></i>
         </div>
-        <button type="button" onclick="switchHomeSubTab('overview')"
-          class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors shrink-0">
-          <i class="fas fa-arrow-left text-[11px] text-slate-500 dark:text-slate-400"></i> <span>Back to Overview</span>
-        </button>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Cash Flow Waterfall &amp; Liquidity Bridge</h3>
+            <span id="analytics-wf-range-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 uppercase tracking-wider">
+              Year
+            </span>
+            <span id="analytics-wf-source-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30">
+              Liquidity Bridge
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Period cash progression from opening liquid reserves through member inflows, credit disbursements, and operating outflows.
+          </p>
+        </div>
+      </div>
+      <button type="button" onclick="switchHomeSubTab('overview')"
+        class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors shrink-0">
+        <i class="fas fa-arrow-left text-[11px] text-slate-500 dark:text-slate-400"></i> <span>Back to Overview</span>
+      </button>
+    </div>
+
+    <!-- Executive Waterfall KPI Ribbon (5 Cards) -->
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+      <!-- Card 1: Opening Liquid Balance -->
+      <div class="bg-white dark:bg-[#0b1320] p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Opening Liquid Balance</span>
+          <span class="w-7 h-7 rounded-lg bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xs shrink-0">
+            <i class="fas fa-flag"></i>
+          </span>
+        </div>
+        <div>
+          <h4 id="wf-kpi-opening" class="text-lg sm:text-xl font-bold text-sky-700 dark:text-sky-400 tracking-tight font-mono tabular-nums">KES 0</h4>
+          <p id="wf-kpi-opening-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 truncate">Period starting position</p>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sky-700 dark:text-sky-400 flex items-center justify-center text-xs">
-              <i class="fas fa-water"></i>
-            </span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Treasury Flow</span>
-          </div>
-          <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Cashflow Waterfall</h4>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            Net inflow-to-outflow velocity tracking member contributions, loan repayments, disbursements, and reserve retention.
-          </p>
+      <!-- Card 2: Total Inflows -->
+      <div class="bg-white dark:bg-[#0b1320] p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Inflows</span>
+          <span class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0">
+            <i class="fas fa-arrow-trend-up"></i>
+          </span>
         </div>
+        <div>
+          <h4 id="wf-kpi-inflows" class="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0</h4>
+          <div class="mt-1.5">
+            <span id="wf-kpi-inflow-pct" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold font-mono tabular-nums bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60">
+              +0.0%
+            </span>
+          </div>
+        </div>
+      </div>
 
-        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs">
-              <i class="fas fa-arrow-trend-up"></i>
-            </span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Credit Concentration</span>
-          </div>
-          <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Exposure Trajectory</h4>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            Borrower exposure concentration, guarantor liability coverage curves, and portfolio leverage over rolling quarters.
-          </p>
+      <!-- Card 3: Total Outflows -->
+      <div class="bg-white dark:bg-[#0b1320] p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Outflows</span>
+          <span class="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 flex items-center justify-center text-xs shrink-0">
+            <i class="fas fa-arrow-trend-down"></i>
+          </span>
         </div>
+        <div>
+          <h4 id="wf-kpi-outflows" class="text-lg sm:text-xl font-bold text-rose-700 dark:text-rose-400 tracking-tight font-mono tabular-nums">KES 0</h4>
+          <div class="mt-1.5">
+            <span id="wf-kpi-outflow-pct" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold font-mono tabular-nums bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/70 dark:border-rose-800/60">
+              Burn: 0.0%
+            </span>
+          </div>
+        </div>
+      </div>
 
-        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs">
-              <i class="fas fa-layer-group"></i>
-            </span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">Delinquency Buckets</span>
-          </div>
-          <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">SASRA Aging</h4>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            Standardized 1–30, 31–60, 61–90, and 90+ day arrears stratification aligned with SACCO/SASRA prudential norms.
-          </p>
+      <!-- Card 4: Net Cash Movement (Delta) -->
+      <div class="bg-white dark:bg-[#0b1320] p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Net Cash Movement (&#916;)</span>
+          <span class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs shrink-0">
+            <i class="fas fa-scale-balanced"></i>
+          </span>
         </div>
+        <div>
+          <h4 id="wf-kpi-net" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h4>
+          <div class="mt-1.5">
+            <span id="wf-kpi-net-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              Balanced
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5: Closing Liquid Reserves -->
+      <div class="col-span-2 md:col-span-1 bg-white dark:bg-[#0b1320] p-4 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Closing Liquid Reserves</span>
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs shrink-0">
+            <i class="fas fa-vault"></i>
+          </span>
+        </div>
+        <div>
+          <h4 id="wf-kpi-closing" class="text-lg sm:text-xl font-bold text-indigo-700 dark:text-indigo-400 tracking-tight font-mono tabular-nums">KES 0</h4>
+          <p id="wf-kpi-closing-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 truncate">Ending verified liquidity</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Waterfall Chart Container -->
+    <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Liquidity Waterfall Bridge</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Floating step cumulative cash movement across contributions, credit operations &amp; investments.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600 dark:text-slate-300 shrink-0">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-xs bg-[#0284c7] dark:bg-[#38bdf8]"></span> Opening
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-xs bg-[#10b981]"></span> Inflows
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-xs bg-[#f43f5e]"></span> Outflows
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-xs bg-[#4f46e5] dark:bg-[#818cf8]"></span> Closing
+          </span>
+        </div>
+      </div>
+      <div class="h-80 sm:h-96 w-full relative">
+        <canvas id="cashflowWaterfallChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Inflows vs Outflows Decomposition Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+      <!-- Left: Inflows Breakdown -->
+      <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i class="fas fa-arrow-down-left text-emerald-700 dark:text-emerald-400 text-xs"></i>
+              <span>Cash Inflows Breakdown</span>
+            </h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Contributions, loan repayments, MMF/fund yields &amp; ledger revenue</p>
+          </div>
+          <span id="wf-inflows-total-badge" class="font-mono tabular-nums text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60">
+            KES 0
+          </span>
+        </div>
+        <div id="wf-inflows-breakdown" class="space-y-3 text-xs">
+          <div class="py-4 text-center text-slate-500 dark:text-slate-400 text-xs">Loading cash inflows breakdown...</div>
+        </div>
+      </div>
+
+      <!-- Right: Outflows Breakdown -->
+      <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div>
+            <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i class="fas fa-arrow-up-right text-rose-700 dark:text-rose-400 text-xs"></i>
+              <span>Cash Outflows Breakdown</span>
+            </h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Loan capital disbursements &amp; operating/investment outflows</p>
+          </div>
+          <span id="wf-outflows-total-badge" class="font-mono tabular-nums text-xs font-bold px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/70 dark:border-rose-800/60">
+            KES 0
+          </span>
+        </div>
+        <div id="wf-outflows-breakdown" class="space-y-3 text-xs">
+          <div class="py-4 text-center text-slate-500 dark:text-slate-400 text-xs">Loading cash outflows breakdown...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upcoming Module Placeholders (VIS-2 & VIS-3) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/70 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs">
+            <i class="fas fa-arrow-trend-up"></i>
+          </span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            VIS-2 Upcoming
+          </span>
+        </div>
+        <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Exposure Trajectory</h4>
+        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+          Borrower exposure concentration, guarantor liability coverage curves, and portfolio leverage over rolling quarters.
+        </p>
+      </div>
+
+      <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/70 dark:border-amber-800/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs">
+            <i class="fas fa-layer-group"></i>
+          </span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            VIS-3 Upcoming
+          </span>
+        </div>
+        <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">SASRA Aging</h4>
+        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+          Standardized 1–30, 31–60, 61–90, and 90+ day arrears stratification aligned with SACCO/SASRA prudential norms.
+        </p>
       </div>
     </div>
   </div>
@@ -556,6 +703,7 @@
 
 <script>
   let charts = {}; // Global object to track chart instances
+  window.latestHomeAnalyticsData = window.latestHomeAnalyticsData || null;
 
   function getChartThemeTokens() {
     const isDark = Boolean(document.documentElement && document.documentElement.classList.contains('dark'));
@@ -563,17 +711,30 @@
       isDark: isDark,
       gridColor: isDark ? '#1e293b' : '#f1f5f9',
       tickColor: isDark ? '#94a3b8' : '#64748b',
-      pointBorderColor: isDark ? '#0b1320' : '#ffffff'
+      pointBorderColor: isDark ? '#0b1320' : '#ffffff',
+      connectorColor: isDark ? '#334155' : '#cbd5e1',
+      wfOpeningColor: isDark ? '#38bdf8' : '#0284c7',
+      wfInflowColor: '#10b981',
+      wfOutflowColor: '#f43f5e',
+      wfClosingColor: isDark ? '#818cf8' : '#4f46e5'
     };
   }
 
   window.resizeHomeCharts = function () {
     Object.keys(charts || {}).forEach(function (key) {
+      if (key === 'cashflowWaterfallChart') return;
       const ch = charts[key];
       if (ch && typeof ch.resize === "function") {
         try { ch.resize(); } catch (_) {}
       }
     });
+  };
+
+  window.resizeAnalyticsCharts = function () {
+    const ch = charts && charts.cashflowWaterfallChart;
+    if (ch && typeof ch.resize === "function") {
+      try { ch.resize(); } catch (_) {}
+    }
   };
 
   window.syncChartsTheme = function () {
@@ -594,6 +755,15 @@
       }
       if (key === 'monthlyContribChart' && ch.data && ch.data.datasets && ch.data.datasets[0]) {
         ch.data.datasets[0].pointBorderColor = t.pointBorderColor;
+      }
+      if (key === 'cashflowWaterfallChart' && Array.isArray(ch._wfStepTypes) && ch.data && ch.data.datasets && ch.data.datasets[0]) {
+        ch.data.datasets[0].backgroundColor = ch._wfStepTypes.map(function (st) {
+          if (st === 'opening') return t.wfOpeningColor;
+          if (st === 'closing') return t.wfClosingColor;
+          if (st === 'outflow') return t.wfOutflowColor;
+          return t.wfInflowColor;
+        });
+        ch._wfConnectorColor = t.connectorColor;
       }
       try { ch.update('none'); } catch (_) {}
     });
@@ -813,7 +983,386 @@
     }
   }
 
+  function buildWaterfallModel_(data) {
+    const safe = data || {};
+    const wf = safe.cashflowWaterfall;
+    if (wf && typeof wf === "object") {
+      const wfIn = wf.inflows || {};
+      const wfOut = wf.outflows || {};
+      const contrib = Number(wfIn.contributions) || 0;
+      const repay = Number(wfIn.loanRepayments) || 0;
+      const yields = Number(wfIn.fundYield !== undefined ? wfIn.fundYield : wfIn.fundYields) || 0;
+      const otherRev = Number(wfIn.otherRevenue !== undefined ? wfIn.otherRevenue : wfIn.ledgerRevenue) || 0;
+      const totalIn = wfIn.total !== undefined ? (Number(wfIn.total) || 0) : (contrib + repay + yields + otherRev);
+
+      const disb = Number(wfOut.loanDisbursements !== undefined ? wfOut.loanDisbursements : wfOut.loansDisbursed) || 0;
+      const opex = Number(wfOut.operatingExpenses) || 0;
+      const totalOut = wfOut.total !== undefined ? (Number(wfOut.total) || 0) : (disb + opex);
+
+      const opening = Number(wf.openingCash !== undefined ? wf.openingCash : wf.openingBalance) || 0;
+      const closing = Number(wf.closingCash !== undefined ? wf.closingCash : (wf.closingBalance !== undefined ? wf.closingBalance : safe.cash)) || 0;
+      const net = wf.netCashflow !== undefined ? (Number(wf.netCashflow) || 0) : (wf.netMovement !== undefined ? (Number(wf.netMovement) || 0) : (totalIn - totalOut));
+      return {
+        openingBalance: opening,
+        closingBalance: closing,
+        inflows: {
+          contributions: contrib,
+          loanRepayments: repay,
+          fundYields: yields,
+          otherRevenue: otherRev,
+          total: totalIn
+        },
+        outflows: {
+          loanDisbursements: disb,
+          operatingExpenses: opex,
+          total: totalOut
+        },
+        netMovement: net,
+        isImpliedOpening: Boolean(wf.isImpliedOpening),
+        hasRecords: wf.hasRecords !== undefined
+          ? Boolean(wf.hasRecords)
+          : (opening !== 0 || closing !== 0 || totalIn > 0 || totalOut > 0)
+      };
+    }
+
+    const inv = safe.investments || {};
+    const bd = inv.breakdown || {};
+    const invIn = bd.inflows || {};
+    const invOut = bd.outflows || {};
+
+    const contrib = Number(safe.yearlyContributions) || 0;
+    const repay = Number(invIn.loanRepayments) || 0;
+    const yields = Number(invIn.fundYields) || 0;
+    const otherRev = Number(invIn.ledgerRevenue) || 0;
+    const totalIn = contrib + repay + yields + otherRev;
+
+    const disb = Number(invOut.loansDisbursed) || 0;
+    const opex = Number(invOut.operatingExpenses) || 0;
+    const totalOut = disb + opex;
+
+    const net = totalIn - totalOut;
+    const closing = Number(safe.cash) || 0;
+    const opening = closing - net;
+
+    return {
+      openingBalance: opening,
+      closingBalance: closing,
+      inflows: {
+        contributions: contrib,
+        loanRepayments: repay,
+        fundYields: yields,
+        otherRevenue: otherRev,
+        total: totalIn
+      },
+      outflows: {
+        loanDisbursements: disb,
+        operatingExpenses: opex,
+        total: totalOut
+      },
+      netMovement: net,
+      isImpliedOpening: true,
+      hasRecords: opening !== 0 || closing !== 0 || totalIn > 0 || totalOut > 0
+    };
+  }
+
+  function renderDecompositionRowsHtml_(rows, total, barColorClass, valueColorClass) {
+    return rows.map(function (r) {
+      const val = Number(r.amount) || 0;
+      const pct = total > 0 ? Math.min(100, Math.max(0, (val / total) * 100)) : 0;
+      return (
+        '<div class="space-y-1.5">' +
+          '<div class="flex items-center justify-between gap-2 text-xs">' +
+            '<span class="font-medium text-slate-700 dark:text-slate-300 truncate">' + escapeHtmlHome(r.label) + '</span>' +
+            '<div class="flex items-center gap-2 shrink-0">' +
+              '<span class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400">' + pct.toFixed(1) + '%</span>' +
+              '<span class="font-mono tabular-nums font-bold ' + (val > 0 ? valueColorClass : 'text-slate-500 dark:text-slate-400') + '">' + formatChartKes(val) + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">' +
+            '<div class="h-full rounded-full transition-all duration-500 ' + barColorClass + '" style="width: ' + pct.toFixed(1) + '%"></div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  const wfConnectorsPlugin = {
+    id: 'waterfallConnectors',
+    afterDatasetsDraw: function (chart) {
+      const steps = chart._wfSteps;
+      if (!Array.isArray(steps) || steps.length < 2) return;
+      const meta = chart.getDatasetMeta(0);
+      if (!meta || !Array.isArray(meta.data) || meta.data.length !== steps.length) return;
+      const yScale = chart.scales && chart.scales.y;
+      if (!yScale) return;
+
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.strokeStyle = chart._wfConnectorColor || '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+
+      for (let i = 0; i < steps.length - 1; i++) {
+        const currBar = meta.data[i];
+        const nextBar = meta.data[i + 1];
+        if (!currBar || !nextBar) continue;
+        const levelVal = steps[i].end;
+        const yPx = yScale.getPixelForValue(levelVal);
+        const x1 = currBar.x + (currBar.width ? currBar.width / 2 : 0);
+        const x2 = nextBar.x - (nextBar.width ? nextBar.width / 2 : 0);
+        if (x2 > x1) {
+          ctx.beginPath();
+          ctx.moveTo(x1, yPx);
+          ctx.lineTo(x2, yPx);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  };
+
+  window.renderCashflowWaterfall = function (data) {
+    if (data) {
+      window.latestHomeAnalyticsData = data;
+    }
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildWaterfallModel_(sourceData);
+    const theme = getChartThemeTokens();
+
+    // Update range & provenance badges
+    const wfRangeBadge = document.getElementById('analytics-wf-range-badge');
+    if (wfRangeBadge) {
+      const rk = sourceData.range || (typeof currentHomeRange !== 'undefined' ? currentHomeRange : 'year');
+      wfRangeBadge.textContent = rk === 'this_month' ? 'Month' : (rk === 'quarter' ? 'Quarter' : 'Year');
+    }
+    const wfSourceBadge = document.getElementById('analytics-wf-source-badge');
+    if (wfSourceBadge) {
+      wfSourceBadge.textContent = m.isImpliedOpening ? 'Reconciled Bridge' : 'Audited Period Flows';
+    }
+
+    // Update 5 Executive Waterfall KPI Cards
+    const elOpen = document.getElementById('wf-kpi-opening');
+    const elOpenSub = document.getElementById('wf-kpi-opening-sub');
+    const elIn = document.getElementById('wf-kpi-inflows');
+    const elInPct = document.getElementById('wf-kpi-inflow-pct');
+    const elOut = document.getElementById('wf-kpi-outflows');
+    const elOutPct = document.getElementById('wf-kpi-outflow-pct');
+    const elNet = document.getElementById('wf-kpi-net');
+    const elNetBadge = document.getElementById('wf-kpi-net-badge');
+    const elClose = document.getElementById('wf-kpi-closing');
+
+    if (elOpen) elOpen.textContent = formatChartKes(m.openingBalance);
+    if (elOpenSub) {
+      elOpenSub.textContent = m.isImpliedOpening ? 'Implied from closing - net delta' : 'Verified starting reserves';
+    }
+    if (elIn) elIn.textContent = formatChartKes(m.inflows.total);
+    if (elInPct) {
+      const inRatio = m.openingBalance > 0 ? (m.inflows.total / m.openingBalance) * 100 : (m.inflows.total > 0 ? 100 : 0);
+      elInPct.textContent = '+' + inRatio.toFixed(1) + '% vs Opening';
+    }
+    if (elOut) elOut.textContent = formatChartKes(m.outflows.total);
+    if (elOutPct) {
+      const burnRatio = m.inflows.total > 0 ? (m.outflows.total / m.inflows.total) * 100 : (m.outflows.total > 0 ? 100 : 0);
+      elOutPct.textContent = 'Burn: ' + burnRatio.toFixed(1) + '% of Inflows';
+    }
+    if (elNet) {
+      const sign = m.netMovement > 0 ? '+' : (m.netMovement < 0 ? '-' : '');
+      elNet.textContent = sign + formatChartKes(Math.abs(m.netMovement));
+      elNet.className = 'text-lg sm:text-xl font-bold tracking-tight font-mono tabular-nums ' + (
+        m.netMovement > 0
+          ? 'text-emerald-700 dark:text-emerald-400'
+          : m.netMovement < 0
+          ? 'text-rose-700 dark:text-rose-400'
+          : 'text-slate-900 dark:text-white'
+      );
+    }
+    if (elNetBadge) {
+      if (m.netMovement > 0) {
+        elNetBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
+        elNetBadge.textContent = 'Net Surplus';
+      } else if (m.netMovement < 0) {
+        elNetBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elNetBadge.textContent = 'Net Drawdown';
+      } else {
+        elNetBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        elNetBadge.textContent = 'Balanced';
+      }
+    }
+    if (elClose) elClose.textContent = formatChartKes(m.closingBalance);
+
+    // Update Inflows vs Outflows Decomposition Grid
+    const elInTotalBadge = document.getElementById('wf-inflows-total-badge');
+    const elOutTotalBadge = document.getElementById('wf-outflows-total-badge');
+    if (elInTotalBadge) elInTotalBadge.textContent = formatChartKes(m.inflows.total);
+    if (elOutTotalBadge) elOutTotalBadge.textContent = formatChartKes(m.outflows.total);
+
+    const elInBreakdown = document.getElementById('wf-inflows-breakdown');
+    if (elInBreakdown) {
+      const inflowRows = [
+        { label: 'Member Contributions', amount: m.inflows.contributions },
+        { label: 'Loan Repayments', amount: m.inflows.loanRepayments },
+        { label: 'MMF & Fund Yields', amount: m.inflows.fundYields },
+        { label: 'Other Revenue', amount: m.inflows.otherRevenue }
+      ];
+      elInBreakdown.innerHTML =
+        renderDecompositionRowsHtml_(inflowRows, m.inflows.total, 'bg-emerald-500', 'text-emerald-700 dark:text-emerald-400') +
+        '<div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">' +
+          '<span class="font-bold text-slate-900 dark:text-white">Total Period Inflows</span>' +
+          '<span class="font-mono tabular-nums font-extrabold text-emerald-700 dark:text-emerald-400">' + formatChartKes(m.inflows.total) + '</span>' +
+        '</div>';
+    }
+
+    const elOutBreakdown = document.getElementById('wf-outflows-breakdown');
+    if (elOutBreakdown) {
+      const outflowRows = [
+        { label: 'Loan Disbursements', amount: m.outflows.loanDisbursements },
+        { label: 'Operating & Investment Outflows', amount: m.outflows.operatingExpenses }
+      ];
+      elOutBreakdown.innerHTML =
+        renderDecompositionRowsHtml_(outflowRows, m.outflows.total, 'bg-rose-500', 'text-rose-700 dark:text-rose-400') +
+        '<div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">' +
+          '<span class="font-bold text-slate-900 dark:text-white">Total Period Outflows</span>' +
+          '<span class="font-mono tabular-nums font-extrabold text-rose-700 dark:text-rose-400">' + formatChartKes(m.outflows.total) + '</span>' +
+        '</div>';
+    }
+
+    // Lazy chart rendering: defer canvas draw until #home-subview-analytics is visible
+    const analyticsPane = document.getElementById('home-subview-analytics');
+    const isAnalyticsVisible = Boolean(analyticsPane && !analyticsPane.classList.contains('hidden'));
+    const ctxWf = document.getElementById('cashflowWaterfallChart');
+    if (!ctxWf || !isAnalyticsVisible) {
+      return;
+    }
+
+    if (charts.cashflowWaterfallChart) {
+      charts.cashflowWaterfallChart.destroy();
+      charts.cashflowWaterfallChart = null;
+    }
+
+    if (setChartEmptyState('cashflowWaterfallChart', !m.hasRecords, 'No cash flow records available for selected period')) {
+      return;
+    }
+
+    // Build waterfall steps with floating [min, max] tuples
+    const steps = [];
+    let running = m.openingBalance;
+    steps.push({
+      label: 'Opening Cash',
+      delta: m.openingBalance,
+      start: 0,
+      end: m.openingBalance,
+      type: 'opening'
+    });
+
+    const candidateDeltas = [
+      { label: 'Contributions', delta: m.inflows.contributions, type: 'inflow' },
+      { label: 'Loan Repayments', delta: m.inflows.loanRepayments, type: 'inflow' },
+      { label: 'Fund Yields', delta: m.inflows.fundYields, type: 'inflow' },
+      { label: 'Other Revenue', delta: m.inflows.otherRevenue, type: 'inflow' },
+      { label: 'Disbursements', delta: -Math.abs(m.outflows.loanDisbursements), type: 'outflow' },
+      { label: 'Op. Expenses', delta: -Math.abs(m.outflows.operatingExpenses), type: 'outflow' }
+    ];
+
+    candidateDeltas.forEach(function (item) {
+      if (Math.abs(item.delta) > 0.005) {
+        const start = running;
+        const end = running + item.delta;
+        steps.push({
+          label: item.label,
+          delta: item.delta,
+          start: start,
+          end: end,
+          type: item.type
+        });
+        running = end;
+      }
+    });
+
+    steps.push({
+      label: 'Closing Cash',
+      delta: m.closingBalance,
+      start: 0,
+      end: m.closingBalance,
+      type: 'closing'
+    });
+
+    const barColors = steps.map(function (st) {
+      if (st.type === 'opening') return theme.wfOpeningColor;
+      if (st.type === 'closing') return theme.wfClosingColor;
+      if (st.type === 'outflow') return theme.wfOutflowColor;
+      return theme.wfInflowColor;
+    });
+
+    const floatingData = steps.map(function (st) {
+      return [Math.min(st.start, st.end), Math.max(st.start, st.end)];
+    });
+
+    const chart = new Chart(ctxWf, {
+      type: 'bar',
+      data: {
+        labels: steps.map(function (st) { return st.label; }),
+        datasets: [{
+          label: 'Cash Flow Bridge',
+          data: floatingData,
+          backgroundColor: barColors,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 56
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function (items) {
+                const idx = items && items[0] ? items[0].dataIndex : -1;
+                return steps[idx] ? steps[idx].label : '';
+              },
+              label: function (ctx) {
+                const st = steps[ctx.dataIndex];
+                if (!st) return '';
+                if (st.type === 'opening') return 'Opening Balance: ' + formatChartKes(st.end);
+                if (st.type === 'closing') return 'Closing Reserves: ' + formatChartKes(st.end);
+                const prefix = st.delta >= 0 ? '+' : '-';
+                return 'Delta: ' + prefix + formatChartKes(Math.abs(st.delta));
+              },
+              afterLabel: function (ctx) {
+                const st = steps[ctx.dataIndex];
+                if (!st || st.type === 'opening' || st.type === 'closing') return '';
+                return 'Cumulative Balance: ' + formatChartKes(st.end);
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 10 }, color: theme.tickColor }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: theme.gridColor },
+            ticks: {
+              font: { size: 10 },
+              color: theme.tickColor,
+              callback: function (value) { return formatMoneyCompactK(value); }
+            }
+          }
+        }
+      },
+      plugins: [wfConnectorsPlugin]
+    });
+
+    chart._wfSteps = steps;
+    chart._wfStepTypes = steps.map(function (st) { return st.type; });
+    chart._wfConnectorColor = theme.connectorColor;
+    charts.cashflowWaterfallChart = chart;
+  };
+
   function renderMainCharts(data) {
+    window.latestHomeAnalyticsData = data;
     renderPortfolioAndLiquidityHealth(data);
     const theme = getChartThemeTokens();
     // 1. Contributions Trend Chart
@@ -1031,6 +1580,7 @@
     }
 
     renderInvestmentCharts(data.investments);
+    window.renderCashflowWaterfall(data);
   }
 
   function renderInvestmentCharts(inv) {

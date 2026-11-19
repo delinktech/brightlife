@@ -377,6 +377,22 @@ function getHomeAnalyticsByRange_(rangeKey) {
   }
 
   const liquiditySummary = computeLiquiditySummary_(ss, totalSavings, totalLoans);
+  const investments = buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds);
+
+  const invInflows = (investments && investments.breakdown && investments.breakdown.inflows) || {};
+  const invOutflows = (investments && investments.breakdown && investments.breakdown.outflows) || {};
+  const wfContributions = Math.round((filteredContributions || 0) * 100) / 100;
+  const wfLoanRepayments = Number(invInflows.loanRepayments) || 0;
+  const wfFundYield = Number(invInflows.fundYields !== undefined ? invInflows.fundYields : invInflows.fundYield) || 0;
+  const wfLedgerRevenue = Number(invInflows.ledgerRevenue) || 0;
+  const wfLoansDisbursed = Number(invOutflows.loansDisbursed) || 0;
+  const wfOperatingExpenses = Number(invOutflows.operatingExpenses) || 0;
+
+  const totalPeriodInflows = wfContributions + wfLoanRepayments + wfFundYield + wfLedgerRevenue;
+  const totalPeriodOutflows = wfLoansDisbursed + wfOperatingExpenses;
+  const netPeriodCashflow = totalPeriodInflows - totalPeriodOutflows;
+  const closingLiquidCash = liquiditySummary.cash;
+  const openingLiquidCash = Math.max(0, Math.round((closingLiquidCash - netPeriodCashflow) * 100) / 100);
 
   const result = {
     range: effectiveRange,
@@ -387,6 +403,23 @@ function getHomeAnalyticsByRange_(rangeKey) {
     memberCount: memberCount,
     cash: liquiditySummary.cash,
     liquidity: liquiditySummary.liquidity,
+    cashflowWaterfall: {
+      openingCash: openingLiquidCash,
+      closingCash: closingLiquidCash,
+      netCashflow: Math.round(netPeriodCashflow * 100) / 100,
+      inflows: {
+        contributions: wfContributions,
+        loanRepayments: wfLoanRepayments,
+        fundYield: wfFundYield,
+        ledgerRevenue: wfLedgerRevenue,
+        total: Math.round(totalPeriodInflows * 100) / 100,
+      },
+      outflows: {
+        loansDisbursed: wfLoansDisbursed,
+        operatingExpenses: wfOperatingExpenses,
+        total: Math.round(totalPeriodOutflows * 100) / 100,
+      },
+    },
     yearlyContributions: filteredContributions,
     yearToDateContributions: yearToDateContributions,
     currentMonthContributions: monthlyContributionsCurrent,
@@ -434,7 +467,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
       settled: settledLoanCount,
     },
     accountsBalanceChart: getAccountsBalanceChartData_(),
-    investments: buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds),
+    investments: investments,
   };
 
   try {

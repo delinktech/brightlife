@@ -966,6 +966,20 @@
       if (typeof window.resizeHomeCharts === "function") {
         window.resizeHomeCharts();
       }
+    } else if (cleanKey === "analytics") {
+      const renderAnalyticsView = function () {
+        if (typeof window.renderCashflowWaterfall === "function" && window.latestHomeAnalyticsData) {
+          window.renderCashflowWaterfall(window.latestHomeAnalyticsData);
+        }
+        if (typeof window.resizeAnalyticsCharts === "function") {
+          window.resizeAnalyticsCharts();
+        }
+      };
+      if (typeof window.requestAnimationFrame === "function") {
+        window.requestAnimationFrame(renderAnalyticsView);
+      } else {
+        renderAnalyticsView();
+      }
     }
   }
   window.switchHomeSubTab = switchHomeSubTab;
