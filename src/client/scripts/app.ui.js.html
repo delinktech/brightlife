@@ -925,6 +925,51 @@
     refreshDashboard();
   }
 
+  function switchHomeSubTab(tabKey) {
+    const cleanKey = tabKey === "analytics" || tabKey === "reports" ? tabKey : "overview";
+    const tabMap = {
+      overview: {
+        btn: document.getElementById("home-tab-overview"),
+        view: document.getElementById("home-subview-overview")
+      },
+      analytics: {
+        btn: document.getElementById("home-tab-analytics"),
+        view: document.getElementById("home-subview-analytics")
+      },
+      reports: {
+        btn: document.getElementById("home-tab-reports"),
+        view: document.getElementById("home-subview-reports")
+      }
+    };
+
+    const activeBtnCls =
+      "px-3.5 py-1.5 min-h-[34px] rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs transition-colors";
+    const inactiveBtnCls =
+      "px-3.5 py-1.5 min-h-[34px] rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors";
+
+    Object.keys(tabMap).forEach(function (key) {
+      const entry = tabMap[key];
+      const isSelected = key === cleanKey;
+      if (entry.view) {
+        entry.view.classList.toggle("hidden", !isSelected);
+      }
+      if (entry.btn) {
+        entry.btn.className = isSelected ? activeBtnCls : inactiveBtnCls;
+        entry.btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+      }
+    });
+
+    if (cleanKey === "overview") {
+      if (typeof window.syncChartsTheme === "function") {
+        window.syncChartsTheme();
+      }
+      if (typeof window.resizeHomeCharts === "function") {
+        window.resizeHomeCharts();
+      }
+    }
+  }
+  window.switchHomeSubTab = switchHomeSubTab;
+
   function startAppLoader() {
     appLoaderActiveRequests++;
     const loader = document.getElementById("app-loader");
