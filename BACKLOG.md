@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v110`** (Google Apps Script Build `@111`, Commit `bf401f5`) |
+| **Current Live Release** | **`v111`** (Google Apps Script Build `@112`, Commit `004929a`) |
 | **Total Tracked Tasks** | **23 Tasks** |
-| **Completed & Shipped (`[DONE]`)** | **12 Tasks (52.2%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`RPT-2`)** |
+| **Completed & Shipped (`[DONE]`)** | **13 Tasks (56.5%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **10 Tasks (43.5%)** |
-| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite (`RPT-2: Statement of Comprehensive Income / P&L`) |
+| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite (`RPT-4: Official AGM & Bank Audit Export Pack`) |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`RPT-2`** | Financial | **Statement of Comprehensive Income (Profit & Loss / P&L)**: Audited IFRS operating performance statement on `Reports` tab with 4-card revenue/surplus ribbon, operating revenue breakdown, investment yields, operating expenses, impairment deduction, net distributable surplus, zero-variance dividend basis, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v111`** (`@112`) | 2026-11-19 |
 | **`RPT-1`** | Financial | **Statement of Financial Position (Balance Sheet)**: Audited IFRS/SASRA Balance Sheet on `Reports` tab with dual-column classical ledger, 4-card solvency ribbon, zero-variance guarantee, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v110`** (`@111`) | 2026-11-19 |
 | **`FIN-1`** | Financial | **Decoupled PAR & 3-Tier Delinquency Waterfall**: Decoupled Portfolio at Risk from guarantor shortfall; implemented 3-tier delinquency classification (explicit status $\to$ due date $\to$ tenor) and Section 51 statutory provisioning. | `@analyst`, `@fixer` | **`v102`** (`@103`) | 2026-11-18 |
 | **`FIN-2`** | Financial | **Net Liquid Cash Reconciliation**: Replaced artificial `savings - loans` formula with true verified physical bank accounts + CIC MMF liquidity summary and fallback waterfall. | `@analyst`, `@fixer` | **`v104`** (`@105`) | 2026-11-19 |
@@ -38,36 +39,24 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 11 tasks are categorized below in strict execution priority:
+The remaining 10 tasks are categorized below in strict execution priority:
 
 ### Tier 1: Immediate Strategic Priorities (Active Sprint Focus)
 
-#### 1. `RPT-2: Statement of Comprehensive Income (Profit & Loss / P&L)` `[IN PROGRESS]`
+#### 1. `RPT-4: Official AGM & Bank Audit Export Pack`
 * **Priority:** `P0 (Top Strategic Priority)`
-* **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
-* **Location:** `Reports` tab (`#home-subview-reports`)
-* **Objective:** Formalize operating performance over the selected period:
-  - **Operating Revenue:** Loan Interest Earned + Processing Fees + Fines/Penalties.
-  - **Investment Yields:** CIC MMF Net Yields + Mansa X Returns.
-  - **Less Operating Expenses:** Bank/Paybill Charges + Software & Technology Fees + Meeting/AGM Costs.
-  - **Less Provisions:** Period Loan Loss Impairment Allocation.
-  - **Result:** **Net Distributable Surplus** available for member dividend allocation.
-* **Dependencies:** FIN-3, RPT-1 (Unblocked and ready for immediate implementation).
-
-#### 2. `RPT-4: Official AGM & Bank Audit Export Pack`
-* **Priority:** `P1 (High)`
 * **Domain:** Document Governance (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
 * **Location:** `Reports` tab
 * **Objective:** One-click generation of the official Brightlife SHG Financial Report:
   - Executive PDF with formal BLG letterhead, verification reference hash, and confidentiality stamps.
   - Full CSV/Excel audit package export for commercial bank financing or SACCO regulator filing.
-* **Dependencies:** RPT-1 (Shipped in v110), RPT-2.
+* **Dependencies:** RPT-1 (Shipped in v110), RPT-2 (Shipped in v111).
 
 ---
 
 ### Tier 2: Governance, Exports & Data Reconciliation
 
-#### 3. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
+#### 2. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
 * **Priority:** `P1 (High)`
 * **Domain:** Governance & Internal Controls (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
 * **Location:** `Loans.html` & `server/loans.service.js`
@@ -76,14 +65,14 @@ The remaining 11 tasks are categorized below in strict execution priority:
   - Audit trail logging in `SHEETS.AUDIT_LOG`.
 * **Dependencies:** UI-2.
 
-#### 4. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
+#### 3. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
 * **Priority:** `P1 (High)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
 * **Location:** `SHEETS.ACCOUNTS` & `SHEETS.FUND_STATEMENTS`
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
 * **Dependencies:** None.
 
-#### 5. `COM-1: Automated WhatsApp & Email Transaction Receipts`
+#### 4. `COM-1: Automated WhatsApp & Email Transaction Receipts`
 * **Priority:** `P1 (High)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
@@ -94,7 +83,7 @@ The remaining 11 tasks are categorized below in strict execution priority:
 
 ### Tier 3: Advanced Intelligence, Workflows & Platform Hardening
 
-#### 6. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
+#### 5. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
 * **Priority:** `P2 (Deferred by User Request)`
 * **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer`)
 * **Location:** `Loans.html` (`Apply for Loan` Modal)
@@ -106,35 +95,35 @@ The remaining 11 tasks are categorized below in strict execution priority:
   - Server-side validation and write to `SHEETS.LOANS` with `Status = "Pending"`.
 * **Dependencies:** None (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
 
-#### 7. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 6. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 8. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
+#### 7. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
 * **Priority:** `P2 (Medium)`
 * **Domain:** UI/UX (`@designer`)
 * **Location:** `Contributions.html`, `Loans.html`, `Members.html`
 * **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
 * **Dependencies:** UI-1A.
 
-#### 9. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 8. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 10. `MIG-3: Legacy Chama Google Sheet Consolidation`
+#### 9. `MIG-3: Legacy Chama Google Sheet Consolidation`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Migration (`@migrator` $\to$ `@ledger`)
 * **Location:** Legacy Workbooks
 * **Objective:** Final ingestion and archival of any legacy standalone spreadsheet tabs into the unified Brightlife database.
 * **Dependencies:** MIG-2.
 
-#### 11. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 10. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
@@ -147,7 +136,7 @@ The remaining 11 tasks are categorized below in strict execution priority:
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v110)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v111)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -156,11 +145,11 @@ graph TD
         V2["VIS-2: Savings vs. Loan Trajectory"]
         V3["VIS-3: SASRA Aging & Provision Matrix"]
         R1["RPT-1: Statement of Financial Position"]
+        R2["RPT-2: Statement of Comprehensive Income"]
     end
 
     subgraph Sprint_Next ["Active Sprint Focus (Top Priority)"]
-        R2["RPT-2: Statement of Comprehensive Income<br>(Profit & Loss / P&L - P0)"]
-        R4["RPT-4: Official AGM & Bank Audit Pack<br>(PDF Letterhead & CSV Export - P1)"]
+        R4["RPT-4: Official AGM & Bank Audit Pack<br>(PDF Letterhead & CSV Export - P0)"]
     end
 
     subgraph Sprint_Follow_Up ["Follow-up Sprint (P1 Priorities)"]
