@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v129`** (Google Apps Script Build `@130`, Commits `d9e93d0` + `abc5596`) |
+| **Current Live Release** | **`v130`** (Google Apps Script Build `@131`) |
 | **Total Tracked Tasks** | **33 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
-| **Completed & Shipped (`[DONE]`)** | **25 Tasks (75.8%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (UI-2)** |
+| **Completed & Shipped (`[DONE]`)** | **26 Tasks (78.8%)** |
+| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for `GOV-1`) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **7 Tasks (21.2%)** |
-| **Current Sprint Focus** | `UI-2: Native Dashboard Loan Application Workflow` |
+| **Current Sprint Focus** | `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`UI-2`** | UI/UX & Operations | **Native Dashboard Loan Application Workflow**: Implemented 100% dashboard-native `Apply for Loan` modal in `Loans.html` dynamically reading `SET-1` policy limits (multiplier, interest rate, tenor tiers, min guarantors), live borrower savings & max limit lookup, real-time guarantor unencumbered savings & shortfall tracker, interactive amortization calculator, and atomic submission to `Loans` (`Status = "Pending Review"`) and `Guarantors` with `SHEETS.AUDIT_LOG` entry and full `DESIGN.md` Light/Dark parity. | `@designer`, `@fixer`, `@sentinel` | **`v130`** (`@131`) | 2026-11-19 |
 | **`SET-1`** | Configuration & Policy | **Admin Loan Policy & Group Settings Management**: Provisioned dynamic loan policy & tenor-tier tables in `Constants` (`Borrower Savings Multiplier` 2x/3x, `Loan Interest Rate Pct`, `Loan Tenor Tiers`, `Minimum Guarantor Count`), built `Settings.html` with `DESIGN.md` Light/Dark parity (`bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, `tabular-nums`), and exposed RBAC-guarded `getLoanPolicySettings` / `saveLoanPolicySettings` RPCs with `SHEETS.AUDIT_LOG` tracking. | `@ledger`, `@fixer`, `@designer`, `@sentinel` | **`v129`** (`@130`) | 2026-11-19 |
 | **`RPT-4`** | Financial | **Official AGM & Bank Audit Export Pack**: One-click generation of the combined institutional Brightlife SHG Annual Financial Pack (Executive PDF combining Balance Sheet `RPT-1`, Income Statement `RPT-2`, and Capital Projects summary with BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps, plus multi-statement RFC-4180 CSV / Excel audit package export), adhering to `bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, and `tabular-nums` design tokens. | `@designer`, `@fixer`, `@sentinel` | **`v128`** (`@129`) | 2026-11-19 |
 | **`COM-3`** | Communications | **Institutional Communications Polish, HTML Email Escaping, Statement Preview Parity & WhatsApp Alignment**: Enforced strict HTML escaping on dynamic fields in outgoing HTML emails, ensured Statement Preview modal parity with delivered statements, and aligned WhatsApp message formatting and dispatch templates with institutional standards. | `@messenger`, `@fixer`, `@designer`, `@sentinel` | **`v127`** (`@128`) | 2026-11-19 |
@@ -51,33 +52,11 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 8 tasks (1 `[IN PROGRESS]`, 7 `[BACKLOG]`) are categorized below in strict execution priority:
+The remaining 7 tasks are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Core Loan Workflows & Data Reconciliation (`P1`)
 
-#### 1. `UI-2: Native Dashboard Loan Application Workflow` `[IN PROGRESS]`
-* **Priority:** `P1 (High)`
-* **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
-* **Location:** `Loans.html` (`Apply for Loan` modal)
-* **Objective:** Transition to a 100% Dashboard-Native Loan Application flow:
-  - Dynamic loan application modal reading active policy limits from `SET-1` (dynamic 2x/3x cap, dynamic interest rate, dynamic tenor tier options).
-  - Live borrower savings lookup, real-time guarantor unencumbered savings check, and live deficit/shortfall tracker.
-  - Interactive amortization & installment schedule calculator (`tabular-nums`).
-  - Atomic insert to `Loans` with `Status = "Pending Review"`.
-* **Dependencies:** `SET-1` (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
-* **Active Sprint Checklist:**
-  - Dynamic integration with `SET-1` policy limits (borrower multiplier 2x/3x, interest rate, tenor tiers, min guarantors).
-  - Real-time borrower savings & max borrowing limit lookup.
-  - Real-time guarantor unencumbered savings check & guarantee shortfall tracking.
-  - Interactive loan calculator & installment schedule preview.
-  - Atomic submission to `Loans` (`Status = "Pending Review"`) and `Guarantors` sub-ledger with `SHEETS.AUDIT_LOG` entry.
-  - Full `DESIGN.md` compliance (light/dark theme parity, buttons `bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]` touch targets, `tabular-nums`).
-* **Acceptance Criteria:**
-  - Modal dynamically enforces `SET-1` multiplier, interest rate, tenor tiers, and minimum guarantor count.
-  - Guarantor unencumbered savings & shortfall tracker updates live; atomic write sets `Status = "Pending Review"`.
-  - Automated Node syntax/VM tests pass and `@sentinel` issues `SECURITY_CLEARANCE: PASS`.
-
-#### 2. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
+#### 1. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
 * **Priority:** `P1 (High)`
 * **Domain:** Governance & Internal Controls (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
 * **Location:** `Loans.html` & `server/loans.service.js`
@@ -91,7 +70,7 @@ The remaining 8 tasks (1 `[IN PROGRESS]`, 7 `[BACKLOG]`) are categorized below i
   - Guarantor liabilities lock atomically in `Guarantors` sub-ledger upon approval; WhatsApp/Email notifications and `SHEETS.AUDIT_LOG` entries are recorded.
   - Automated Node syntax/VM tests pass and `@sentinel` issues `SECURITY_CLEARANCE: PASS`.
 
-#### 3. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
+#### 2. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
 * **Priority:** `P1 (High)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
 * **Location:** `SHEETS.ACCOUNTS` & `SHEETS.FUND_STATEMENTS`
@@ -102,7 +81,7 @@ The remaining 8 tasks (1 `[IN PROGRESS]`, 7 `[BACKLOG]`) are categorized below i
 
 ### Tier 3: Advanced Intelligence, Migration & Platform Hardening (`P2`)
 
-#### 4. `MIG-3: One-Time 'Form Loan Requests' Backfill & Google Form Deprecation`
+#### 3. `MIG-3: One-Time 'Form Loan Requests' Backfill & Google Form Deprecation`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
 * **Location:** `src/migration/loan.form.migration.js` & `SHEETS.LOANS`
@@ -112,28 +91,28 @@ The remaining 8 tasks (1 `[IN PROGRESS]`, 7 `[BACKLOG]`) are categorized below i
   - Idempotent backfill script ingests all unmigrated `Form Loan Requests` rows into `SHEETS.LOANS` without duplicates.
   - Full migration summary recorded in `SHEETS.AUDIT_LOG` and external Google Form retired.
 
-#### 5. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 4. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 6. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
+#### 5. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
 * **Priority:** `P2 (Medium)`
 * **Domain:** UI/UX (`@designer`)
 * **Location:** `Contributions.html`, `Loans.html`, `Members.html`
 * **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
 * **Dependencies:** UI-1A.
 
-#### 7. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 6. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 8. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 7. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
