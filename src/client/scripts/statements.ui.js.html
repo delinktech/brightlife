@@ -95,7 +95,7 @@ function renderMonthlyStatementsView(data) {
   if (monthSelect && data.availableMonths) {
     monthSelect.innerHTML = data.availableMonths.map(function (m) {
       const isSel = m.key === data.activeMonthKey ? "selected" : "";
-      return '<option value="' + m.key + '" ' + isSel + '>' + m.label + '</option>';
+      return '<option value="' + escapeHtmlAttr(m.key) + '" class="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100" ' + isSel + '>' + escapeHtmlAttr(m.label) + '</option>';
     }).join("");
   }
 
@@ -205,12 +205,12 @@ function renderStatementMembersTable(members) {
               'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5">' +
               '<i class="fas fa-eye text-slate-500 dark:text-slate-400"></i> Preview' +
             '</button>' +
-            '<button type="button" onclick="sendSingleMemberStatement(\'' + escapeHtmlAttr(m.id) + '\')" title="Send Email Statement" ' +
-              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 ' + (!m.hasEmail ? 'opacity-50 cursor-not-allowed' : '') + '">' +
+            '<button type="button" ' + (!m.hasEmail ? 'disabled ' : '') + 'onclick="sendSingleMemberStatement(\'' + escapeHtmlAttr(m.id) + '\')" title="' + (!m.hasEmail ? 'No email configured' : 'Send Email Statement') + '" ' +
+              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">' +
               '<i class="fas fa-envelope text-emerald-700 dark:text-emerald-400"></i> Email' +
             '</button>' +
-            '<button type="button" onclick="sendSingleMemberWhatsApp(\'' + escapeHtmlAttr(m.id) + '\')" title="Send WhatsApp Statement" ' +
-              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 ' + (!m.hasPhone ? 'opacity-50 cursor-not-allowed' : '') + '">' +
+            '<button type="button" ' + (!m.hasPhone ? 'disabled ' : '') + 'onclick="sendSingleMemberWhatsApp(\'' + escapeHtmlAttr(m.id) + '\')" title="' + (!m.hasPhone ? 'No phone configured' : 'Send WhatsApp Statement') + '" ' +
+              'class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 font-medium text-[11px] transition-colors inline-flex items-center gap-1.5 disabled:opacity-45 disabled:cursor-not-allowed">' +
               '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> WhatsApp' +
             '</button>' +
           '</div>' +
@@ -319,9 +319,17 @@ function previewMemberStatement(memberId) {
       }
 
       if (waBtn) {
+        waBtn.disabled = !isValidWhatsAppUrl_(res.whatsAppUrl);
+        waBtn.title = res.whatsAppUrl ? "Send via WhatsApp" : "No phone configured";
         waBtn.onclick = function () {
-          if (res.whatsAppUrl) {
-            window.open(res.whatsAppUrl, "_blank");
+          if (isValidWhatsAppUrl_(res.whatsAppUrl)) {
+            let waWin = null;
+            try {
+              waWin = window.open("", "_blank", "noopener,noreferrer");
+            } catch (e) {
+              waWin = null;
+            }
+            openWhatsAppUrlFromClick_(waWin, res.whatsAppUrl, stmt.memberName);
           } else {
             showNotification("Member does not have a valid phone number for WhatsApp.", "warning", 5000);
           }
@@ -388,19 +396,71 @@ async function sendSingleMemberStatement(memberId) {
     });
 }
 
+function isValidWhatsAppUrl_(url) {
+  return typeof url === "string" && /^https:\/\/(wa\.me|api\.whatsapp\.com)\//i.test(url.trim());
+}
+
+function showWhatsAppFallbackLink_(url, memberName) {
+  if (!isValidWhatsAppUrl_(url)) {
+    showNotification("Invalid WhatsApp URL returned for " + (memberName || "member") + ".", "error", 5000);
+    return;
+  }
+  const safeUrl = url.trim();
+  const safeName = memberName ? String(memberName) : "member";
+  showNotification("Popup blocked for " + safeName + ". Click below to launch WhatsApp.", "warning", 10000, {
+    actionLabel: "Open WhatsApp",
+    actionIcon: "fab fa-whatsapp",
+    actionUrl: safeUrl
+  });
+}
+
+function openWhatsAppUrlFromClick_(waWin, url, memberName) {
+  if (!isValidWhatsAppUrl_(url)) {
+    try { if (waWin && !waWin.closed) waWin.close(); } catch (e) {}
+    showNotification("Invalid WhatsApp URL returned for " + (memberName || "member") + ".", "error", 5000);
+    return;
+  }
+  const safeUrl = url.trim();
+  if (waWin && !waWin.closed) {
+    waWin.location.href = safeUrl;
+  } else {
+    showWhatsAppFallbackLink_(safeUrl, memberName);
+  }
+}
+
 function sendSingleMemberWhatsApp(memberId) {
+  const members = statementsState.overview && Array.isArray(statementsState.overview.members)
+    ? statementsState.overview.members
+    : [];
+  const memberObj = members.find(function (m) { return String(m.id) === String(memberId); });
+  if (memberObj && !memberObj.hasPhone) {
+    showNotification("Member does not have a valid phone number. Please update their phone in Members tab.", "warning", 5000);
+    return;
+  }
+  const memberName = (memberObj && memberObj.name) || memberId;
+
+  let waWin = null;
+  try {
+    waWin = window.open("", "_blank", "noopener,noreferrer");
+  } catch (e) {
+    waWin = null;
+  }
+
   startAppLoader();
   google.script.run
     .withSuccessHandler(function (res) {
       stopAppLoader();
       if (res && res.whatsAppUrl) {
-        window.open(res.whatsAppUrl, "_blank");
+        const resolvedName = (res.statementData && res.statementData.memberName) || memberName;
+        openWhatsAppUrlFromClick_(waWin, res.whatsAppUrl, resolvedName);
       } else {
+        try { if (waWin && !waWin.closed) waWin.close(); } catch (e) {}
         showNotification("Member does not have a valid phone number. Please update their phone in Members tab.", "warning", 5000);
       }
     })
     .withFailureHandler(function (err) {
       stopAppLoader();
+      try { if (waWin && !waWin.closed) waWin.close(); } catch (e) {}
       handleErr(err);
     })
     .sendMemberMonthlyStatement({

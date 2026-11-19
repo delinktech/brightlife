@@ -579,7 +579,7 @@
         icon: '<i class="fas fa-circle-check"></i>'
       },
       info: {
-        cls: "w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 flex items-center justify-center text-base shrink-0",
+        cls: "w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-500/40 text-[#004D40] dark:text-emerald-300 flex items-center justify-center text-base shrink-0",
         icon: '<i class="fas fa-circle-info"></i>'
       },
       warning: {
@@ -613,9 +613,9 @@
       const customCls = opts.confirmClass || (
         iconType === "danger"
           ? "bg-rose-600 hover:bg-rose-700 text-white"
-          : iconType === "success"
-          ? "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950"
-          : "bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950"
+          : iconType === "warning"
+          ? "bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950"
+          : "bg-[#004D40] hover:bg-[#003b31] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950"
       );
       confirmBtn.className = baseBtnCls + customCls;
     }
@@ -748,7 +748,21 @@
     msgEl.textContent = String(message);
     bodyEl.appendChild(msgEl);
 
-    if (opts.actionLabel && typeof opts.onAction === "function") {
+    if (opts.actionLabel && opts.actionUrl) {
+      const actionLink = document.createElement("a");
+      actionLink.href = String(opts.actionUrl);
+      actionLink.target = "_blank";
+      actionLink.rel = "noopener noreferrer";
+      actionLink.className = "mt-2 min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#004D40] hover:bg-[#003b31] dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-slate-950 text-[11px] font-semibold shadow-xs transition-colors";
+      const linkIcon = document.createElement("i");
+      linkIcon.className = (opts.actionIcon || "fas fa-arrow-up-right-from-square") + " text-[10px]";
+      actionLink.appendChild(linkIcon);
+      actionLink.appendChild(document.createTextNode(String(opts.actionLabel)));
+      actionLink.addEventListener("click", function () {
+        if (toast.parentElement) toast.remove();
+      });
+      bodyEl.appendChild(actionLink);
+    } else if (opts.actionLabel && typeof opts.onAction === "function") {
       const actionBtn = document.createElement("button");
       actionBtn.type = "button";
       actionBtn.className = "mt-2 min-h-[34px] inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-[11px] font-semibold shadow-xs transition-colors";
