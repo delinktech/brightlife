@@ -745,6 +745,9 @@ function appendRowByHeaders_(sheet, rowObj) {
       } catch (e) {}
     });
   }
+  if (typeof invalidateSheetContextCache_ === "function") {
+    try { invalidateSheetContextCache_(sheet.getName()); } catch (e) {}
+  }
   return target;
 }
 
@@ -782,7 +785,7 @@ function readUnifiedInvestmentLedgerValues_(ss) {
 
   const legacy = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENT_LEDGER);
   if (legacy && legacy.getName().trim().toLowerCase() === String(SHEETS.INVESTMENT_LEDGER).toLowerCase() && legacy.getLastRow() > 1) {
-    const lv = legacy.getDataRange().getValues();
+    const lv = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, legacy) : legacy.getDataRange().getValues();
     const lc = getHeaderMap_(lv[0]);
     for (let i = 1; i < lv.length; i++) {
       out.push([
@@ -800,7 +803,7 @@ function readUnifiedInvestmentLedgerValues_(ss) {
 
   const cf = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENT_CASHFLOWS);
   if (cf && cf.getName().trim().toLowerCase() === String(SHEETS.INVESTMENT_CASHFLOWS).toLowerCase() && cf.getLastRow() > 1) {
-    const cv = cf.getDataRange().getValues();
+    const cv = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, cf) : cf.getDataRange().getValues();
     const cc = getHeaderMap_(cv[0]);
     if (cc["Date"] !== undefined && cc["Flow Type"] !== undefined && cc["Amount"] !== undefined) {
       for (let j = 1; j < cv.length; j++) {
@@ -886,7 +889,7 @@ function getStandaloneProjectCarryingItems_(ss, ledgerValues) {
   const items = [];
   const prj = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENT_PROJECTS);
   if (!prj || prj.getLastRow() < 2) return items;
-  const pv = prj.getDataRange().getValues();
+  const pv = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, prj) : prj.getDataRange().getValues();
   const pc = getHeaderMap_(pv[0]);
   if (pc["Project ID"] === undefined) return items;
   const agg = aggregateLedgerByEntity_(ledgerValues || readUnifiedInvestmentLedgerValues_(ss));

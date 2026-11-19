@@ -1,81 +1,88 @@
 function getDashboardData() {
   requireAccess_();
-  const ss = getSpreadsheet_();
-  const kpiSnap = typeof readSummaryKpisSnapshot_ === "function" ? readSummaryKpisSnapshot_(ss) : null;
-  const loans = getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
-  const guarantors = getRequiredSheet_(SHEETS.GUARANTORS).getDataRange().getValues();
+  try {
+    const ctx = typeof beginRequestSheetContext_ === "function" ? beginRequestSheetContext_() : null;
+    const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
+    const kpiSnap = typeof readSummaryKpisSnapshot_ === "function" ? readSummaryKpisSnapshot_(ss) : null;
+    const loans = ctx ? ctx.getValues(SHEETS.LOANS, { required: true }) : getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
+    const guarantors = ctx ? ctx.getValues(SHEETS.GUARANTORS, { required: true }) : getRequiredSheet_(SHEETS.GUARANTORS).getDataRange().getValues();
 
-  let totalPool = kpiSnap ? kpiSnap.totalMemberSavings : 0;
-  let totalActiveLoans = kpiSnap ? kpiSnap.totalOutstandingLoans : 0;
-  let pendingLoansCount = kpiSnap ? kpiSnap.pendingLoansCount : 0;
+    let totalPool = kpiSnap ? kpiSnap.totalMemberSavings : 0;
+    let totalActiveLoans = kpiSnap ? kpiSnap.totalOutstandingLoans : 0;
+    let pendingLoansCount = kpiSnap ? kpiSnap.pendingLoansCount : 0;
 
-  if (!kpiSnap) {
-    const members = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
-    const mCol = members.length > 0 ? getHeaderMap_(members[0]) : {};
-    const savIdx = mCol["Total Savings"] !== undefined ? mCol["Total Savings"] : 6;
-    for (let i = 1; i < members.length; i++) {
-      totalPool += Number(members[i][savIdx]) || 0;
-    }
-  }
-
-  const gCol = guarantors.length > 0 ? getHeaderMap_(guarantors[0]) : {};
-  const gLidIdx = gCol["Loan ID"] !== undefined ? gCol["Loan ID"] : 0;
-  const gNameIdx = gCol["Guarantor Name"] !== undefined ? gCol["Guarantor Name"] : 1;
-  const gAmtIdx = gCol["Guaranteed Amount"] !== undefined ? gCol["Guaranteed Amount"] : 2;
-
-  const guarantorMap = {};
-  for (let j = 1; j < guarantors.length; j++) {
-    const loanId = guarantors[j][gLidIdx];
-    if (!guarantorMap[loanId]) guarantorMap[loanId] = [];
-    guarantorMap[loanId].push({
-      name: guarantors[j][gNameIdx],
-      amount: guarantors[j][gAmtIdx],
-    });
-  }
-
-  const lCol = loans.length > 0 ? getHeaderMap_(loans[0]) : {};
-  const lIdIdx = lCol["Loan ID"] !== undefined ? lCol["Loan ID"] : 0;
-  const lNameIdx = lCol["Borrower Name"] !== undefined ? lCol["Borrower Name"] : 1;
-  const lAmtIdx = lCol["Balance"] !== undefined ? lCol["Balance"] : (lCol["Requested Amount"] !== undefined ? lCol["Requested Amount"] : 2);
-  const lStatIdx = lCol["Status"] !== undefined ? lCol["Status"] : 5;
-
-  const loanList = [];
-  for (let k = 1; k < loans.length; k++) {
-    const loanId = loans[k][lIdIdx];
-    if (!loanId) continue;
-    const status = loans[k][lStatIdx];
-    const amt = Number(loans[k][lAmtIdx]) || 0;
     if (!kpiSnap) {
-      if (status === LOAN_STATUS.ACTIVE || status === LOAN_STATUS.APPROVED) totalActiveLoans += amt;
-      if (status === LOAN_STATUS.PENDING) pendingLoansCount++;
+      const members = ctx ? ctx.getValues(SHEETS.MEMBERS, { required: true }) : getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+      const mCol = members.length > 0 ? getHeaderMap_(members[0]) : {};
+      const savIdx = mCol["Total Savings"] !== undefined ? mCol["Total Savings"] : 6;
+      for (let i = 1; i < members.length; i++) {
+        totalPool += Number(members[i][savIdx]) || 0;
+      }
     }
 
-    loanList.push({
-      id: loanId,
-      borrower: loans[k][lNameIdx],
-      amount: amt,
-      status: status,
-      guarantors: guarantorMap[loanId] || [],
-    });
-  }
+    const gCol = guarantors.length > 0 ? getHeaderMap_(guarantors[0]) : {};
+    const gLidIdx = gCol["Loan ID"] !== undefined ? gCol["Loan ID"] : 0;
+    const gNameIdx = gCol["Guarantor Name"] !== undefined ? gCol["Guarantor Name"] : 1;
+    const gAmtIdx = gCol["Guaranteed Amount"] !== undefined ? gCol["Guaranteed Amount"] : 2;
 
-  return {
-    stats: {
-      pool: totalPool,
-      activeLoans: totalActiveLoans,
-      cash: kpiSnap ? kpiSnap.netCashPosition : (totalPool - totalActiveLoans),
-      pending: pendingLoansCount,
-      invested: kpiSnap ? kpiSnap.totalInvestmentAssets : 0,
-      activeMembers: kpiSnap ? kpiSnap.totalActiveMembers : 0,
-      parRate: kpiSnap ? kpiSnap.activeParPct : 0,
-      fromMaterializedView: Boolean(kpiSnap),
-    },
-    loans: loanList,
-  };
+    const guarantorMap = {};
+    for (let j = 1; j < guarantors.length; j++) {
+      const loanId = guarantors[j][gLidIdx];
+      if (!guarantorMap[loanId]) guarantorMap[loanId] = [];
+      guarantorMap[loanId].push({
+        name: guarantors[j][gNameIdx],
+        amount: guarantors[j][gAmtIdx],
+      });
+    }
+
+    const lCol = loans.length > 0 ? getHeaderMap_(loans[0]) : {};
+    const lIdIdx = lCol["Loan ID"] !== undefined ? lCol["Loan ID"] : 0;
+    const lNameIdx = lCol["Borrower Name"] !== undefined ? lCol["Borrower Name"] : 1;
+    const lAmtIdx = lCol["Balance"] !== undefined ? lCol["Balance"] : (lCol["Requested Amount"] !== undefined ? lCol["Requested Amount"] : 2);
+    const lStatIdx = lCol["Status"] !== undefined ? lCol["Status"] : 5;
+
+    const loanList = [];
+    for (let k = 1; k < loans.length; k++) {
+      const loanId = loans[k][lIdIdx];
+      if (!loanId) continue;
+      const status = loans[k][lStatIdx];
+      const amt = Number(loans[k][lAmtIdx]) || 0;
+      if (!kpiSnap) {
+        if (status === LOAN_STATUS.ACTIVE || status === LOAN_STATUS.APPROVED) totalActiveLoans += amt;
+        if (status === LOAN_STATUS.PENDING) pendingLoansCount++;
+      }
+
+      loanList.push({
+        id: loanId,
+        borrower: loans[k][lNameIdx],
+        amount: amt,
+        status: status,
+        guarantors: guarantorMap[loanId] || [],
+      });
+    }
+
+    return {
+      stats: {
+        pool: totalPool,
+        activeLoans: totalActiveLoans,
+        cash: kpiSnap ? kpiSnap.netCashPosition : (totalPool - totalActiveLoans),
+        pending: pendingLoansCount,
+        invested: kpiSnap ? kpiSnap.totalInvestmentAssets : 0,
+        activeMembers: kpiSnap ? kpiSnap.totalActiveMembers : 0,
+        parRate: kpiSnap ? kpiSnap.activeParPct : 0,
+        fromMaterializedView: Boolean(kpiSnap),
+      },
+      loans: loanList,
+      rpcProfile: ctx ? ctx.getProfile() : null,
+    };
+  } finally {
+    if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+  }
 }
 
 function clearDashboardCache_() {
   try {
+    if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
     var cache = CacheService.getScriptCache();
     cache.removeAll(["home_analytics_year", "home_analytics_quarter", "home_analytics_this_month"]);
   } catch (err) {
@@ -101,17 +108,19 @@ function getHomeAnalyticsByRange_(rangeKey) {
     console.error("Cache read error: " + cacheErr.message);
   }
 
-  const ss = getSpreadsheet_();
+  try {
+    const ctx = typeof beginRequestSheetContext_ === "function" ? beginRequestSheetContext_() : null;
+    const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
   const now = new Date();
   const currentYear = now.getFullYear();
   const tz = ss.getSpreadsheetTimeZone();
   const rangeBounds = getDateRangeBounds_(effectiveRange, now);
 
-  // ARC-3: Query the single-row materialized view "Summary KPIs" in 1 instant range call
-  // to avoid scanning and summing the entire Members register on every analytics refresh.
+  // ARC-3 + ARC-4: Query the single-row materialized view "Summary KPIs" in 1 instant range call
+  // and reuse request-scoped SheetContext cached matrices for all operational tabs.
   const kpiSnap = typeof readSummaryKpisSnapshot_ === "function" ? readSummaryKpisSnapshot_(ss) : null;
-  const contributionRows = getRequiredSheet_(SHEETS.CONTRIBUTIONS).getDataRange().getValues();
-  const loanRows = getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
+  const contributionRows = ctx ? ctx.getValues(SHEETS.CONTRIBUTIONS, { required: true }) : getRequiredSheet_(SHEETS.CONTRIBUTIONS).getDataRange().getValues();
+  const loanRows = ctx ? ctx.getValues(SHEETS.LOANS, { required: true }) : getRequiredSheet_(SHEETS.LOANS).getDataRange().getValues();
 
   let totalSavings = 0;
   let totalLoans = 0;
@@ -122,7 +131,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
     totalLoans = kpiSnap.totalOutstandingLoans;
     memberCount = kpiSnap.totalRegisteredMembers;
   } else {
-    const memberRows = getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+    const memberRows = ctx ? ctx.getValues(SHEETS.MEMBERS, { required: true }) : getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
     if (memberRows.length > 1) {
       const memberHeaders = memberRows[0];
       const memberCol = getHeaderMap_(memberHeaders);
@@ -440,7 +449,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
   try {
     const invSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENTS);
     if (invSheet && invSheet.getLastRow() > 1) {
-      const invValues = invSheet.getDataRange().getValues();
+      const invValues = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, invSheet) : invSheet.getDataRange().getValues();
       if (invValues.length > 1) {
         const invCol = getHeaderMap_(invValues[0]);
         if (invCol["Investment ID"] !== undefined) {
@@ -570,6 +579,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
     accountsBalanceChart: getAccountsBalanceChartData_(),
     investments: investments,
     exposureTrajectory: buildExposureTrajectory_(ss, tz, now, effectiveRange, contributionRows, loanRows),
+    rpcProfile: ctx ? ctx.getProfile() : null,
   };
 
   try {
@@ -581,7 +591,10 @@ function getHomeAnalyticsByRange_(rangeKey) {
     console.error("Cache put error: " + putErr.message);
   }
 
-  return result;
+    return result;
+  } finally {
+    if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+  }
 }
 
 /**
@@ -597,7 +610,7 @@ function computeLiquiditySummary_(ss, totalSavings, totalLoans) {
   try {
     const accSheet = getSheetByNameInsensitive_(ss, SHEETS.ACCOUNTS);
     if (accSheet && accSheet.getLastRow() > 1) {
-      const accRows = accSheet.getDataRange().getValues();
+      const accRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, accSheet) : accSheet.getDataRange().getValues();
       if (accRows.length > 1) {
         const col = getHeaderMap_(accRows[0]);
         for (let i = 1; i < accRows.length; i++) {
@@ -641,7 +654,7 @@ function computeLiquiditySummary_(ss, totalSavings, totalLoans) {
     try {
       const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
       if (fundSheet && fundSheet.getLastRow() > 1) {
-        const fRows = fundSheet.getDataRange().getValues();
+        const fRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, fundSheet) : fundSheet.getDataRange().getValues();
         if (fRows.length > 1) {
           const fCol = getHeaderMap_(fRows[0]);
           const closingCol = fCol["Closing Balance"];
@@ -713,7 +726,7 @@ function getAccountsBalanceChartData_() {
     const ss = getSpreadsheet_();
     const sheet = getSheetByNameInsensitive_(ss, SHEETS.ACCOUNTS);
     if (!sheet) return { labels: labels, values: values, rows: rows };
-    const raw = sheet.getDataRange().getValues();
+    const raw = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, sheet) : sheet.getDataRange().getValues();
     if (raw.length <= 1) return { labels: labels, values: values, rows: rows };
     const col = getHeaderMap_(raw[0]);
     const tz = ss.getSpreadsheetTimeZone();
@@ -770,7 +783,7 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
   try {
     const sheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENTS);
     if (sheet) {
-      const values = sheet.getDataRange().getValues();
+      const values = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, sheet) : sheet.getDataRange().getValues();
       if (values.length > 1) {
         const headers = values[0];
         const col = getHeaderMap_(headers);
@@ -804,7 +817,7 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
   try {
     const repSheet = getSheetByNameInsensitive_(ss, SHEETS.LOAN_REPAYMENTS);
     if (repSheet && repSheet.getLastRow() > 1) {
-      const rv = repSheet.getDataRange().getValues();
+      const rv = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, repSheet) : repSheet.getDataRange().getValues();
       if (rv.length > 1) {
         const rc = getHeaderMap_(rv[0]);
         const rDateCol =
@@ -836,7 +849,7 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
   try {
     const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
     if (fundSheet && fundSheet.getLastRow() > 1) {
-      const fv = fundSheet.getDataRange().getValues();
+      const fv = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, fundSheet) : fundSheet.getDataRange().getValues();
       if (fv.length > 1) {
         const fc = getHeaderMap_(fv[0]);
         const fDateCol = fc["Statement Date"] !== undefined ? fc["Statement Date"] : fc["Date"];
@@ -869,7 +882,7 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
   try {
     const loanSheet = getSheetByNameInsensitive_(ss, SHEETS.LOANS);
     if (loanSheet && loanSheet.getLastRow() > 1) {
-      const lvLoans = loanSheet.getDataRange().getValues();
+      const lvLoans = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, loanSheet) : loanSheet.getDataRange().getValues();
       if (lvLoans.length > 1) {
         const lcLoans = getHeaderMap_(lvLoans[0]);
         const appDateCol = lcLoans["Approved Date"];
@@ -1006,7 +1019,7 @@ function buildExposureTrajectory_(ss, tz, now, effectiveRange, cachedContributio
     let cRows = cachedContributionRows;
     if (!cRows) {
       const cSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CONTRIBUTIONS);
-      cRows = cSheet && cSheet.getLastRow() > 1 ? cSheet.getDataRange().getValues() : [];
+      cRows = cSheet && cSheet.getLastRow() > 1 ? (typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, cSheet) : cSheet.getDataRange().getValues()) : [];
     }
     if (cRows && cRows.length > 1) {
       const cCol = getHeaderMap_(cRows[0]);
@@ -1034,7 +1047,7 @@ function buildExposureTrajectory_(ss, tz, now, effectiveRange, cachedContributio
     let lRows = cachedLoanRows;
     if (!lRows) {
       const lSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
-      lRows = lSheet && lSheet.getLastRow() > 1 ? lSheet.getDataRange().getValues() : [];
+      lRows = lSheet && lSheet.getLastRow() > 1 ? (typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, lSheet) : lSheet.getDataRange().getValues()) : [];
     }
     if (lRows && lRows.length > 1) {
       const lCol = getHeaderMap_(lRows[0]);
@@ -1067,7 +1080,7 @@ function buildExposureTrajectory_(ss, tz, now, effectiveRange, cachedContributio
   try {
     const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
     if (repSheet && repSheet.getLastRow() > 1) {
-      const rRows = repSheet.getDataRange().getValues();
+      const rRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, repSheet) : repSheet.getDataRange().getValues();
       if (rRows.length > 1) {
         const rCol = getHeaderMap_(rRows[0]);
         const rDateCol =
@@ -1210,7 +1223,7 @@ function buildBalanceSheet_(ss, tz, now, effectiveRange, liquiditySummary, portf
   try {
     const invSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENTS);
     if (invSheet && invSheet.getLastRow() > 1) {
-      const invRows = invSheet.getDataRange().getValues();
+      const invRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, invSheet) : invSheet.getDataRange().getValues();
       if (invRows.length > 1) {
         const col = getHeaderMap_(invRows[0]);
         const idCol = col["Investment ID"];
@@ -1366,7 +1379,7 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
   try {
     const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
     if (repSheet && repSheet.getLastRow() > 1) {
-      const rRows = repSheet.getDataRange().getValues();
+      const rRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, repSheet) : repSheet.getDataRange().getValues();
       if (rRows.length > 1) {
         const rCol = getHeaderMap_(rRows[0]);
         const rDateCol =
@@ -1400,7 +1413,7 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
     let lRows = cachedLoanRows;
     if (!lRows) {
       const lSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
-      lRows = lSheet && lSheet.getLastRow() > 1 ? lSheet.getDataRange().getValues() : [];
+      lRows = lSheet && lSheet.getLastRow() > 1 ? (typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, lSheet) : lSheet.getDataRange().getValues()) : [];
     }
     if (lRows && lRows.length > 1) {
       const lCol = getHeaderMap_(lRows[0]);
@@ -1427,7 +1440,7 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
   try {
     const fundSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.FUND_STATEMENTS);
     if (fundSheet && fundSheet.getLastRow() > 1) {
-      const fRows = fundSheet.getDataRange().getValues();
+      const fRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, fundSheet) : fundSheet.getDataRange().getValues();
       if (fRows.length > 1) {
         const fCol = getHeaderMap_(fRows[0]);
         const fDateCol = fCol["Statement Date"] !== undefined ? fCol["Statement Date"] : fCol["Date"];
@@ -1456,7 +1469,7 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
   try {
     const invSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENTS);
     if (invSheet && invSheet.getLastRow() > 1) {
-      const iRows = invSheet.getDataRange().getValues();
+      const iRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, invSheet) : invSheet.getDataRange().getValues();
       if (iRows.length > 1) {
         const iCol = getHeaderMap_(iRows[0]);
         const dateCol =

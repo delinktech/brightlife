@@ -91,7 +91,7 @@ const TRANSACTION_TYPES = Object.freeze({
  */
 const SPREADSHEET_ID = "18zbE2MSVciTkdbwjgtiVqASJ9VEO3IEnlrTGZoXbu_0";
 
-function getSpreadsheet_() {
+function openSpreadsheetDirect_() {
   var lastErr = "";
   if (typeof SPREADSHEET_ID !== "undefined" && SPREADSHEET_ID && String(SPREADSHEET_ID).trim()) {
     try {
@@ -113,6 +113,13 @@ function getSpreadsheet_() {
   );
 }
 
+function getSpreadsheet_() {
+  if (typeof ACTIVE_REQUEST_SHEET_CONTEXT_ !== "undefined" && ACTIVE_REQUEST_SHEET_CONTEXT_) {
+    return ACTIVE_REQUEST_SHEET_CONTEXT_.getSpreadsheet();
+  }
+  return openSpreadsheetDirect_();
+}
+
 const SHEET_NAME_ALIASES = Object.freeze({
   "auditlog": ["Audit Log", "AuditLog"],
   "audit log": ["Audit Log", "AuditLog"],
@@ -132,7 +139,13 @@ const SHEET_NAME_ALIASES = Object.freeze({
 });
 
 function getSheetByNameInsensitive_(ss, targetName) {
+  if (!ss && typeof ACTIVE_REQUEST_SHEET_CONTEXT_ !== "undefined" && ACTIVE_REQUEST_SHEET_CONTEXT_) {
+    return ACTIVE_REQUEST_SHEET_CONTEXT_.getSheet(targetName);
+  }
   if (!ss || !targetName) return null;
+  if (typeof ACTIVE_REQUEST_SHEET_CONTEXT_ !== "undefined" && ACTIVE_REQUEST_SHEET_CONTEXT_) {
+    return ACTIVE_REQUEST_SHEET_CONTEXT_.getSheet(targetName);
+  }
   const target = String(targetName).trim().toLowerCase();
   const sheets = ss.getSheets();
   const byLowerName = {};
