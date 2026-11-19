@@ -84,7 +84,16 @@ function clearDashboardCache_() {
   try {
     if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
     var cache = CacheService.getScriptCache();
-    cache.removeAll(["home_analytics_year", "home_analytics_quarter", "home_analytics_this_month"]);
+    var now = new Date();
+    var curMonthKey = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0");
+    cache.removeAll([
+      "home_analytics_year",
+      "home_analytics_quarter",
+      "home_analytics_this_month",
+      "dividend_overview_v1",
+      "statements_overview_default",
+      "statements_overview_" + curMonthKey
+    ]);
   } catch (err) {
     console.error("clearDashboardCache_ error: " + err.message);
   }

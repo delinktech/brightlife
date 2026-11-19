@@ -6,7 +6,9 @@
 
 const dividendsState = {
   overview: null,
-  simulation: null
+  simulation: null,
+  fundStatementsPage: 1,
+  fundStatementsPageSize: 20
 };
 
 function formatKshDiv(val) {
@@ -55,7 +57,8 @@ function applyDividendOverviewData(res) {
     simPoolInput.value = s.suggestedPool || 0;
   }
 
-  // Render Fund Statements table
+  // Render Fund Statements table (reset to page 1 on fresh overview load)
+  dividendsState.fundStatementsPage = 1;
   renderFundStatementsTable(res.fundStatements || []);
 }
 
@@ -119,12 +122,37 @@ function renderFundStatementsTable(list) {
   const tbody = document.getElementById("fund-statements-table-body");
   if (!tbody) return;
 
-  if (!list || !list.length) {
+  const fullList = Array.isArray(list) ? list : [];
+  const total = fullList.length;
+  const pageSize = dividendsState.fundStatementsPageSize || 20;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (dividendsState.fundStatementsPage > totalPages) dividendsState.fundStatementsPage = totalPages;
+  if (dividendsState.fundStatementsPage < 1) dividendsState.fundStatementsPage = 1;
+
+  const startIdx = (dividendsState.fundStatementsPage - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const pageRows = fullList.slice(startIdx, endIdx);
+
+  const infoEl = document.getElementById("div-fund-pagination-info");
+  const indEl = document.getElementById("div-fund-page-indicator");
+  const prevBtn = document.getElementById("btn-fund-prev");
+  const nextBtn = document.getElementById("btn-fund-next");
+
+  if (infoEl) {
+    infoEl.textContent = total > 0
+      ? "Showing " + (startIdx + 1) + "\u2013" + endIdx + " of " + total + " statements"
+      : "Showing 0\u20130 of 0 statements";
+  }
+  if (indEl) indEl.textContent = "Page " + dividendsState.fundStatementsPage + " of " + totalPages;
+  if (prevBtn) prevBtn.disabled = dividendsState.fundStatementsPage <= 1;
+  if (nextBtn) nextBtn.disabled = dividendsState.fundStatementsPage >= totalPages;
+
+  if (!total) {
     tbody.innerHTML = '<tr><td colspan="9" class="py-6 text-center text-slate-500 dark:text-slate-400 font-sans">No fund statements recorded yet.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = list.map(function(item) {
+  tbody.innerHTML = pageRows.map(function(item) {
     return (
       '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
       '  <td class="py-3 px-4 font-sans text-slate-700 dark:text-slate-300">' + (item.date || "—") + '</td>' +
@@ -139,6 +167,22 @@ function renderFundStatementsTable(list) {
       '</tr>'
     );
   }).join("");
+}
+
+function prevFundStatementsPage() {
+  if (dividendsState.fundStatementsPage > 1) {
+    dividendsState.fundStatementsPage--;
+    renderFundStatementsTable((dividendsState.overview && dividendsState.overview.fundStatements) || []);
+  }
+}
+
+function nextFundStatementsPage() {
+  const list = (dividendsState.overview && dividendsState.overview.fundStatements) || [];
+  const totalPages = Math.max(1, Math.ceil(list.length / (dividendsState.fundStatementsPageSize || 20)));
+  if (dividendsState.fundStatementsPage < totalPages) {
+    dividendsState.fundStatementsPage++;
+    renderFundStatementsTable(list);
+  }
 }
 
 function openFundStatementModal() {

@@ -1523,6 +1523,7 @@
           toggleLoading(false);
           stopAppLoader();
         }
+        scheduleSecondaryPrefetch();
       })
       .withFailureHandler((err) => {
         if (!hasCached) {
@@ -1536,6 +1537,46 @@
         }
       })
       .getHomeAnalytics(currentHomeRange);
+  }
+
+  let secondaryPrefetchScheduled = false;
+  function scheduleSecondaryPrefetch() {
+    if (secondaryPrefetchScheduled || sessionAccessDenied) return;
+    if (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) return;
+    if (typeof google === "undefined" || !google.script || !google.script.run) return;
+    secondaryPrefetchScheduled = true;
+
+    setTimeout(function () {
+      if (sessionAccessDenied || !window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) return;
+
+      const canDividends =
+        window.APP_PERMS.isAdmin === true ||
+        window.APP_PERMS.accountsWrite === true ||
+        (window.currentUser && (window.currentUser.roleKey === "admin" || window.currentUser.roleKey === "treasurer"));
+
+      if (canDividends && !cacheGet("dividends_overview")) {
+        google.script.run
+          .withSuccessHandler(function (res) {
+            if (res && res.success) cacheSet("dividends_overview", res, 5 * 60 * 1000);
+          })
+          .withFailureHandler(function () {})
+          .getDividendOverviewData();
+      }
+
+      if (!cacheGet("statements_overview_latest")) {
+        google.script.run
+          .withSuccessHandler(function (data) {
+            if (data) {
+              cacheSet("statements_overview_latest", data, 5 * 60 * 1000);
+              if (data.activeMonthKey) {
+                cacheSet("statements_overview_" + data.activeMonthKey, data, 5 * 60 * 1000);
+              }
+            }
+          })
+          .withFailureHandler(function () {})
+          .getMonthlyStatementsOverviewData();
+      }
+    }, 150);
   }
 
   /**

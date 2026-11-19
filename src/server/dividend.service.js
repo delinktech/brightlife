@@ -21,138 +21,177 @@ function getDividendOverviewData() {
       throw new Error("Access denied: Only Admin or Treasurer can manage dividends.");
     }
 
-    const ss = getSpreadsheet_();
-
-    // 1. Gather all active members and their current savings and loan balance
-    const memberSheet = getRequiredSheet_(SHEETS.MEMBERS);
-    const mValues = memberSheet.getDataRange().getValues();
-    const mCol = getHeaderMap_(mValues[0]);
-    requireHeaders_(mCol, ["Member ID", "First Name", "Status"], SHEETS.MEMBERS);
-
-    let totalGroupSavings = 0;
-    const qualifyingMembers = [];
-
-    for (let r = 1; r < mValues.length; r++) {
-      const row = mValues[r];
-      const status = String(row[mCol["Status"]] || "").trim().toLowerCase();
-      if (status !== "active") continue;
-
-      const mid = String(row[mCol["Member ID"]] || "").trim();
-      if (!mid) continue;
-
-      const first = String(row[mCol["First Name"]] || "").trim();
-      const middle = mCol["Middle Name"] !== undefined ? String(row[mCol["Middle Name"]] || "").trim() : "";
-      const last = mCol["Last Name"] !== undefined ? String(row[mCol["Last Name"]] || "").trim() : "";
-      const fullName = mCol["Full Name"] !== undefined && row[mCol["Full Name"]]
-        ? String(row[mCol["Full Name"]]).trim()
-        : [first, middle, last].filter(Boolean).join(" ");
-
-      const savings = mCol["Total Savings"] !== undefined ? (Number(row[mCol["Total Savings"]]) || 0) : 0;
-      const loanBal = mCol["Current Loan Balance"] !== undefined ? (Number(row[mCol["Current Loan Balance"]]) || 0) : 0;
-
-      if (savings > 0) {
-        totalGroupSavings += savings;
-        qualifyingMembers.push({
-          memberId: mid,
-          fullName: fullName,
-          savings: savings,
-          loanBalance: loanBal,
-        });
+    const cacheKey = "dividend_overview_v1";
+    try {
+      const cached = CacheService.getScriptCache().get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
       }
+    } catch (cacheErr) {
+      console.warn("Dividend cache read error: " + cacheErr.message);
     }
 
-    // 2. Gather cumulative loan interest earned from Loan Repayments
-    let totalLoanInterest = 0;
+    const ctx = typeof beginRequestSheetContext_ === "function" ? beginRequestSheetContext_() : null;
     try {
-      const repSheet = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
-      if (repSheet && repSheet.getLastRow() > 1) {
-        const rVals = repSheet.getDataRange().getValues();
-        const rCol = getHeaderMap_(rVals[0]);
-        const intIdx = rCol["Interest Paid"];
-        const statIdx = rCol["Status"];
-        if (intIdx !== undefined) {
-          for (let i = 1; i < rVals.length; i++) {
-            const stat = statIdx !== undefined ? String(rVals[i][statIdx] || "").toLowerCase() : "approved";
-            if (stat === "approved") {
-              totalLoanInterest += Number(rVals[i][intIdx]) || 0;
-            }
-          }
-        }
-      }
-    } catch (eR) {
-      console.warn("Could not calculate loan interest: " + eR.message);
-    }
+      const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
 
-    // 3. Gather investment returns from Fund Statements (CIC MMF & Mansa X) and Investments
-    let totalInvestmentGains = 0;
-    const fundStatementList = [];
-    const tz = ss.getSpreadsheetTimeZone();
+      // 1. Gather all active members and their current savings and loan balance
+      const mValues = typeof getSheetValuesCached_ === "function"
+        ? getSheetValuesCached_(ss, SHEETS.MEMBERS, { required: true })
+        : getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+      const mCol = getHeaderMap_(mValues[0]);
+      requireHeaders_(mCol, ["Member ID", "First Name", "Status"], SHEETS.MEMBERS);
 
-    try {
-      const fundSheet = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
-      if (fundSheet && fundSheet.getLastRow() > 1) {
-        const fVals = fundSheet.getDataRange().getValues();
-        const fCol = getHeaderMap_(fVals[0]);
-        for (let f = 1; f < fVals.length; f++) {
-          const row = fVals[f];
-          const gross = Number(row[fCol["Gross Interest"]]) || 0;
-          const tax = Number(row[fCol["Withholding Tax"]]) || 0;
-          const rawNet = fCol["Net Yield"] !== undefined ? Number(row[fCol["Net Yield"]]) : 0;
-          const net = rawNet || (gross - tax);
-          totalInvestmentGains += net;
+      let totalGroupSavings = 0;
+      const qualifyingMembers = [];
 
-          fundStatementList.push({
-            date: formatDateValue_(row[fCol["Statement Date"]], tz),
-            fund: String(row[fCol["Fund Channel"]] || "").trim(),
-            opening: Number(row[fCol["Opening Balance"]]) || 0,
-            deposits: Number(row[fCol["Purchases / Deposits"]]) || 0,
-            grossInterest: gross,
-            wht: tax,
-            netYield: net,
-            closing: Number(row[fCol["Closing Balance"]]) || 0,
-            ref: String(row[fCol["Statement Ref"]] || "").trim()
+      for (let r = 1; r < mValues.length; r++) {
+        const row = mValues[r];
+        const status = String(row[mCol["Status"]] || "").trim().toLowerCase();
+        if (status !== "active") continue;
+
+        const mid = String(row[mCol["Member ID"]] || "").trim();
+        if (!mid) continue;
+
+        const first = String(row[mCol["First Name"]] || "").trim();
+        const middle = mCol["Middle Name"] !== undefined ? String(row[mCol["Middle Name"]] || "").trim() : "";
+        const last = mCol["Last Name"] !== undefined ? String(row[mCol["Last Name"]] || "").trim() : "";
+        const fullName = mCol["Full Name"] !== undefined && row[mCol["Full Name"]]
+          ? String(row[mCol["Full Name"]]).trim()
+          : [first, middle, last].filter(Boolean).join(" ");
+
+        const savings = mCol["Total Savings"] !== undefined ? (Number(row[mCol["Total Savings"]]) || 0) : 0;
+        const loanBal = mCol["Current Loan Balance"] !== undefined ? (Number(row[mCol["Current Loan Balance"]]) || 0) : 0;
+
+        if (savings > 0) {
+          totalGroupSavings += savings;
+          qualifyingMembers.push({
+            memberId: mid,
+            fullName: fullName,
+            savings: savings,
+            loanBalance: loanBal,
           });
         }
       }
-    } catch (eFund) {
-      console.warn("Could not calculate fund statement yield: " + eFund.message);
-    }
 
-    try {
-      const invSheet = ss.getSheetByName(SHEETS.INVESTMENTS);
-      if (invSheet && invSheet.getLastRow() > 1) {
-        const iVals = invSheet.getDataRange().getValues();
-        const iCol = getHeaderMap_(iVals[0]);
-        if (iCol["ROI Amount"] !== undefined) {
-          for (let j = 1; j < iVals.length; j++) {
-            totalInvestmentGains += Number(iVals[j][iCol["ROI Amount"]]) || 0;
+      // 2. Gather cumulative loan interest earned from Loan Repayments
+      let totalLoanInterest = 0;
+      try {
+        const rVals = typeof getSheetValuesCached_ === "function"
+          ? getSheetValuesCached_(ss, SHEETS.LOAN_REPAYMENTS)
+          : (function () {
+              const s = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
+              return s && s.getLastRow() > 1 ? s.getDataRange().getValues() : [];
+            })();
+        if (rVals && rVals.length > 1) {
+          const rCol = getHeaderMap_(rVals[0]);
+          const intIdx = rCol["Interest Paid"];
+          const statIdx = rCol["Status"];
+          if (intIdx !== undefined) {
+            for (let i = 1; i < rVals.length; i++) {
+              const stat = statIdx !== undefined ? String(rVals[i][statIdx] || "").toLowerCase() : "approved";
+              if (stat === "approved") {
+                totalLoanInterest += Number(rVals[i][intIdx]) || 0;
+              }
+            }
           }
         }
+      } catch (eR) {
+        console.warn("Could not calculate loan interest: " + eR.message);
       }
-    } catch (eI) {
-      console.warn("Could not calculate investment returns: " + eI.message);
+
+      // 3. Gather investment returns from Fund Statements (CIC MMF & Mansa X) and Investments
+      let totalInvestmentGains = 0;
+      const fundStatementList = [];
+      const tz = ss.getSpreadsheetTimeZone();
+
+      try {
+        const fVals = typeof getSheetValuesCached_ === "function"
+          ? getSheetValuesCached_(ss, SHEETS.FUND_STATEMENTS)
+          : (function () {
+              const s = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
+              return s && s.getLastRow() > 1 ? s.getDataRange().getValues() : [];
+            })();
+        if (fVals && fVals.length > 1) {
+          const fCol = getHeaderMap_(fVals[0]);
+          for (let f = 1; f < fVals.length; f++) {
+            const row = fVals[f];
+            const gross = Number(row[fCol["Gross Interest"]]) || 0;
+            const tax = Number(row[fCol["Withholding Tax"]]) || 0;
+            const rawNet = fCol["Net Yield"] !== undefined ? Number(row[fCol["Net Yield"]]) : 0;
+            const net = rawNet || (gross - tax);
+            totalInvestmentGains += net;
+
+            fundStatementList.push({
+              date: formatDateValue_(row[fCol["Statement Date"]], tz),
+              fund: String(row[fCol["Fund Channel"]] || "").trim(),
+              opening: Number(row[fCol["Opening Balance"]]) || 0,
+              deposits: Number(row[fCol["Purchases / Deposits"]]) || 0,
+              grossInterest: gross,
+              wht: tax,
+              netYield: net,
+              closing: Number(row[fCol["Closing Balance"]]) || 0,
+              ref: String(row[fCol["Statement Ref"]] || "").trim()
+            });
+          }
+        }
+      } catch (eFund) {
+        console.warn("Could not calculate fund statement yield: " + eFund.message);
+      }
+
+      try {
+        const iVals = typeof getSheetValuesCached_ === "function"
+          ? getSheetValuesCached_(ss, SHEETS.INVESTMENTS)
+          : (function () {
+              const s = ss.getSheetByName(SHEETS.INVESTMENTS);
+              return s && s.getLastRow() > 1 ? s.getDataRange().getValues() : [];
+            })();
+        if (iVals && iVals.length > 1) {
+          const iCol = getHeaderMap_(iVals[0]);
+          if (iCol["ROI Amount"] !== undefined) {
+            for (let j = 1; j < iVals.length; j++) {
+              totalInvestmentGains += Number(iVals[j][iCol["ROI Amount"]]) || 0;
+            }
+          }
+        }
+      } catch (eI) {
+        console.warn("Could not calculate investment returns: " + eI.message);
+      }
+
+      // 4. Calculate member shares
+      qualifyingMembers.forEach(function (m) {
+        m.sharePercent = totalGroupSavings > 0 ? (m.savings / totalGroupSavings) * 100 : 0;
+      });
+
+      // Suggested pool is cumulative interest + investment gains
+      const suggestedPool = Math.max(0, totalLoanInterest + totalInvestmentGains);
+
+      const result = {
+        success: true,
+        summary: {
+          totalGroupSavings: totalGroupSavings,
+          totalLoanInterest: totalLoanInterest,
+          totalInvestmentGains: totalInvestmentGains,
+          suggestedPool: suggestedPool,
+          qualifyingMemberCount: qualifyingMembers.length,
+        },
+        members: qualifyingMembers,
+        fundStatements: fundStatementList,
+      };
+
+      try {
+        const payloadStr = JSON.stringify(result);
+        if (payloadStr.length < 100000) {
+          CacheService.getScriptCache().put(cacheKey, payloadStr, 300);
+        }
+      } catch (putErr) {
+        console.warn("Dividend cache put error: " + putErr.message);
+      }
+
+      return result;
+    } finally {
+      if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
     }
-
-    // 4. Calculate member shares
-    qualifyingMembers.forEach(function (m) {
-      m.sharePercent = totalGroupSavings > 0 ? (m.savings / totalGroupSavings) * 100 : 0;
-    });
-
-    // Suggested pool is cumulative interest + investment gains
-    const suggestedPool = Math.max(0, totalLoanInterest + totalInvestmentGains);
-
-    return {
-      success: true,
-      summary: {
-        totalGroupSavings: totalGroupSavings,
-        totalLoanInterest: totalLoanInterest,
-        totalInvestmentGains: totalInvestmentGains,
-        suggestedPool: suggestedPool,
-        qualifyingMemberCount: qualifyingMembers.length,
-      },
-      members: qualifyingMembers,
-      fundStatements: fundStatementList,
-    };
   } catch (err) {
     return { success: false, error: err.message };
   }

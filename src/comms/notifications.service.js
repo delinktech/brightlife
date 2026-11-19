@@ -957,44 +957,96 @@ function sendBulkMonthlyStatements(params) {
  * Returns overview data for the Monthly Statements modal/dashboard view
  */
 function getMonthlyStatementsOverviewData(monthKey) {
-  const membersRes = getMembersData(1, 500);
-  const members = membersRes.members || [];
-
-  // Default to previous month if not specified
-  const now = new Date();
-  const defYear = now.getFullYear();
-  const defMonth = String(now.getMonth() + 1).padStart(2, "0");
-  const activeMonthKey = monthKey || (defYear + "-" + defMonth);
-
-  // Available months: generate last 6 months
-  const availableMonths = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = Utilities.formatDate(d, "Africa/Nairobi", "yyyy-MM");
-    const label = Utilities.formatDate(d, "Africa/Nairobi", "MMMM yyyy");
-    availableMonths.push({ key: key, label: label });
+  const session = requireAccess_();
+  if (session.permissions && session.permissions.isMemberOnly) {
+    throw new Error("Access denied: Staff permissions required to view monthly statements.");
   }
 
-  const memberRows = members.map(function (m) {
-    const cleanPhone = normalizeKenyanPhone_(m.phone);
-    return {
-      id: m.id,
-      name: m.name,
-      fullName: m.fullName || m.name,
-      phone: m.phone || "",
-      cleanPhone: cleanPhone,
-      email: m.email || "",
-      hasEmail: Boolean(m.email && m.email.indexOf("@") !== -1),
-      hasPhone: Boolean(cleanPhone),
-      savings: m.savings,
-      loanBalance: m.loanBalance,
-    };
-  });
+  const cacheKey = "statements_overview_" + (monthKey || "default");
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch (cacheErr) {
+    console.warn("Statements cache read error: " + cacheErr.message);
+  }
 
-  return {
-    activeMonthKey: activeMonthKey,
-    availableMonths: availableMonths,
-    members: memberRows,
-    settings: getNotificationSettings(),
-  };
+  const ctx = typeof beginRequestSheetContext_ === "function" ? beginRequestSheetContext_() : null;
+  try {
+    const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
+    const values = typeof getSheetValuesCached_ === "function"
+      ? getSheetValuesCached_(ss, SHEETS.MEMBERS, { required: true })
+      : getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+
+    const memberRows = [];
+    if (values && values.length > 1) {
+      const col = getHeaderMap_(values[0]);
+      requireHeaders_(col, ["Member ID", "First Name", "Last Name", "Total Savings", "Current Loan Balance"], SHEETS.MEMBERS);
+
+      for (let r = 1; r < values.length; r++) {
+        const row = values[r];
+        const mid = String(row[col["Member ID"]] || "").trim();
+        if (!mid) continue;
+
+        const firstName = String(row[col["First Name"]] || "").trim();
+        const middleName = col["Middle Name"] !== undefined ? String(row[col["Middle Name"]] || "").trim() : "";
+        const lastName = String(row[col["Last Name"]] || "").trim();
+        const initial = middleName ? middleName.charAt(0) + "." : "";
+        const fullNameClean = (firstName + " " + middleName + " " + lastName).replace(/\s+/g, " ").trim();
+        const nameClean = (firstName + " " + initial + " " + lastName).replace(/\s+/g, " ").trim();
+        const phone = col["Phone Number"] !== undefined ? String(row[col["Phone Number"]] || "").trim() : "";
+        const email = col["Email"] !== undefined ? String(row[col["Email"]] || "").trim() : "";
+        const cleanPhone = normalizeKenyanPhone_(phone);
+
+        memberRows.push({
+          id: mid,
+          name: nameClean,
+          fullName: fullNameClean || nameClean,
+          phone: phone,
+          cleanPhone: cleanPhone,
+          email: email,
+          hasEmail: Boolean(email && email.indexOf("@") !== -1),
+          hasPhone: Boolean(cleanPhone),
+          savings: Number(row[col["Total Savings"]]) || 0,
+          loanBalance: Number(row[col["Current Loan Balance"]]) || 0,
+        });
+      }
+    }
+
+    // Default to current month if not specified
+    const now = new Date();
+    const defYear = now.getFullYear();
+    const defMonth = String(now.getMonth() + 1).padStart(2, "0");
+    const activeMonthKey = monthKey || (defYear + "-" + defMonth);
+
+    // Available months: generate last 6 months
+    const availableMonths = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = Utilities.formatDate(d, "Africa/Nairobi", "yyyy-MM");
+      const label = Utilities.formatDate(d, "Africa/Nairobi", "MMMM yyyy");
+      availableMonths.push({ key: key, label: label });
+    }
+
+    const result = {
+      activeMonthKey: activeMonthKey,
+      availableMonths: availableMonths,
+      members: memberRows,
+      settings: getNotificationSettings(),
+    };
+
+    try {
+      const payloadStr = JSON.stringify(result);
+      if (payloadStr.length < 100000) {
+        CacheService.getScriptCache().put(cacheKey, payloadStr, 300);
+      }
+    } catch (putErr) {
+      console.warn("Statements cache put error: " + putErr.message);
+    }
+
+    return result;
+  } finally {
+    if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+  }
 }

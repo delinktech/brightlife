@@ -8,7 +8,10 @@ const statementsState = {
   overview: null,
   selectedMonthKey: null,
   previewMemberId: null,
-  previewStatementData: null
+  previewStatementData: null,
+  currentPage: 1,
+  pageSize: 20,
+  filteredMembers: null
 };
 
 function formatKshStmt(val) {
@@ -19,6 +22,8 @@ function formatKshStmt(val) {
 function applyMonthlyStatementsData(data) {
   statementsState.overview = data;
   statementsState.selectedMonthKey = data.activeMonthKey;
+  statementsState.currentPage = 1;
+  statementsState.filteredMembers = null;
   renderMonthlyStatementsView(data);
 }
 
@@ -136,15 +141,40 @@ function renderStatementMembersTable(members) {
   const renderedCount = document.getElementById("stmt-rendered-count");
   if (!tableBody) return;
 
-  if (!members || members.length === 0) {
+  const fullList = Array.isArray(members) ? members : [];
+  const total = fullList.length;
+  const pageSize = statementsState.pageSize || 20;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (statementsState.currentPage > totalPages) statementsState.currentPage = totalPages;
+  if (statementsState.currentPage < 1) statementsState.currentPage = 1;
+
+  const startIdx = (statementsState.currentPage - 1) * pageSize;
+  const endIdx = Math.min(startIdx + pageSize, total);
+  const pageRows = fullList.slice(startIdx, endIdx);
+
+  const infoEl = document.getElementById("stmt-pagination-info");
+  const indEl = document.getElementById("stmt-page-indicator");
+  const prevBtn = document.getElementById("btn-stmt-prev");
+  const nextBtn = document.getElementById("btn-stmt-next");
+
+  if (infoEl) {
+    infoEl.textContent = total > 0
+      ? "Showing " + (startIdx + 1) + "\u2013" + endIdx + " of " + total + " members"
+      : "Showing 0\u20130 of 0 members";
+  }
+  if (indEl) indEl.textContent = "Page " + statementsState.currentPage + " of " + totalPages;
+  if (prevBtn) prevBtn.disabled = statementsState.currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = statementsState.currentPage >= totalPages;
+
+  if (!total) {
     tableBody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-500 dark:text-slate-400">No members found matching filter.</td></tr>';
     if (renderedCount) renderedCount.innerText = "0";
     return;
   }
 
-  if (renderedCount) renderedCount.innerText = members.length;
+  if (renderedCount) renderedCount.innerText = total;
 
-  tableBody.innerHTML = members.map(function (m) {
+  tableBody.innerHTML = pageRows.map(function (m) {
     const emailCell = m.hasEmail
       ? '<span class="text-slate-700 dark:text-slate-300 font-mono text-[11px]">' + escapeHtmlAttr(m.email) + '</span>'
       : '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 font-medium border border-rose-200 dark:border-rose-500/30"><i class="fas fa-exclamation-triangle mr-1 text-[9px]"></i> No email</span>';
@@ -196,6 +226,8 @@ function changeStatementMonth() {
   const sel = document.getElementById("stmt-month-select");
   if (!sel) return;
   statementsState.selectedMonthKey = sel.value;
+  statementsState.currentPage = 1;
+  statementsState.filteredMembers = null;
   loadMonthlyStatementsView(sel.value);
 }
 
@@ -208,7 +240,26 @@ function filterStatementMembersTable() {
            (m.id && m.id.toLowerCase().indexOf(q) !== -1) ||
            (m.email && m.email.toLowerCase().indexOf(q) !== -1);
   });
+  statementsState.currentPage = 1;
+  statementsState.filteredMembers = filtered;
   renderStatementMembersTable(filtered);
+}
+
+function prevStatementsPage() {
+  if (statementsState.currentPage > 1) {
+    statementsState.currentPage--;
+    const list = statementsState.filteredMembers || (statementsState.overview && statementsState.overview.members) || [];
+    renderStatementMembersTable(list);
+  }
+}
+
+function nextStatementsPage() {
+  const list = statementsState.filteredMembers || (statementsState.overview && statementsState.overview.members) || [];
+  const totalPages = Math.max(1, Math.ceil(list.length / (statementsState.pageSize || 20)));
+  if (statementsState.currentPage < totalPages) {
+    statementsState.currentPage++;
+    renderStatementMembersTable(list);
+  }
 }
 
 function toggleSelectAllStatementMembers() {

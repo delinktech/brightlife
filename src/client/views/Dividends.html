@@ -206,6 +206,20 @@
         </tbody>
       </table>
     </div>
+    <div id="div-fund-pagination" class="px-4 py-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-400">
+      <div id="div-fund-pagination-info" class="font-medium tabular-nums">Showing 0–0 of 0 statements</div>
+      <div class="flex items-center gap-2">
+        <button type="button" id="btn-fund-prev" onclick="prevFundStatementsPage()" disabled
+          class="min-h-[38px] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition-colors">
+          Previous
+        </button>
+        <span id="div-fund-page-indicator" class="px-2 font-mono tabular-nums font-semibold text-slate-700 dark:text-slate-200">Page 1 of 1</span>
+        <button type="button" id="btn-fund-next" onclick="nextFundStatementsPage()" disabled
+          class="min-h-[38px] px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition-colors">
+          Next
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Dividend Confirm Modal -->
