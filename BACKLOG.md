@@ -13,7 +13,7 @@
 | **Completed & Shipped (`[DONE]`)** | **12 Tasks (52.2%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **11 Tasks (47.8%)** |
-| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite & Member Loan Application |
+| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite (`RPT-2: Statement of Comprehensive Income / P&L`) |
 
 ---
 
@@ -38,35 +38,12 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 12 tasks are categorized below in strict execution priority:
+The remaining 11 tasks are categorized below in strict execution priority:
 
-### Tier 1: Immediate Strategic Priorities (Sprint Next)
+### Tier 1: Immediate Strategic Priorities (Active Sprint Focus)
 
-#### 1. `RPT-1: Statement of Financial Position (Balance Sheet)` `[IN PROGRESS]`
-* **Priority:** `P0 (Critical)`
-* **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
-* **Location:** `Reports` tab (`#home-subview-reports`)
-* **Objective:** Formalize Brightlife's audited Balance Sheet compliant with IFRS for SACCOs:
-  - **Assets:** Cash & Bank Balances + CIC MMF + Gross Loans Receivable *less Allowance for Loan Losses* (`netLoanAssetValue` from VIS-3).
-  - **Liabilities:** Accounts Payable + Accrued Expenses + Unallocated Deposits.
-  - **Equity:** Member Accumulated Savings + Statutory Reserve Fund (20%) + Retained Distributable Surplus.
-  - **Mathematical Identity:** $\text{Total Assets} \equiv \text{Total Liabilities} + \text{Total Equity}$.
-* **Dependencies:** FIN-2 (Reconciled Cash), VIS-3 (Net Loan Carrying Asset).
-
-#### 2. `UI-2: Working Member Loan Application Workflow`
-* **Priority:** `P0 (Critical)`
-* **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer`)
-* **Location:** `Loans.html` (`Apply for Loan` Modal)
-* **Objective:** Replace static/placeholder loan request flow with an interactive, end-to-end loan application modal:
-  - Dynamic Borrower Selection with real-time savings lookup.
-  - Real-time 3x Borrowing Limit & Eligibility Calculation.
-  - Real-time Guarantor Allocation & Guarantee Deficit Tracker.
-  - Interactive Loan Calculator: Amortization schedule, monthly installments, total interest.
-  - Server-side validation and write to `SHEETS.LOANS` with `Status = "Pending"`.
-* **Dependencies:** None (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
-
-#### 3. `RPT-2: Statement of Comprehensive Income (Profit & Loss / P&L)`
-* **Priority:** `P1 (High)`
+#### 1. `RPT-2: Statement of Comprehensive Income (Profit & Loss / P&L)`
+* **Priority:** `P0 (Top Strategic Priority)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab (`#home-subview-reports`)
 * **Objective:** Formalize operating performance over the selected period:
@@ -75,22 +52,22 @@ The remaining 12 tasks are categorized below in strict execution priority:
   - **Less Operating Expenses:** Bank/Paybill Charges + Software & Technology Fees + Meeting/AGM Costs.
   - **Less Provisions:** Period Loan Loss Impairment Allocation.
   - **Result:** **Net Distributable Surplus** available for member dividend allocation.
-* **Dependencies:** FIN-3, RPT-1.
+* **Dependencies:** FIN-3, RPT-1 (Unblocked and ready for immediate implementation).
 
----
-
-### Tier 2: Governance, Exports & Data Reconciliation
-
-#### 4. `RPT-4: Official AGM & Bank Audit Export Pack`
+#### 2. `RPT-4: Official AGM & Bank Audit Export Pack`
 * **Priority:** `P1 (High)`
 * **Domain:** Document Governance (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
 * **Location:** `Reports` tab
 * **Objective:** One-click generation of the official Brightlife SHG Financial Report:
   - Executive PDF with formal BLG letterhead, verification reference hash, and confidentiality stamps.
   - Full CSV/Excel audit package export for commercial bank financing or SACCO regulator filing.
-* **Dependencies:** RPT-1, RPT-2.
+* **Dependencies:** RPT-1 (Shipped in v110), RPT-2.
 
-#### 5. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
+---
+
+### Tier 2: Governance, Exports & Data Reconciliation
+
+#### 3. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
 * **Priority:** `P1 (High)`
 * **Domain:** Governance & Internal Controls (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
 * **Location:** `Loans.html` & `server/loans.service.js`
@@ -99,14 +76,14 @@ The remaining 12 tasks are categorized below in strict execution priority:
   - Audit trail logging in `SHEETS.AUDIT_LOG`.
 * **Dependencies:** UI-2.
 
-#### 6. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
+#### 4. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
 * **Priority:** `P1 (High)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
 * **Location:** `SHEETS.ACCOUNTS` & `SHEETS.FUND_STATEMENTS`
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
 * **Dependencies:** None.
 
-#### 7. `COM-1: Automated WhatsApp & Email Transaction Receipts`
+#### 5. `COM-1: Automated WhatsApp & Email Transaction Receipts`
 * **Priority:** `P1 (High)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
@@ -117,35 +94,47 @@ The remaining 12 tasks are categorized below in strict execution priority:
 
 ### Tier 3: Advanced Intelligence, Workflows & Platform Hardening
 
-#### 8. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 6. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
+* **Priority:** `P2 (Deferred by User Request)`
+* **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer`)
+* **Location:** `Loans.html` (`Apply for Loan` Modal)
+* **Objective:** Replace static/placeholder loan request flow with an interactive, end-to-end loan application modal:
+  - Dynamic Borrower Selection with real-time savings lookup.
+  - Real-time 3x Borrowing Limit & Eligibility Calculation.
+  - Real-time Guarantor Allocation & Guarantee Deficit Tracker.
+  - Interactive Loan Calculator: Amortization schedule, monthly installments, total interest.
+  - Server-side validation and write to `SHEETS.LOANS` with `Status = "Pending"`.
+* **Dependencies:** None (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
+
+#### 7. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 9. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
+#### 8. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
 * **Priority:** `P2 (Medium)`
 * **Domain:** UI/UX (`@designer`)
 * **Location:** `Contributions.html`, `Loans.html`, `Members.html`
 * **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
 * **Dependencies:** UI-1A.
 
-#### 10. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 9. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 11. `MIG-3: Legacy Chama Google Sheet Consolidation`
+#### 10. `MIG-3: Legacy Chama Google Sheet Consolidation`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Migration (`@migrator` $\to$ `@ledger`)
 * **Location:** Legacy Workbooks
 * **Objective:** Final ingestion and archival of any legacy standalone spreadsheet tabs into the unified Brightlife database.
 * **Dependencies:** MIG-2.
 
-#### 12. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 11. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
@@ -158,7 +147,7 @@ The remaining 12 tasks are categorized below in strict execution priority:
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v109)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v110)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -166,15 +155,15 @@ graph TD
         V1["VIS-1: Cash Flow Waterfall"]
         V2["VIS-2: Savings vs. Loan Trajectory"]
         V3["VIS-3: SASRA Aging & Provision Matrix"]
+        R1["RPT-1: Statement of Financial Position"]
     end
 
-    subgraph Sprint_Next ["Immediate Next Sprint (P0 Priorities)"]
-        R1["RPT-1: Statement of Financial Position<br>(Balance Sheet on Reports Tab)"]
-        U2["UI-2: Member Loan Application Workflow<br>(Modal, Eligibility & Calculator)"]
+    subgraph Sprint_Next ["Immediate Next Sprint"]
+        U2["UI-2: Member Loan Application Workflow<br>(Modal, Eligibility & Calculator - P0)"]
+        R2["RPT-2: Statement of Comprehensive Income<br>(Profit & Loss / P&L - P1)"]
     end
 
     subgraph Sprint_Follow_Up ["Follow-up Sprint (P1 Priorities)"]
-        R2["RPT-2: Statement of Comprehensive Income<br>(Profit & Loss / P&L)"]
         R4["RPT-4: Official AGM & Bank Audit Pack<br>(PDF Letterhead & CSV Export)"]
         G1["GOV-1: Multi-Signature Dual-Officer Loan Approval"]
         M2["MIG-2: Equity Bank Statement Ingestion"]
