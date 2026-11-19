@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v112`** (Google Apps Script Build `@113`, Commit `15d40fd`) |
+| **Current Live Release** | **`v114`** (Google Apps Script Build `@115`, Commit `af4575f`) |
 | **Total Tracked Tasks** | **27 Tasks** (Expanded with Architectural Modernization `ARC-1`–`ARC-4`) |
-| **Completed & Shipped (`[DONE]`)** | **14 Tasks (51.9%)** |
+| **Completed & Shipped (`[DONE]`)** | **16 Tasks (59.3%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **13 Tasks (48.1%)** |
-| **Current Sprint Focus** | Phase 2.5: Architectural Modernization — `ARC-2: Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine` |
+| **Prioritized Backlog (`[BACKLOG]`)** | **11 Tasks (40.7%)** |
+| **Current Sprint Focus** | Phase 2.5: Architectural Modernization — `ARC-4: Request-Scoped SheetContext & RPC Optimization Pipeline` |
 
 ---
 
@@ -21,6 +21,8 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`ARC-3`** | Architecture | **Google Sheets Formula Offloading & Materialized View (`Summary KPIs`)**: Deprecated per-row formula injections in `Contributions` and `Members`; installed Row 1 header spill formulas (`MAP`, `LAMBDA`, `SUMIFS`, `XLOOKUP`) across `Members`, `Contributions`, `Loans`, `Loan Repayments`, `Guarantors`, `Investments`, and `Investment Projects`; provisioned 15-metric `Summary KPIs` materialized view tab and single-range O(1) read path (`readSummaryKpisSnapshot_`, `getSummaryKpisData`). | `@ledger`, `@analyst`, `@fixer` | **`v114`** (`@115`) | 2026-11-19 |
+| **`ARC-2`** | Architecture | **Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine**: Implemented Tier 1 `Investments` market valuation columns (Units Held, Unit Cost, Current Price, FVTPL Carrying Value), Tier 2 `Investment Projects` register (Bee Keeping, Land, Agribusiness), Tier 3 unified `Investment Cashflows` ledger merged non-destructively with legacy `InvestmentLedger`, RPT-1/RPT-2 valuation & dividend rollups, and idempotent `?setupWorkbook=1` provisioner. | `@ledger`, `@analyst`, `@fixer` | **`v113`** (`@114`) | 2026-11-19 |
 | **`ARC-1`** | Architecture | **Institutional Schema Standard & Reference Data Architecture**: Standardized all sheet tab names to Institutional Title Case with Single Spaces, implemented bidirectional backward-compatible alias resolution dictionary in `config.js` (`SHEETS.MEMBERS`, `SHEETS.INVESTMENTS`, etc.), restructured `Constants` sheet into formal reference tables (`Asset_Classes`, `Project_Categories`, `Payment_Channels`, `Statutory_Thresholds`) with dynamic data validation dropdown rules. | `@ledger`, `@migrator`, `@fixer` | **`v112`** (`@113`) | 2026-11-19 |
 | **`RPT-2`** | Financial | **Statement of Comprehensive Income (Profit & Loss / P&L)**: Audited IFRS operating performance statement on `Reports` tab with 4-card revenue/surplus ribbon, operating revenue breakdown, investment yields, operating expenses, impairment deduction, net distributable surplus, zero-variance dividend basis, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v111`** (`@112`) | 2026-11-19 |
 | **`RPT-1`** | Financial | **Statement of Financial Position (Balance Sheet)**: Audited IFRS/SASRA Balance Sheet on `Reports` tab with dual-column classical ledger, 4-card solvency ribbon, zero-variance guarantee, RFC-4180 CSV export, and BLG letterhead print preview. | `@analyst`, `@fixer`, `@designer` | **`v110`** (`@111`) | 2026-11-19 |
@@ -40,43 +42,11 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 13 tasks are categorized below in strict execution priority:
+The remaining 11 tasks are categorized below in strict execution priority:
 
 ### Tier 1: Architectural Modernization & Active Sprint Priorities
 
-#### 1. `ARC-2: Plug-and-Play 3-Tier Investment & Tangible Capital Venture Engine`
-* **Priority:** `P0 (Top Strategic Priority)`
-* **Domain:** Investment Accounting & Core Operations (`@ledger` $\to$ `@analyst` $\to$ `@fixer`)
-* **Location:** `server/investments.service.js`, `server/projects.service.js`, `Investments`, `Investment Projects`, `Investment Cashflows`
-* **Objective:** Build the institutional plug-and-play investment engine supporting both financial assets and tangible capital ventures:
-  - **Tier 1 (Financial Assets):** `Investments` sheet tracking liquid market instruments (MMFs, Equities/Shares, T-Bills, Fixed Deposits) with Cost Basis, Units Held, Current Nav/Price, Market Valuation, and Unrealized Gain/Loss.
-  - **Tier 2 (Tangible Capital Ventures):** `Investment Projects` sheet tracking physical group ventures (Bee Keeping, Land Acquisition, Agribusiness, Commercial Real Estate) with Project Category, Approved Budget, Total Capital Deployed, Projected Revenue, Milestone Status, and Completion Date.
-  - **Tier 3 (Unified Cashflows):** `Investment Cashflows` sheet tracking all money movements (Capital Outflows/Investments, Dividend/Yield Inflows, Capital Returns, Operational Project Expenses) linked by Asset ID or Project ID.
-  - Integrate valuation rollups into `RPT-1` Balance Sheet (Total Investments Asset) and `RPT-2` Income Statement (Net Investment Yields & Project Surpluses).
-* **Dependencies:** `ARC-1` (Shipped in v112).
-* **Definition of Done (DoD):**
-  - CRUD operations implemented and tested for both Financial Instruments and Capital Projects.
-  - Transaction ledger writes and reconciles cash movements against physical accounts.
-  - Service functions expose normalized APIs (`getInvestmentsSummary()`, `getProjectsSummary()`, `recordInvestmentCashflow()`).
-  - Node syntax and VM mock tests pass (`PASS`); `@sentinel` clearance PASS.
-
-#### 2. `ARC-3: Google Sheets Formula Offloading & Materialized View (Summary KPIs)`
-* **Priority:** `P0 (Performance & Scalability)`
-* **Domain:** Database Performance & Sheet Architecture (`@ledger` $\to$ `@analyst` $\to$ `@fixer`)
-* **Location:** `Contributions`, `Loans`, `Summary KPIs`
-* **Objective:** Offload heavy row-by-row server calculations to native Google Sheets array formulas and a single-row materialized view:
-  - Deprecate row-by-row formula injection in `Contributions` (which severely bloated write latency and file calculation time).
-  - Inject resilient header spill formulas (`MAP`, `LAMBDA`, `SUMIFS`, `FILTER`) in Row 1 for cumulative member savings balances and loan amortization balances.
-  - Implement a dedicated single-row `Summary KPIs` sheet acting as a real-time materialized view (Total Member Savings, Total Disbursed, Total Outstanding Loans, Net Cash Position, Total Investment Assets, Active PAR %).
-  - Update GAS read paths to query `Summary KPIs` in 1 instant range call instead of iterating hundreds of rows across 6 separate sheets.
-* **Dependencies:** `ARC-1` (Shipped in v112).
-* **Definition of Done (DoD):**
-  - Row-by-row formula generation removed from backend contribution creation handlers.
-  - Dynamic spill array formulas established in header rows of transactional sheets.
-  - `Summary KPIs` tab generated and dynamically calculating from underlying sheets.
-  - GAS KPI fetching latency reduced by >= 50%; Node syntax/VM tests pass; `@sentinel` clearance PASS.
-
-#### 3. `ARC-4: Request-Scoped SheetContext & RPC Optimization Pipeline`
+#### 1. `ARC-4: Request-Scoped SheetContext & RPC Optimization Pipeline`
 * **Priority:** `P0 (Engine Infrastructure)`
 * **Domain:** Backend Optimization & Middleware (`@fixer` $\to$ `@sentinel`)
 * **Location:** `server/context.service.js`, `server/core.service.js`
@@ -84,20 +54,20 @@ The remaining 13 tasks are categorized below in strict execution priority:
   - Introduce request-scoped `SheetContext` pattern that batches and lazily caches open sheet instances and multi-range reads per HTTP execution.
   - Cut dashboard/report load roundtrips from 15+ individual `SpreadsheetApp` calls down to <= 8 optimized reads.
   - Implement metadata-driven column header resolution to safeguard against manual column reordering by users.
-* **Dependencies:** `ARC-1` (Shipped in v112), `ARC-3`.
+* **Dependencies:** `ARC-1` (Shipped in v112), `ARC-3` (Shipped in v114).
 * **Definition of Done (DoD):**
   - `SheetContext` class implemented and adopted across all core API endpoints (`apiGetDashboardData`, `apiGetReportsData`).
   - RPC execution profiling logs confirm <= 8 sheet reads per full dashboard payload load.
   - Header resolution unit tests pass; Node syntax and VM tests pass (`15/15 PASS`); `@sentinel` clearance PASS.
 
-#### 4. `RPT-4: Official AGM & Bank Audit Export Pack`
+#### 2. `RPT-4: Official AGM & Bank Audit Export Pack`
 * **Priority:** `P0 (Top Reporting Priority)`
 * **Domain:** Document Governance (`@designer` $\to$ `@fixer` $\to$ `@sentinel`)
 * **Location:** `Reports` tab (`#home-subview-reports`)
 * **Objective:** One-click generation of the combined institutional Brightlife SHG Annual Financial Pack:
   - Executive PDF report combining Balance Sheet (`RPT-1`), Income Statement (`RPT-2`), and Capital Projects summary, styled with formal BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps.
   - Full multi-statement CSV / Excel audit package export for commercial bank financing or SACCO regulator filing.
-* **Dependencies:** `RPT-1` (Shipped in v110), `RPT-2` (Shipped in v111), `ARC-1` (Shipped in v112), `ARC-2`.
+* **Dependencies:** `RPT-1` (Shipped in v110), `RPT-2` (Shipped in v111), `ARC-1` (Shipped in v112), `ARC-2` (Shipped in v113).
 * **Definition of Done (DoD):**
   - One-click print preview generates comprehensive institutional AGM pack.
   - RFC-4180 CSV / Excel export generates verified multi-tab financial workbook.
