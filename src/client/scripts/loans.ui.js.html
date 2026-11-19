@@ -532,7 +532,8 @@
       ]
     },
     borrowerId: "",
-    guarantors: []
+    guarantors: [],
+    guarantorDirectory: []
   };
 
   function getActiveLoanPolicy_() {
@@ -555,7 +556,11 @@
 
   function getMemberUnencumberedSavings_(m) {
     if (!m) return 0;
-    return Math.max(0, (Number(m.savings) || 0) - (Number(m.guaranteed) || 0));
+    if (m.availableToGuarantee !== undefined && m.availableToGuarantee !== "") {
+      return Math.max(0, Number(m.availableToGuarantee) || 0);
+    }
+    const gAmt = m.guaranteedAmount !== undefined ? m.guaranteedAmount : m.guaranteed;
+    return Math.max(0, (Number(m.savings) || 0) - (Number(gAmt) || 0));
   }
 
   function syncApplyLoanPolicyBadges_() {
@@ -594,7 +599,7 @@
         return (
           '<div class="custom-combobox-item" onclick="selectApplyLoanBorrower_(\'' + escapeHtmlAttr(m.id) + '\')">' +
           '<span>' + escapeHtmlAttr(m.name) + '</span>' +
-          '<span class="item-id">' + escapeHtmlAttr(m.id) + ' &bull; ' + formatMoney(m.savings || 0) + '</span>' +
+          '<span class="item-id font-mono">' + escapeHtmlAttr(m.id) + '</span>' +
           '</div>'
         );
       }).join("");
@@ -766,9 +771,21 @@
     updateLoanApplicationCalculator();
   }
 
+  function getGuarantorSourceList_() {
+    if (Array.isArray(applyLoanState.guarantorDirectory) && applyLoanState.guarantorDirectory.length > 0) {
+      return applyLoanState.guarantorDirectory;
+    }
+    return (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+  }
+
+  function findFullMemberRecord_(memberId) {
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    return list.find(function (m) { return String(m.id) === String(memberId); }) || null;
+  }
+
   function getEligibleGuarantorsForRow_(idx, filterText) {
     const q = (filterText || "").toLowerCase().trim();
-    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const list = getGuarantorSourceList_();
     return list.filter(function (m) {
       if (String(m.id) === String(applyLoanState.borrowerId)) return false;
       const takenElsewhere = applyLoanState.guarantors.some(function (other, oIdx) {
@@ -796,11 +813,20 @@
     }
 
     panel.innerHTML = matches.slice(0, 40).map(function (m) {
-      const free = getMemberUnencumberedSavings_(m);
+      const fullM = findFullMemberRecord_(m.id);
+      const isEligible = m.eligible !== undefined ? Boolean(m.eligible) : (getMemberUnencumberedSavings_(fullM || m) > 0);
+      if (!isEligible) {
+        return (
+          '<div class="custom-combobox-item opacity-50 cursor-not-allowed pointer-events-none" aria-disabled="true">' +
+            '<span>' + escapeHtmlAttr(m.name) + ' <span class="text-[10px] text-slate-400 font-mono">(' + escapeHtmlAttr(m.id) + ")</span></span>" +
+            '<span class="item-id text-rose-600 dark:text-rose-400">Ineligible</span>' +
+          "</div>"
+        );
+      }
       return (
         '<div class="custom-combobox-item" onclick="event.stopPropagation(); onGuarantorSelected(' + idx + ', \'' + escapeHtmlAttr(m.id) + '\')">' +
           '<span>' + escapeHtmlAttr(m.name) + "</span>" +
-          '<span class="item-id font-mono tabular-nums">' + escapeHtmlAttr(m.id) + " &bull; " + formatMoney(free) + " free</span>" +
+          '<span class="item-id font-mono">' + escapeHtmlAttr(m.id) + "</span>" +
         "</div>"
       );
     }).join("");
@@ -811,13 +837,78 @@
     renderGuarantorComboboxPanel_(idx, "");
   }
 
+  function getGuarantorRowStatus_(selectedMember, amount, rowObj) {
+    if (!selectedMember) {
+      return {
+        valid: true,
+        text: "Select a guarantor to verify eligibility",
+        cls: "text-[10px] text-slate-500 dark:text-slate-400 px-0.5",
+        maxAttr: ""
+      };
+    }
+    const isMemberOnly = !window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false;
+    const fullM = findFullMemberRecord_(selectedMember.id);
+    if (!isMemberOnly && fullM) {
+      const freeSavings = getMemberUnencumberedSavings_(fullM);
+      if (freeSavings <= 0) {
+        return {
+          valid: false,
+          text: "Ineligible \u2014 No unencumbered savings available",
+          cls: "text-[10px] font-semibold text-rose-600 dark:text-rose-400 px-0.5",
+          maxAttr: "0"
+        };
+      }
+      if ((Number(amount) || 0) > freeSavings) {
+        return {
+          valid: false,
+          text: "Exceeds member's guarantee limit",
+          cls: "text-[10px] font-semibold text-rose-600 dark:text-rose-400 px-0.5",
+          maxAttr: String(freeSavings)
+        };
+      }
+      return {
+        valid: true,
+        text: "Eligible Guarantor",
+        cls: "text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 px-0.5",
+        maxAttr: String(freeSavings)
+      };
+    }
+
+    // Privacy-safe member-only mode: never expose numeric balances
+    if (selectedMember.eligible === false) {
+      return {
+        valid: false,
+        text: "Ineligible \u2014 No unencumbered savings available",
+        cls: "text-[10px] font-semibold text-rose-600 dark:text-rose-400 px-0.5",
+        maxAttr: ""
+      };
+    }
+    if (rowObj && rowObj.capacityInsufficient) {
+      return {
+        valid: false,
+        text: "Exceeds member's guarantee limit",
+        cls: "text-[10px] font-semibold text-rose-600 dark:text-rose-400 px-0.5",
+        maxAttr: ""
+      };
+    }
+    return {
+      valid: true,
+      text: "Eligible Guarantor",
+      cls: "text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 px-0.5",
+      maxAttr: ""
+    };
+  }
+
   function onGuarantorSearchInput_(idx, value) {
     const g = applyLoanState.guarantors[idx];
     if (g && g.memberId) {
       g.memberId = "";
+      g.capacityInsufficient = false;
       const freeEl = document.getElementById("al-guarantor-free-" + idx);
       if (freeEl) {
-        freeEl.textContent = "Select a guarantor to view available unencumbered savings";
+        const st = getGuarantorRowStatus_(null, 0, null);
+        freeEl.className = st.cls;
+        freeEl.textContent = st.text;
       }
       updateLoanApplicationCalculator();
     }
@@ -829,7 +920,7 @@
     const addBtn = document.getElementById("al-add-guarantor-btn");
     if (!container) return;
 
-    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const list = getGuarantorSourceList_();
     const eligibleMembers = list.filter(function (m) {
       return String(m.id) !== String(applyLoanState.borrowerId);
     });
@@ -846,8 +937,10 @@
 
     container.innerHTML = applyLoanState.guarantors.map(function (g, idx) {
       const selectedMember = eligibleMembers.find(function (m) { return String(m.id) === String(g.memberId); });
-      const freeSavings = getMemberUnencumberedSavings_(selectedMember);
       const inputVal = selectedMember ? (selectedMember.name + " (" + selectedMember.id + ")") : "";
+      const rowStatus = getGuarantorRowStatus_(selectedMember, g.amount, g);
+      const maxAttrHtml = rowStatus.maxAttr !== "" ? (' max="' + escapeHtmlAttr(rowStatus.maxAttr) + '"') : "";
+      const borderCls = rowStatus.valid ? "border-slate-200 dark:border-slate-700" : "border-rose-500 dark:border-rose-500";
 
       return (
         '<div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-1.5">' +
@@ -866,9 +959,9 @@
             "</div>" +
             '<div class="sm:col-span-4 relative flex items-center">' +
               '<span class="absolute left-3 text-[11px] font-mono font-semibold text-slate-400 dark:text-slate-500 pointer-events-none">KES</span>' +
-              '<input type="number" min="0" step="500" value="' + (Number(g.amount) || "") + '" placeholder="0" ' +
+              '<input type="number" id="al-guarantor-amount-' + idx + '" min="0" step="500"' + maxAttrHtml + ' value="' + (Number(g.amount) || "") + '" placeholder="0" ' +
                 'oninput="onGuarantorAmountChanged(' + idx + ', this.value)" ' +
-                'class="min-h-[38px] w-full pl-11 pr-3 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-semibold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />' +
+                'class="min-h-[38px] w-full pl-11 pr-3 py-1.5 bg-white dark:bg-slate-900 border ' + borderCls + ' text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-semibold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />' +
             "</div>" +
             '<div class="sm:col-span-1 flex justify-end">' +
               '<button type="button" onclick="removeLoanGuarantorRow(' + idx + ')" aria-label="Remove Guarantor" ' +
@@ -877,8 +970,8 @@
               "</button>" +
             "</div>" +
           "</div>" +
-          '<div id="al-guarantor-free-' + idx + '" class="text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums px-0.5">' +
-            (selectedMember ? ("Available to pledge: " + formatMoney(freeSavings)) : "Select a guarantor to view available unencumbered savings") +
+          '<div id="al-guarantor-free-' + idx + '" class="' + rowStatus.cls + '">' +
+            escapeHtmlAttr(rowStatus.text) +
           "</div>" +
         "</div>"
       );
@@ -887,7 +980,7 @@
 
   function addLoanGuarantorRow() {
     if (applyLoanState.guarantors.length >= 3) return;
-    applyLoanState.guarantors.push({ memberId: "", amount: 0 });
+    applyLoanState.guarantors.push({ memberId: "", amount: 0, capacityInsufficient: false });
     renderApplyLoanGuarantors_();
     updateLoanApplicationCalculator();
   }
@@ -901,14 +994,56 @@
   function onGuarantorSelected(idx, memberId) {
     if (!applyLoanState.guarantors[idx]) return;
     applyLoanState.guarantors[idx].memberId = memberId || "";
+    applyLoanState.guarantors[idx].capacityInsufficient = false;
     renderApplyLoanGuarantors_();
     updateLoanApplicationCalculator();
   }
 
+  let guarantorCapacityTimers_ = {};
+  function syncGuarantorRowFeedback_(idx) {
+    const g = applyLoanState.guarantors[idx];
+    if (!g) return;
+    const gm = getGuarantorSourceList_().find(function (m) { return String(m.id) === String(g.memberId); });
+    const st = getGuarantorRowStatus_(gm, g.amount, g);
+    const freeEl = document.getElementById("al-guarantor-free-" + idx);
+    if (freeEl) {
+      freeEl.className = st.cls;
+      freeEl.textContent = st.text;
+    }
+    const amtInput = document.getElementById("al-guarantor-amount-" + idx);
+    if (amtInput) {
+      amtInput.classList.toggle("border-rose-500", !st.valid);
+      amtInput.classList.toggle("dark:border-rose-500", !st.valid);
+      amtInput.classList.toggle("border-slate-200", st.valid);
+      amtInput.classList.toggle("dark:border-slate-700", st.valid);
+    }
+  }
+
   function onGuarantorAmountChanged(idx, value) {
-    if (!applyLoanState.guarantors[idx]) return;
-    applyLoanState.guarantors[idx].amount = Math.max(0, Number(value) || 0);
+    const g = applyLoanState.guarantors[idx];
+    if (!g) return;
+    g.amount = Math.max(0, Number(value) || 0);
+    g.capacityInsufficient = false;
+    syncGuarantorRowFeedback_(idx);
     updateLoanApplicationCalculator();
+
+    const isMemberOnly = !window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false;
+    if (isMemberOnly && g.memberId && g.amount > 0 && typeof google !== "undefined" && google.script && google.script.run && typeof google.script.run.checkGuarantorCapacity === "function") {
+      if (guarantorCapacityTimers_[idx]) clearTimeout(guarantorCapacityTimers_[idx]);
+      const reqMemberId = g.memberId;
+      const reqAmount = g.amount;
+      guarantorCapacityTimers_[idx] = setTimeout(function () {
+        google.script.run
+          .withSuccessHandler(function (res) {
+            const cur = applyLoanState.guarantors[idx];
+            if (!cur || cur.memberId !== reqMemberId || cur.amount !== reqAmount) return;
+            cur.capacityInsufficient = !(res && res.sufficient);
+            syncGuarantorRowFeedback_(idx);
+            updateLoanApplicationCalculator();
+          })
+          .checkGuarantorCapacity(reqMemberId, reqAmount);
+      }, 250);
+    }
   }
 
   function updateLoanApplicationCalculator() {
@@ -932,9 +1067,32 @@
     const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
     const borrower = list.find(function (item) { return String(item.id) === String(applyLoanState.borrowerId); });
     const borrowerSavings = borrower ? (Number(borrower.savings) || 0) : 0;
+    const isMemberOnly = !window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false;
+
+    let hasGuarantorLimitViolation = false;
     const totalGuaranteed = applyLoanState.guarantors.reduce(function (sum, g) {
-      return sum + (g.memberId ? (Number(g.amount) || 0) : 0);
+      if (!g.memberId) return sum;
+      const entered = Math.max(0, Number(g.amount) || 0);
+      const dirM = getGuarantorSourceList_().find(function (m) { return String(m.id) === String(g.memberId); });
+      const fullM = findFullMemberRecord_(g.memberId);
+      if (!isMemberOnly && fullM) {
+        const free = getMemberUnencumberedSavings_(fullM);
+        if (free <= 0 || entered > free) hasGuarantorLimitViolation = true;
+        return sum + Math.min(entered, free);
+      }
+      if ((dirM && dirM.eligible === false) || g.capacityInsufficient) {
+        hasGuarantorLimitViolation = true;
+        return sum;
+      }
+      return sum + entered;
     }, 0);
+
+    const submitBtn = document.getElementById("al-submit-btn");
+    if (submitBtn) {
+      submitBtn.disabled = hasGuarantorLimitViolation;
+      submitBtn.classList.toggle("opacity-45", hasGuarantorLimitViolation);
+      submitBtn.classList.toggle("cursor-not-allowed", hasGuarantorLimitViolation);
+    }
     const totalCoverage = borrowerSavings + totalGuaranteed;
     const shortfall = Math.max(0, totalRepayment - totalCoverage);
     const pct = totalRepayment > 0 ? Math.min(100, Math.round((totalCoverage / totalRepayment) * 100)) : 0;
@@ -1029,6 +1187,18 @@
       }).catch(function () {});
     }
 
+    if (typeof google !== "undefined" && google.script && google.script.run && typeof google.script.run.getEligibleGuarantorDirectory === "function") {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok !== false && Array.isArray(res.guarantors)) {
+            applyLoanState.guarantorDirectory = res.guarantors;
+            renderApplyLoanGuarantors_();
+            updateLoanApplicationCalculator();
+          }
+        })
+        .getEligibleGuarantorDirectory();
+    }
+
     if (typeof google !== "undefined" && google.script && google.script.run && typeof google.script.run.getLoanPolicySettings === "function") {
       google.script.run
         .withSuccessHandler(function (res) {
@@ -1084,10 +1254,10 @@
 
     for (let i = 0; i < validGuarantors.length; i++) {
       const g = validGuarantors[i];
-      const gm = list.find(function (m) { return String(m.id) === String(g.memberId); });
-      const free = getMemberUnencumberedSavings_(gm);
-      if (Number(g.amount) > free) {
-        showNotification("Guarantor " + ((gm && gm.name) || g.memberId) + " exceeds unencumbered savings (" + formatMoney(free) + ").", "warning");
+      const gm = getGuarantorSourceList_().find(function (m) { return String(m.id) === String(g.memberId); });
+      const st = getGuarantorRowStatus_(gm, g.amount, g);
+      if (!st.valid) {
+        showNotification("Guarantor " + ((gm && gm.name) || g.memberId) + ": " + st.text, "warning");
         return;
       }
     }
@@ -1108,7 +1278,7 @@
       tenorMonths: tenorMonths,
       purpose: purpose,
       guarantors: validGuarantors.map(function (g) {
-        const gm = list.find(function (m) { return String(m.id) === String(g.memberId); });
+        const gm = getGuarantorSourceList_().find(function (m) { return String(m.id) === String(g.memberId); });
         return {
           memberId: g.memberId,
           memberName: gm ? gm.name : g.memberId,

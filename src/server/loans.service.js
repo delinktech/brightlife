@@ -1151,10 +1151,9 @@ function submitLoanApplication(payload) {
       }
       const existingGuarantees = Math.round((existingGuaranteesByMember[gLower] || 0) * 100) / 100;
       const guarantorUnencumbered = Math.max(0, Math.round((gMember.savings - existingGuarantees) * 100) / 100);
-      if (gAmt > guarantorUnencumbered) {
+      if (guarantorUnencumbered <= 0 || gAmt > guarantorUnencumbered) {
         throw new Error(
-          "Guarantor " + gMember.fullName + " only has " + fmtCur(guarantorUnencumbered) +
-          " unencumbered savings available (Pledged on other loans: " + fmtCur(existingGuarantees) + ")"
+          "Guarantor " + gMember.fullName + " does not have sufficient unencumbered guarantee capacity for the pledged amount."
         );
       }
 
@@ -1252,5 +1251,151 @@ function submitLoanApplication(payload) {
         lock.releaseLock();
       } catch (eLock) {}
     }
+  }
+}
+
+/**
+ * Computes unencumbered savings per member (Total Savings minus active/pending guarantees)
+ * for internal server-side guarantor eligibility checks.
+ */
+function computeMemberUnencumberedMap_(ss) {
+  const mValues = typeof getSheetValuesCached_ === "function"
+    ? getSheetValuesCached_(ss, SHEETS.MEMBERS, { required: true })
+    : getRequiredSheet_(SHEETS.MEMBERS).getDataRange().getValues();
+  const lValues = typeof getSheetValuesCached_ === "function"
+    ? getSheetValuesCached_(ss, SHEETS.LOANS)
+    : (function () {
+        const s = ss.getSheetByName(SHEETS.LOANS);
+        return s && s.getLastRow() >= 1 ? s.getDataRange().getValues() : [];
+      })();
+  const gValues = typeof getSheetValuesCached_ === "function"
+    ? getSheetValuesCached_(ss, SHEETS.GUARANTORS)
+    : (function () {
+        const s = ss.getSheetByName(SHEETS.GUARANTORS);
+        return s && s.getLastRow() >= 1 ? s.getDataRange().getValues() : [];
+      })();
+
+  const loanStatusMap = {};
+  if (lValues && lValues.length > 1) {
+    const lCol = getHeaderMap_(lValues[0]);
+    const lidIdx = lCol["Loan ID"];
+    const statIdx = lCol["Status"];
+    if (lidIdx !== undefined) {
+      for (let i = 1; i < lValues.length; i++) {
+        const lid = String(lValues[i][lidIdx] || "").trim().toLowerCase();
+        if (lid) {
+          loanStatusMap[lid] = statIdx !== undefined ? String(lValues[i][statIdx] || "").trim().toLowerCase() : "";
+        }
+      }
+    }
+  }
+
+  const pledgedByMember = {};
+  if (gValues && gValues.length > 1) {
+    const gCol = getHeaderMap_(gValues[0]);
+    const gLidIdx = gCol["Loan ID"];
+    const gMidIdx = gCol["Member ID"];
+    const gAmtIdx = gCol["Guaranteed Amount"];
+    const gStatIdx = gCol["Loan Status"];
+    if (gMidIdx !== undefined && gAmtIdx !== undefined) {
+      for (let r = 1; r < gValues.length; r++) {
+        const mid = String(gValues[r][gMidIdx] || "").trim().toLowerCase();
+        if (!mid) continue;
+        const amt = Number(gValues[r][gAmtIdx]) || 0;
+        if (amt <= 0) continue;
+        const lid = gLidIdx !== undefined ? String(gValues[r][gLidIdx] || "").trim().toLowerCase() : "";
+        const st = (lid && loanStatusMap[lid] !== undefined)
+          ? loanStatusMap[lid]
+          : (gStatIdx !== undefined ? String(gValues[r][gStatIdx] || "").trim().toLowerCase() : "");
+        if (st !== "settled" && st !== "rejected" && st !== "closed") {
+          pledgedByMember[mid] = (pledgedByMember[mid] || 0) + amt;
+        }
+      }
+    }
+  }
+
+  const members = [];
+  if (mValues && mValues.length > 1) {
+    const mCol = getHeaderMap_(mValues[0]);
+    const midIdx = mCol["Member ID"];
+    const fIdx = mCol["First Name"];
+    const mIdx = mCol["Middle Name"];
+    const lIdx = mCol["Last Name"];
+    const fullIdx = mCol["Full Name"];
+    const savIdx = mCol["Total Savings"];
+    const statIdx = mCol["Status"];
+    for (let r = 1; r < mValues.length; r++) {
+      const row = mValues[r];
+      const mid = midIdx !== undefined ? String(row[midIdx] || "").trim() : "";
+      if (!mid) continue;
+      const status = statIdx !== undefined ? String(row[statIdx] || "Active").trim().toLowerCase() : "active";
+      if (status !== "active") continue;
+      const first = fIdx !== undefined ? String(row[fIdx] || "").trim() : "";
+      const middle = mIdx !== undefined ? String(row[mIdx] || "").trim() : "";
+      const last = lIdx !== undefined ? String(row[lIdx] || "").trim() : "";
+      const initial = middle ? middle.charAt(0) + "." : "";
+      const name = (fullIdx !== undefined && row[fullIdx])
+        ? String(row[fullIdx]).trim()
+        : [first, initial, last].filter(Boolean).join(" ").trim();
+      const savings = savIdx !== undefined ? (Number(row[savIdx]) || 0) : 0;
+      const pledged = pledgedByMember[mid.toLowerCase()] || 0;
+      const unencumbered = Math.max(0, Math.round((savings - pledged) * 100) / 100);
+      members.push({
+        id: mid,
+        name: name || mid,
+        unencumbered: unencumbered,
+        eligible: unencumbered > 0,
+      });
+    }
+  }
+  return members;
+}
+
+/**
+ * Privacy-safe guarantor directory for the Loan Application modal.
+ * Returns ONLY { id, name, eligible } with zero numeric savings/balances.
+ */
+function getEligibleGuarantorDirectory() {
+  try {
+    requireAccess_();
+    const ctx = typeof getRequestSheetContext_ === "function" ? getRequestSheetContext_() : null;
+    try {
+      const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
+      const list = computeMemberUnencumberedMap_(ss).map(function (m) {
+        return { id: m.id, name: m.name, eligible: m.eligible };
+      });
+      return { ok: true, success: true, guarantors: list };
+    } finally {
+      if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+    }
+  } catch (err) {
+    return { ok: false, success: false, error: err.message, guarantors: [] };
+  }
+}
+
+/**
+ * Privacy-safe server check for whether a guarantor has sufficient unencumbered savings
+ * for a requested pledge amount, without exposing their exact balance.
+ */
+function checkGuarantorCapacity(guarantorId, amount) {
+  try {
+    requireAccess_();
+    const gId = String(guarantorId || "").trim().toLowerCase();
+    const reqAmt = Number(amount) || 0;
+    if (!gId || reqAmt <= 0) {
+      return { ok: true, sufficient: false };
+    }
+    const ctx = typeof getRequestSheetContext_ === "function" ? getRequestSheetContext_() : null;
+    try {
+      const ss = ctx ? ctx.getSpreadsheet() : getSpreadsheet_();
+      const list = computeMemberUnencumberedMap_(ss);
+      const found = list.find(function (m) { return m.id.toLowerCase() === gId; });
+      const sufficient = Boolean(found && found.unencumbered > 0 && reqAmt <= found.unencumbered);
+      return { ok: true, sufficient: sufficient };
+    } finally {
+      if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+    }
+  } catch (err) {
+    return { ok: false, sufficient: false, error: err.message };
   }
 }
