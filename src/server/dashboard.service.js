@@ -405,7 +405,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
 
   let investmentCount = 0;
   try {
-    const invSheet = getSpreadsheet_().getSheetByName(SHEETS.INVESTMENTS);
+    const invSheet = getSheetByNameInsensitive_(ss, SHEETS.INVESTMENTS);
     if (invSheet && invSheet.getLastRow() > 1) {
       const invValues = invSheet.getDataRange().getValues();
       if (invValues.length > 1) {
@@ -678,7 +678,7 @@ function getAccountsBalanceChartData_() {
   const rows = [];
   try {
     const ss = getSpreadsheet_();
-    const sheet = ss.getSheetByName(SHEETS.ACCOUNTS);
+    const sheet = getSheetByNameInsensitive_(ss, SHEETS.ACCOUNTS);
     if (!sheet) return { labels: labels, values: values, rows: rows };
     const raw = sheet.getDataRange().getValues();
     if (raw.length <= 1) return { labels: labels, values: values, rows: rows };

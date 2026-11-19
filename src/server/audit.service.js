@@ -73,7 +73,7 @@ function syncRepaymentsStatusFromContributions_() {
 }
 function getOrCreateAuditSheet_() {
   var ss = getSpreadsheet_();
-  var sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+  var sheet = getSheetByNameInsensitive_(ss, SHEETS.AUDIT_LOG);
   if (sheet) return sheet;
   sheet = ss.insertSheet(SHEETS.AUDIT_LOG);
   sheet.appendRow([

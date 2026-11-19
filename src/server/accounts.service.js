@@ -153,6 +153,10 @@ function updateAccountStatementBalance(data) {
     JSON.stringify({ row: rowNumber, org: orgName, balance: stmtBal })
   );
 
+  if (typeof clearDashboardCache_ === "function") {
+    clearDashboardCache_();
+  }
+
   return { success: true };
 }
 

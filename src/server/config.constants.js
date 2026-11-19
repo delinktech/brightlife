@@ -11,13 +11,16 @@ const SHEETS = Object.freeze({
   LOAN_REPAYMENTS: "Loan Repayments",
   GUARANTORS: "Guarantors",
   INVESTMENTS: "Investments",
+  INVESTMENT_PROJECTS: "Investment Projects",
   INVESTMENT_LEDGER: "InvestmentLedger",
+  INVESTMENT_CASHFLOWS: "Investment Cashflows",
   ACCOUNTS: "Accounts",
   ROLES: "Roles",
-  AUDIT_LOG: "AuditLog",
+  AUDIT_LOG: "Audit Log",
   CONSTANTS: "Constants",
   FUND_STATEMENTS: "Fund Statements",
   CIC_TRANSACTIONS: "CIC Transactions",
+  SUMMARY_KPIS: "Summary KPIs",
 });
 
 const TRANSACTION_STATUS = Object.freeze({
@@ -110,15 +113,164 @@ function getSpreadsheet_() {
   );
 }
 
+const SHEET_NAME_ALIASES = Object.freeze({
+  "auditlog": ["Audit Log", "AuditLog"],
+  "audit log": ["Audit Log", "AuditLog"],
+  "investmentledger": ["Investment Cashflows", "InvestmentLedger"],
+  "investment cashflows": ["Investment Cashflows", "InvestmentLedger", "CIC Transactions"],
+  "investment_cashflows": ["Investment Cashflows", "InvestmentLedger", "CIC Transactions"],
+  "cic transactions": ["Investment Cashflows", "CIC Transactions"],
+  "cic_transactions": ["Investment Cashflows", "CIC Transactions"],
+  "investments_register": ["Investments", "Investments_Register"],
+  "investments": ["Investments", "Investments_Register"],
+  "investment_projects": ["Investment Projects", "Investment_Projects"],
+  "investment projects": ["Investment Projects", "Investment_Projects"],
+  "summary_kpis": ["Summary KPIs", "Summary_KPIs"],
+  "summary kpis": ["Summary KPIs", "Summary_KPIs"],
+});
+
 function getSheetByNameInsensitive_(ss, targetName) {
   if (!ss || !targetName) return null;
   const target = String(targetName).trim().toLowerCase();
   const sheets = ss.getSheets();
+  const byLowerName = {};
   for (let i = 0; i < sheets.length; i++) {
     const name = sheets[i].getName().trim().toLowerCase();
-    if (name === target) return sheets[i];
+    if (!byLowerName[name]) byLowerName[name] = sheets[i];
   }
+
+  // Exact match takes precedence
+  if (byLowerName[target]) return byLowerName[target];
+
+  // Fallback to configured aliases
+  const candidates = SHEET_NAME_ALIASES[target];
+  if (candidates && candidates.length) {
+    for (let c = 0; c < candidates.length; c++) {
+      const candKey = candidates[c].trim().toLowerCase();
+      if (byLowerName[candKey]) return byLowerName[candKey];
+    }
+  }
+
   return null;
+}
+
+/**
+ * Idempotently provisions the 4 standardized institutional reference tables
+ * (Asset_Classes, Project_Categories, Payment_Channels, Statutory_Thresholds)
+ * in the Constants sheet, starting past Column E so existing Status validation
+ * values in Constants!$E$2:$E are strictly preserved.
+ */
+function provisionConstantsReferenceTables_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  let sheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CONSTANTS);
+  let createdSheet = false;
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(SHEETS.CONSTANTS);
+    createdSheet = true;
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  const existingHeaders =
+    lastRow >= 1 && lastCol >= 1
+      ? getHeaderMap_(sheet.getRange(1, 1, 1, lastCol).getValues()[0])
+      : {};
+
+  const tables = [
+    {
+      key: "asset_classes",
+      columns: [
+        [
+          "Asset_Classes",
+          "Operating Cash",
+          "Money Market Fund",
+          "Fixed Income / Bond",
+          "Real Estate / Land",
+          "Agribusiness",
+          "Equity / Venture",
+        ],
+      ],
+    },
+    {
+      key: "project_categories",
+      columns: [
+        [
+          "Project_Categories",
+          "Real Estate & Land",
+          "Agribusiness",
+          "Financial Instruments",
+          "Infrastructure & Equipment",
+          "Working Capital",
+        ],
+      ],
+    },
+    {
+      key: "payment_channels",
+      columns: [
+        [
+          "Payment_Channels",
+          DEPOSIT_CHANNELS.CASH,
+          DEPOSIT_CHANNELS.EQUITY_BANK,
+          DEPOSIT_CHANNELS.CIC_MMF,
+          DEPOSIT_CHANNELS.MANSA_X,
+          DEPOSIT_CHANNELS.REFUND_OFFSET,
+        ],
+      ],
+    },
+    {
+      key: "statutory_thresholds",
+      columns: [
+        [
+          "Statutory_Thresholds",
+          "SASRA_MAX_LOAN_EXPOSURE_PCT",
+          "STATUTORY_RESERVE_TRANSFER_PCT",
+          "PROVISION_CURRENT_PCT",
+          "PROVISION_WATCH_1_30_PCT",
+          "PROVISION_SUBSTANDARD_31_60_PCT",
+          "PROVISION_DOUBTFUL_61_90_PCT",
+          "PROVISION_LOSS_91_PLUS_PCT",
+          "LIQUIDITY_MIN_PCT",
+          "LIQUIDITY_OPTIMAL_PCT",
+        ],
+        ["Threshold_Value", 85, 20, 1, 5, 25, 50, 100, 15, 30],
+      ],
+    },
+  ];
+
+  // Never overwrite Columns A-E (Column 5 / E is reserved for Status data validation).
+  let nextCol = Math.max(6, lastCol + 1);
+  const addedTables = [];
+  const skippedTables = [];
+
+  for (let t = 0; t < tables.length; t++) {
+    const tbl = tables[t];
+    if (existingHeaders[tbl.key] !== undefined) {
+      skippedTables.push(tbl.columns[0][0]);
+      continue;
+    }
+
+    const rowCount = tbl.columns[0].length;
+    const colCount = tbl.columns.length;
+    const grid = [];
+    for (let r = 0; r < rowCount; r++) {
+      const rowArr = [];
+      for (let c = 0; c < colCount; c++) {
+        rowArr.push(tbl.columns[c][r]);
+      }
+      grid.push(rowArr);
+    }
+
+    sheet.getRange(1, nextCol, rowCount, colCount).setValues(grid);
+    nextCol += colCount;
+    addedTables.push(tbl.columns[0][0]);
+  }
+
+  return {
+    success: true,
+    createdSheet: createdSheet,
+    addedTables: addedTables,
+    skippedTables: skippedTables,
+  };
 }
 
 function getRequiredSheet_(sheetName) {
