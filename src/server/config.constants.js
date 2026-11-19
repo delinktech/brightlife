@@ -447,17 +447,23 @@ function installColumnSpillFormula_(sheet, colIndexZeroBased, headerTitle, mapEx
     return null;
   }
   const col1 = colIndexZeroBased + 1;
-  const headerCell = sheet.getRange(1, col1);
-  headerCell.setValue(headerTitle);
+  try {
+    const headerCell = sheet.getRange(1, col1);
+    const curVal = headerCell && typeof headerCell.getValue === "function" ? String(headerCell.getValue() || "") : "";
+    if (curVal !== String(headerTitle || "")) {
+      headerCell.setValue(headerTitle);
+      SpreadsheetApp.flush();
+    }
+  } catch (eHeader) {}
 
   const lastRow = Math.max(sheet.getLastRow(), 2);
   const clearCount = Math.max(lastRow - 1, 1);
   const dataRange = sheet.getRange(2, col1, clearCount, 1);
-  if (dataRange && typeof dataRange.clearDataValidations === "function") {
-    try { dataRange.clearDataValidations(); } catch (e) {}
-  }
   if (dataRange && typeof dataRange.clearContent === "function") {
-    try { dataRange.clearContent(); } catch (e) {}
+    try {
+      dataRange.clearContent();
+      SpreadsheetApp.flush();
+    } catch (eClear) {}
   }
 
   const spillFormula = "=" + String(mapExpr || "").replace(/^=+/, "").trim();
@@ -465,6 +471,7 @@ function installColumnSpillFormula_(sheet, colIndexZeroBased, headerTitle, mapEx
     const anchorCell = sheet.getRange(2, col1);
     if (anchorCell && typeof anchorCell.setFormula === "function") {
       anchorCell.setFormula(spillFormula);
+      SpreadsheetApp.flush();
     }
   } catch (e) {
     console.warn("Could not install Row 2 spill formula on " + sheet.getName() + " col " + col1 + ": " + e.message);

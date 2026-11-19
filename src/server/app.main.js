@@ -17,7 +17,7 @@ function doGet(e) {
       const setupRes = runInstitutionalWorkbookSetup_();
       return ContentService.createTextOutput("SETUP_WORKBOOK_SUCCESS:\n" + JSON.stringify(setupRes, null, 2));
     } catch (errSetup) {
-      return ContentService.createTextOutput("SETUP_WORKBOOK_ERROR: " + errSetup.message);
+      return ContentService.createTextOutput("SETUP_WORKBOOK_ERROR: " + errSetup.message + "\n" + (errSetup.stack || ""));
     }
   }
 

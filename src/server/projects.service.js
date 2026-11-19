@@ -86,15 +86,46 @@ function runInstitutionalWorkbookSetup_() {
     spillFormulas: null,
     summaryKpis: null,
     nativeTables: null,
+    warnings: [],
   };
 
-  report.constants = provisionConstantsReferenceTables_(ss);
-  const refRanges = getConstantsReferenceRanges_(ss);
+  try {
+    report.constants = provisionConstantsReferenceTables_(ss);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("constants: " + e.message);
+  }
+  let refRanges = {};
+  try {
+    refRanges = getConstantsReferenceRanges_(ss);
+  } catch (e) {
+    report.warnings.push("refRanges: " + e.message);
+  }
 
-  report.investments = provisionInvestmentsRegister_(ss, refRanges);
-  report.projects = provisionInvestmentProjects_(ss, refRanges);
-  report.cashflows = provisionInvestmentCashflows_(ss, refRanges);
-  report.migratedLedger = migrateAndRetireLegacyInvestmentLedger_(ss);
+  try {
+    report.investments = provisionInvestmentsRegister_(ss, refRanges);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("investments: " + e.message);
+  }
+  try {
+    report.projects = provisionInvestmentProjects_(ss, refRanges);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("projects: " + e.message);
+  }
+  try {
+    report.cashflows = provisionInvestmentCashflows_(ss, refRanges);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("cashflows: " + e.message);
+  }
+  try {
+    report.migratedLedger = migrateAndRetireLegacyInvestmentLedger_(ss);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("migratedLedger: " + e.message);
+  }
 
   // Retire redundant CIC Transactions tab when Fund Statements exists
   try {
@@ -106,17 +137,39 @@ function runInstitutionalWorkbookSetup_() {
       }
       report.retiredSheets.push(SHEETS.CIC_TRANSACTIONS);
     }
-  } catch (eCic) {}
+    SpreadsheetApp.flush();
+  } catch (eCic) {
+    report.warnings.push("retireCic: " + eCic.message);
+  }
   if (report.migratedLedger && report.migratedLedger.retiredSheet) {
     report.retiredSheets.push(SHEETS.INVESTMENT_LEDGER);
   }
 
-  report.prepopulated = prepopulateInvestmentEngine_(ss);
-  report.spillFormulas = provisionWorkbookSpillFormulas_(ss);
-  report.summaryKpis = provisionSummaryKpisSheet_(ss);
-  report.nativeTables = syncWorkbookNativeTables_(ss);
+  try {
+    report.prepopulated = prepopulateInvestmentEngine_(ss);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("prepopulated: " + e.message);
+  }
+  try {
+    report.spillFormulas = provisionWorkbookSpillFormulas_(ss);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("spillFormulas: " + e.message);
+  }
+  try {
+    report.summaryKpis = provisionSummaryKpisSheet_(ss);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("summaryKpis: " + e.message);
+  }
+  try {
+    report.nativeTables = syncWorkbookNativeTables_(ss);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    report.warnings.push("nativeTables: " + e.message);
+  }
 
-  SpreadsheetApp.flush();
   try { clearDashboardCache_(); } catch (e) {}
   appendAuditLog_(
     "workbook.setup",
@@ -464,6 +517,7 @@ function applyListValidation_(range, values) {
     range.setDataValidation(
       SpreadsheetApp.newDataValidation().requireValueInList(values, true).setAllowInvalid(true).build()
     );
+    SpreadsheetApp.flush();
   } catch (e) {}
 }
 
@@ -473,6 +527,7 @@ function applyRangeValidation_(range, sourceRange) {
     range.setDataValidation(
       SpreadsheetApp.newDataValidation().requireValueInRange(sourceRange, true).setAllowInvalid(true).build()
     );
+    SpreadsheetApp.flush();
   } catch (e) {}
 }
 
@@ -480,7 +535,10 @@ function applyNumberFormat_(sheet, headers, fmt) {
   headers.forEach(function (h) {
     try {
       const r = columnRange_(sheet, h);
-      if (r) r.setNumberFormat(fmt);
+      if (r) {
+        r.setNumberFormat(fmt);
+        SpreadsheetApp.flush();
+      }
     } catch (e) {}
   });
 }
