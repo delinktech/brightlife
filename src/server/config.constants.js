@@ -336,33 +336,42 @@ function formatCurrency_(value) {
 }
 
 /**
- * ARC-3: Returns true when Row 1 of the given 0-based column index carries a header-anchored
- * spill formula (e.g. ={"Member Name"; MAP(...)}). Row-level writers must leave cells in
- * rows 2..N of that column empty ("") so they never obstruct the array spill with #REF!.
+ * ARC-3: Returns true when Row 2 (or legacy Row 1) of the given 0-based column index carries a
+ * spill formula (e.g. =MAP(...) in Row 2, or legacy ={"Header"; MAP(...)} in Row 1). Row-level
+ * writers must leave cells in rows 2..N of that column empty ("") so they never obstruct the array spill with #REF!.
  */
 function hasHeaderSpillFormula_(sheet, colIndexZeroBased) {
   if (!sheet || colIndexZeroBased === undefined || colIndexZeroBased === null || colIndexZeroBased < 0) {
     return false;
   }
-  try {
-    const cell = sheet.getRange(1, colIndexZeroBased + 1);
-    if (!cell || typeof cell.getFormula !== "function") return false;
-    const f = String(cell.getFormula() || "").trim();
-    return f.indexOf("=") === 0 && (f.indexOf("MAP(") !== -1 || f.indexOf("ARRAYFORMULA(") !== -1 || f.indexOf("{") !== -1);
-  } catch (e) {
-    return false;
+  const col1 = colIndexZeroBased + 1;
+  const rowsToCheck = [2, 1];
+  for (let i = 0; i < rowsToCheck.length; i++) {
+    try {
+      const cell = sheet.getRange(rowsToCheck[i], col1);
+      if (!cell || typeof cell.getFormula !== "function") continue;
+      const f = String(cell.getFormula() || "").trim();
+      if (f.indexOf("=") === 0 && (f.indexOf("MAP(") !== -1 || f.indexOf("ARRAYFORMULA(") !== -1 || f.indexOf("{") !== -1)) {
+        return true;
+      }
+    } catch (e) {}
   }
+  return false;
 }
 
 /**
- * ARC-3: Installs a single Row 1 header-anchored spill formula ={"Header"; MAP(...)} on a column,
- * purging any legacy per-row formulas or blocking values in rows 2..lastRow first.
+ * ARC-3: Installs a single Row 2 anchored spill formula =MAP(...) on a column while keeping
+ * Row 1 strictly as plain text (compatible with Google Sheets Native Tables), purging any
+ * legacy per-row formulas or blocking values in rows 2..lastRow first.
  */
 function installColumnSpillFormula_(sheet, colIndexZeroBased, headerTitle, mapExpr) {
   if (!sheet || colIndexZeroBased === undefined || colIndexZeroBased === null || colIndexZeroBased < 0) {
     return null;
   }
   const col1 = colIndexZeroBased + 1;
+  const headerCell = sheet.getRange(1, col1);
+  headerCell.setValue(headerTitle);
+
   const lastRow = Math.max(sheet.getLastRow(), 2);
   const clearCount = Math.max(lastRow - 1, 1);
   const dataRange = sheet.getRange(2, col1, clearCount, 1);
@@ -372,12 +381,16 @@ function installColumnSpillFormula_(sheet, colIndexZeroBased, headerTitle, mapEx
   if (dataRange && typeof dataRange.clearContent === "function") {
     try { dataRange.clearContent(); } catch (e) {}
   }
-  const safeHeader = String(headerTitle || "").replace(/"/g, '""');
-  const spillFormula = '={"' + safeHeader + '"; ' + mapExpr + "}";
-  const headerCell = sheet.getRange(1, col1);
-  headerCell.setValue(headerTitle);
-  if (headerCell && typeof headerCell.setFormula === "function") {
-    headerCell.setFormula(spillFormula);
+
+  const spillFormula = "=" + String(mapExpr || "").replace(/^=+/, "").trim();
+  try {
+    const anchorCell = sheet.getRange(2, col1);
+    if (anchorCell && typeof anchorCell.setFormula === "function") {
+      anchorCell.setFormula(spillFormula);
+    }
+  } catch (e) {
+    console.warn("Could not install Row 2 spill formula on " + sheet.getName() + " col " + col1 + ": " + e.message);
+    return null;
   }
   return spillFormula;
 }

@@ -198,7 +198,7 @@ function provisionInvestmentsRegister_(ss, refRanges) {
   applyNumberFormat_(sheet, ["Unit Cost", "Current Price", "Carrying Value"], "#,##0.00");
   applyNumberFormat_(sheet, ["Last Valued"], "dd mmm yyyy");
 
-  // ARC-3: Row 1 spill formula for Carrying Value (Units Held * Current Price when marked to market, else Money Invested)
+  // ARC-3: Row 2 spill formula for Carrying Value (Units Held * Current Price when marked to market, else Money Invested)
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const col = getHeaderMap_(headers);
   if (
@@ -209,17 +209,21 @@ function provisionInvestmentsRegister_(ss, refRanges) {
     col["Units Held"] !== undefined &&
     col["Current Price"] !== undefined
   ) {
-    const idL = getColLetter_(col["Investment ID"] + 1);
-    const invL = getColLetter_(col["Money Invested"] + 1);
-    const statL = getColLetter_(col["Status"] + 1);
-    const uL = getColLetter_(col["Units Held"] + 1);
-    const pL = getColLetter_(col["Current Price"] + 1);
-    installColumnSpillFormula_(
-      sheet,
-      col["Carrying Value"],
-      "Carrying Value",
-      "MAP(" + idL + "2:" + idL + ", " + invL + "2:" + invL + ", " + statL + "2:" + statL + ", " + uL + "2:" + uL + ", " + pL + "2:" + pL + ', LAMBDA(id, inv, stat, u, p, IF(id="", "", IF(REGEXMATCH(LOWER(TRIM(stat)), "^(exited|closed|sold|matured|settled|inactive|cancelled|rejected)$"), 0, IF(AND(N(u)>0, N(p)>0), N(u)*N(p), N(inv))))))'
-    );
+    try {
+      const idL = getColLetter_(col["Investment ID"] + 1);
+      const invL = getColLetter_(col["Money Invested"] + 1);
+      const statL = getColLetter_(col["Status"] + 1);
+      const uL = getColLetter_(col["Units Held"] + 1);
+      const pL = getColLetter_(col["Current Price"] + 1);
+      installColumnSpillFormula_(
+        sheet,
+        col["Carrying Value"],
+        "Carrying Value",
+        "MAP(" + idL + "2:" + idL + ", " + invL + "2:" + invL + ", " + statL + "2:" + statL + ", " + uL + "2:" + uL + ", " + pL + "2:" + pL + ', LAMBDA(id, inv, stat, u, p, IF(id="", "", IF(REGEXMATCH(LOWER(TRIM(stat)), "^(exited|closed|sold|matured|settled|inactive|cancelled|rejected)$"), 0, IF(AND(N(u)>0, N(p)>0), N(u)*N(p), N(inv))))))'
+      );
+    } catch (eSpill) {
+      console.warn("Could not install Carrying Value spill formula on Investments: " + eSpill.message);
+    }
   }
   return { created: res.created, addedHeaders: res.addedHeaders };
 }
@@ -346,12 +350,48 @@ function nextSequentialId_(sheet, headerName, prefix) {
 function appendRowByHeaders_(sheet, rowObj) {
   const lastCol = sheet.getLastColumn();
   const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  const row = headers.map(function (h) {
+  const isSpillCol = headers.map(function (_h, idx) {
+    return typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, idx);
+  });
+  const row = headers.map(function (h, idx) {
+    if (isSpillCol[idx]) return "";
     const key = String(h || "").trim();
     return rowObj[key] !== undefined ? rowObj[key] : "";
   });
-  const target = sheet.getLastRow() + 1;
+
+  const lastRow = sheet.getLastRow();
+  let target = lastRow + 1;
+  let savedRow2Formulas = null;
+
+  if (lastRow === 2) {
+    const row2Vals = sheet.getRange(2, 1, 1, lastCol).getValues()[0];
+    const nonSpillBlank = row2Vals.every(function (v, idx) {
+      return isSpillCol[idx] || String(v === undefined || v === null ? "" : v).trim() === "";
+    });
+    if (nonSpillBlank) {
+      target = 2;
+      savedRow2Formulas = [];
+      for (let c = 0; c < lastCol; c++) {
+        if (isSpillCol[c]) {
+          try {
+            const cell = sheet.getRange(2, c + 1);
+            const f = cell && typeof cell.getFormula === "function" ? String(cell.getFormula() || "").trim() : "";
+            if (f) savedRow2Formulas.push({ col1: c + 1, formula: f });
+          } catch (e) {}
+        }
+      }
+    }
+  }
+
   sheet.getRange(target, 1, 1, row.length).setValues([row]);
+  if (target === 2 && savedRow2Formulas && savedRow2Formulas.length) {
+    savedRow2Formulas.forEach(function (item) {
+      try {
+        const cell = sheet.getRange(2, item.col1);
+        if (cell && typeof cell.setFormula === "function") cell.setFormula(item.formula);
+      } catch (e) {}
+    });
+  }
   return target;
 }
 

@@ -268,7 +268,28 @@ function saveMember(data) {
   });
 
   if (isUpdate) {
+    let savedRow2Formulas = null;
+    if (targetRowIndex === 2) {
+      savedRow2Formulas = [];
+      for (let c = 0; c < headers.length; c++) {
+        try {
+          const cell = sheet.getRange(2, c + 1);
+          const f = cell && typeof cell.getFormula === "function" ? String(cell.getFormula() || "").trim() : "";
+          if (f.indexOf("=") === 0 && (f.indexOf("MAP(") !== -1 || f.indexOf("ARRAYFORMULA(") !== -1 || f.indexOf("{") !== -1)) {
+            savedRow2Formulas.push({ col1: c + 1, formula: f });
+          }
+        } catch (e) {}
+      }
+    }
     sheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
+    if (targetRowIndex === 2 && savedRow2Formulas && savedRow2Formulas.length) {
+      savedRow2Formulas.forEach(function (item) {
+        try {
+          const cell = sheet.getRange(2, item.col1);
+          if (cell && typeof cell.setFormula === "function") cell.setFormula(item.formula);
+        } catch (e) {}
+      });
+    }
   } else {
     sheet.appendRow(rowData);
   }
