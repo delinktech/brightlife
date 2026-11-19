@@ -968,8 +968,13 @@
       }
     } else if (cleanKey === "analytics") {
       const renderAnalyticsView = function () {
-        if (typeof window.renderCashflowWaterfall === "function" && window.latestHomeAnalyticsData) {
-          window.renderCashflowWaterfall(window.latestHomeAnalyticsData);
+        if (window.latestHomeAnalyticsData) {
+          if (typeof window.renderCashflowWaterfall === "function") {
+            window.renderCashflowWaterfall(window.latestHomeAnalyticsData);
+          }
+          if (typeof window.renderSavingsExposureTrajectory === "function") {
+            window.renderSavingsExposureTrajectory(window.latestHomeAnalyticsData);
+          }
         }
         if (typeof window.resizeAnalyticsCharts === "function") {
           window.resizeAnalyticsCharts();

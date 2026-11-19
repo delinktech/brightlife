@@ -468,6 +468,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
     },
     accountsBalanceChart: getAccountsBalanceChartData_(),
     investments: investments,
+    exposureTrajectory: buildExposureTrajectory_(ss, tz, now, effectiveRange, contributionRows, loanRows),
   };
 
   try {
@@ -888,6 +889,189 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
     revenueByCategory: {
       labels: revenueCategoryLabels,
       values: revenueCategoryValues,
+    },
+  };
+}
+
+/**
+ * Builds rolling 12-month (or 6-month for 'this_month') member savings vs net loan exposure
+ * trajectory against the SASRA 85% prudential ceiling.
+ */
+function buildExposureTrajectory_(ss, tz, now, effectiveRange, cachedContributionRows, cachedLoanRows) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const trendMonths = effectiveRange === "this_month" ? 6 : 12;
+
+  const contribEntries = [];
+  try {
+    let cRows = cachedContributionRows;
+    if (!cRows) {
+      const cSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CONTRIBUTIONS);
+      cRows = cSheet && cSheet.getLastRow() > 1 ? cSheet.getDataRange().getValues() : [];
+    }
+    if (cRows && cRows.length > 1) {
+      const cCol = getHeaderMap_(cRows[0]);
+      const dateCol = cCol["Date"];
+      const amtCol = cCol["Amount"];
+      const statCol = cCol["Status"];
+      if (dateCol !== undefined && amtCol !== undefined) {
+        for (let i = 1; i < cRows.length; i++) {
+          const row = cRows[i];
+          const dt = parseSheetDate_(row[dateCol]);
+          const amt = Number(row[amtCol]) || 0;
+          if (!dt || amt <= 0) continue;
+          const stat = statCol !== undefined ? String(row[statCol] || "").trim().toLowerCase() : "";
+          if (stat !== "" && stat !== "approved") continue;
+          contribEntries.push({ ts: dt.getTime(), amt: amt });
+        }
+      }
+    }
+  } catch (eContrib) {
+    console.error("Exposure trajectory contributions error: " + eContrib.message);
+  }
+
+  const loanDisbursalEntries = [];
+  try {
+    let lRows = cachedLoanRows;
+    if (!lRows) {
+      const lSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
+      lRows = lSheet && lSheet.getLastRow() > 1 ? lSheet.getDataRange().getValues() : [];
+    }
+    if (lRows && lRows.length > 1) {
+      const lCol = getHeaderMap_(lRows[0]);
+      const appDateCol = lCol["Approved Date"];
+      const reqDateCol = lCol["Request Date"];
+      const prinCol =
+        lCol["Requested Amount"] !== undefined ? lCol["Requested Amount"] : lCol["Principal Amount"];
+      const statCol = lCol["Status"];
+      if (prinCol !== undefined && (appDateCol !== undefined || reqDateCol !== undefined)) {
+        for (let k = 1; k < lRows.length; k++) {
+          const row = lRows[k];
+          const stat = statCol !== undefined ? String(row[statCol] || "").trim().toLowerCase() : "";
+          if (stat === "pending" || stat === "rejected") continue;
+          const rawDt =
+            appDateCol !== undefined && row[appDateCol]
+              ? row[appDateCol]
+              : (reqDateCol !== undefined ? row[reqDateCol] : null);
+          const dt = parseSheetDate_(rawDt);
+          const principal = Number(row[prinCol]) || 0;
+          if (!dt || principal <= 0) continue;
+          loanDisbursalEntries.push({ ts: dt.getTime(), amt: principal });
+        }
+      }
+    }
+  } catch (eLoans) {
+    console.error("Exposure trajectory loans error: " + eLoans.message);
+  }
+
+  const principalRepaymentEntries = [];
+  try {
+    const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
+    if (repSheet && repSheet.getLastRow() > 1) {
+      const rRows = repSheet.getDataRange().getValues();
+      if (rRows.length > 1) {
+        const rCol = getHeaderMap_(rRows[0]);
+        const rDateCol =
+          rCol["Payment Date"] !== undefined
+            ? rCol["Payment Date"]
+            : (rCol["Repayment Date"] !== undefined ? rCol["Repayment Date"] : rCol["Date"]);
+        const rPrinCol =
+          rCol["Principal Paid"] !== undefined
+            ? rCol["Principal Paid"]
+            : (rCol["Principal Portion"] !== undefined ? rCol["Principal Portion"] : undefined);
+        const rFallbackAmtCol = rCol["Total Paid"] !== undefined ? rCol["Total Paid"] : rCol["Amount"];
+        const rAmtCol = rPrinCol !== undefined ? rPrinCol : rFallbackAmtCol;
+        const rStatCol = rCol["Status"];
+
+        if (rDateCol !== undefined && rAmtCol !== undefined) {
+          for (let r = 1; r < rRows.length; r++) {
+            const row = rRows[r];
+            const stat = rStatCol !== undefined ? String(row[rStatCol] || "").trim().toLowerCase() : "";
+            if (stat !== "" && stat !== "approved") continue;
+            const dt = parseSheetDate_(row[rDateCol]);
+            const prinPaid = Number(row[rAmtCol]) || 0;
+            if (!dt || prinPaid <= 0) continue;
+            principalRepaymentEntries.push({ ts: dt.getTime(), amt: prinPaid });
+          }
+        }
+      }
+    }
+  } catch (eRepay) {
+    console.error("Exposure trajectory repayments error: " + eRepay.message);
+  }
+
+  const labels = [];
+  const cumulativeSavingsSeries = [];
+  const loanExposureSeries = [];
+  const prudentialCeilingSeries = [];
+  const series = [];
+
+  for (let m = trendMonths - 1; m >= 0; m--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const monthKey = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    const label = Utilities.formatDate(d, tz, "MMM yy");
+    const monthEndTs = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+
+    let cumSavings = 0;
+    for (let i = 0; i < contribEntries.length; i++) {
+      if (contribEntries[i].ts <= monthEndTs) cumSavings += contribEntries[i].amt;
+    }
+
+    let cumLoansDisbursed = 0;
+    for (let k = 0; k < loanDisbursalEntries.length; k++) {
+      if (loanDisbursalEntries[k].ts <= monthEndTs) cumLoansDisbursed += loanDisbursalEntries[k].amt;
+    }
+
+    let cumPrincipalRepaid = 0;
+    for (let r = 0; r < principalRepaymentEntries.length; r++) {
+      if (principalRepaymentEntries[r].ts <= monthEndTs) cumPrincipalRepaid += principalRepaymentEntries[r].amt;
+    }
+
+    const roundedSavings = Math.round(cumSavings * 100) / 100;
+    const exposure = Math.max(0, Math.round((cumLoansDisbursed - cumPrincipalRepaid) * 100) / 100);
+    const ceiling = Math.round(roundedSavings * 0.85 * 100) / 100;
+
+    labels.push(label);
+    cumulativeSavingsSeries.push(roundedSavings);
+    loanExposureSeries.push(exposure);
+    prudentialCeilingSeries.push(ceiling);
+    series.push({
+      label: label,
+      monthKey: monthKey,
+      cumulativeSavings: roundedSavings,
+      loanExposure: exposure,
+      prudentialCeiling: ceiling,
+    });
+  }
+
+  const currentSavings = cumulativeSavingsSeries.length
+    ? cumulativeSavingsSeries[cumulativeSavingsSeries.length - 1]
+    : 0;
+  const currentLoanExposure = loanExposureSeries.length
+    ? loanExposureSeries[loanExposureSeries.length - 1]
+    : 0;
+  const rawUtilization = currentSavings > 0 ? (currentLoanExposure / currentSavings) * 100 : 0;
+  const utilizationRate = Math.round(rawUtilization * 100) / 100;
+  const idleCapitalBuffer = Math.max(0, Math.round((currentSavings - currentLoanExposure) * 100) / 100);
+
+  let prudentialBand = "neutral";
+  if (currentSavings <= 0) prudentialBand = "neutral";
+  else if (utilizationRate < 40) prudentialBand = "underutilized";
+  else if (utilizationRate <= 75) prudentialBand = "healthy";
+  else if (utilizationRate <= 85) prudentialBand = "elevated";
+  else prudentialBand = "overleveraged";
+
+  return {
+    labels: labels,
+    cumulativeSavings: cumulativeSavingsSeries,
+    loanExposure: loanExposureSeries,
+    prudentialCeiling: prudentialCeilingSeries,
+    series: series,
+    summary: {
+      currentSavings: currentSavings,
+      currentLoanExposure: currentLoanExposure,
+      utilizationRate: utilizationRate,
+      idleCapitalBuffer: idleCapitalBuffer,
+      prudentialBand: prudentialBand,
     },
   };
 }

@@ -582,37 +582,91 @@
       </div>
     </div>
 
-    <!-- Upcoming Module Placeholders (VIS-2 & VIS-3) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-      <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/70 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-xs">
-            <i class="fas fa-arrow-trend-up"></i>
+    <!-- VIS-2: Full-Width Savings vs. Loan Exposure Trajectory -->
+    <div class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h4 class="text-sm font-bold text-slate-900 dark:text-white">Savings vs. Loan Exposure Trajectory</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">12-Month capital mobilization, active credit risk &amp; SASRA leverage boundary.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 text-[11px] font-medium text-slate-600 dark:text-slate-300 shrink-0">
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-xs bg-[#0284c7] dark:bg-[#38bdf8]"></span> Savings Pool
           </span>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            VIS-2 Upcoming
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-xs bg-[#6366f1] dark:bg-[#818cf8]"></span> Active Loan Exposure
+          </span>
+          <span class="inline-flex items-center gap-1.5">
+            <span class="w-3.5 border-t-2 border-dashed border-amber-600 dark:border-amber-400"></span> SASRA 85% Ceiling
           </span>
         </div>
-        <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Exposure Trajectory</h4>
-        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-          Borrower exposure concentration, guarantor liability coverage curves, and portfolio leverage over rolling quarters.
-        </p>
       </div>
 
-      <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/70 dark:border-amber-800/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs">
-            <i class="fas fa-layer-group"></i>
-          </span>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-            VIS-3 Upcoming
-          </span>
+      <!-- 3-Column Executive Leverage Strip -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- 1. Capital Utilization Rate -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Capital Utilization Rate</span>
+            <span id="trajectory-kpi-utilization-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              No Capital Base
+            </span>
+          </div>
+          <div>
+            <h5 id="trajectory-kpi-utilization" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">0.0%</h5>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Active loan book vs. member savings pool</p>
+          </div>
         </div>
-        <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">SASRA Aging</h4>
-        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-          Standardized 1–30, 31–60, 61–90, and 90+ day arrears stratification aligned with SACCO/SASRA prudential norms.
-        </p>
+
+        <!-- 2. Idle Capital Buffer -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Idle Capital Buffer</span>
+            <span class="w-6 h-6 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-shield-halved"></i>
+            </span>
+          </div>
+          <div>
+            <h5 id="trajectory-kpi-buffer" class="text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0</h5>
+            <p id="trajectory-kpi-buffer-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Available for loans &amp; MMF deployment</p>
+          </div>
+        </div>
+
+        <!-- 3. Portfolio Snapshot -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Portfolio Snapshot</span>
+            <span class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-scale-balanced"></i>
+            </span>
+          </div>
+          <div>
+            <h5 id="trajectory-kpi-snapshot" class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate">KES 0 / KES 0</h5>
+            <p id="trajectory-kpi-snapshot-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Total savings vs. outstanding loan balances</p>
+          </div>
+        </div>
       </div>
+
+      <!-- Dual-Layer Trajectory Canvas -->
+      <div class="h-80 sm:h-96 w-full relative">
+        <canvas id="savingsExposureTrajectoryChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Upcoming Module Placeholder (VIS-3) -->
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-sm space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/60 border border-amber-200/70 dark:border-amber-800/60 text-amber-700 dark:text-amber-400 flex items-center justify-center text-xs">
+          <i class="fas fa-layer-group"></i>
+        </span>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          VIS-3 Upcoming
+        </span>
+      </div>
+      <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">SASRA Aging</h4>
+      <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+        Standardized 1–30, 31–60, 61–90, and 90+ day arrears stratification aligned with SACCO/SASRA prudential norms.
+      </p>
     </div>
   </div>
 
@@ -716,13 +770,17 @@
       wfOpeningColor: isDark ? '#38bdf8' : '#0284c7',
       wfInflowColor: '#10b981',
       wfOutflowColor: '#f43f5e',
-      wfClosingColor: isDark ? '#818cf8' : '#4f46e5'
+      wfClosingColor: isDark ? '#818cf8' : '#4f46e5',
+      trajSavingsLine: isDark ? '#38bdf8' : '#0284c7',
+      trajSavingsFill: isDark ? 'rgba(56, 189, 248, 0.16)' : 'rgba(2, 132, 199, 0.15)',
+      trajExposureLine: isDark ? '#818cf8' : '#6366f1',
+      trajCeilingLine: isDark ? '#fbbf24' : '#d97706'
     };
   }
 
   window.resizeHomeCharts = function () {
     Object.keys(charts || {}).forEach(function (key) {
-      if (key === 'cashflowWaterfallChart') return;
+      if (key === 'cashflowWaterfallChart' || key === 'savingsExposureTrajectoryChart') return;
       const ch = charts[key];
       if (ch && typeof ch.resize === "function") {
         try { ch.resize(); } catch (_) {}
@@ -731,10 +789,12 @@
   };
 
   window.resizeAnalyticsCharts = function () {
-    const ch = charts && charts.cashflowWaterfallChart;
-    if (ch && typeof ch.resize === "function") {
-      try { ch.resize(); } catch (_) {}
-    }
+    ['cashflowWaterfallChart', 'savingsExposureTrajectoryChart'].forEach(function (key) {
+      const ch = charts && charts[key];
+      if (ch && typeof ch.resize === "function") {
+        try { ch.resize(); } catch (_) {}
+      }
+    });
   };
 
   window.syncChartsTheme = function () {
@@ -764,6 +824,25 @@
           return t.wfInflowColor;
         });
         ch._wfConnectorColor = t.connectorColor;
+      }
+      if (key === 'savingsExposureTrajectoryChart' && ch.data && Array.isArray(ch.data.datasets)) {
+        const ds0 = ch.data.datasets[0];
+        const ds1 = ch.data.datasets[1];
+        const ds2 = ch.data.datasets[2];
+        if (ds0) {
+          ds0.borderColor = t.trajSavingsLine;
+          ds0.backgroundColor = t.trajSavingsFill;
+          ds0.pointBackgroundColor = t.trajSavingsLine;
+          ds0.pointBorderColor = t.pointBorderColor;
+        }
+        if (ds1) {
+          ds1.borderColor = t.trajExposureLine;
+          ds1.pointBackgroundColor = t.trajExposureLine;
+          ds1.pointBorderColor = t.pointBorderColor;
+        }
+        if (ds2) {
+          ds2.borderColor = t.trajCeilingLine;
+        }
       }
       try { ch.update('none'); } catch (_) {}
     });
@@ -1361,6 +1440,279 @@
     charts.cashflowWaterfallChart = chart;
   };
 
+  function buildTrajectoryModel_(data) {
+    const safe = data || {};
+    const et = (safe.exposureTrajectory && typeof safe.exposureTrajectory === 'object')
+      ? safe.exposureTrajectory
+      : null;
+
+    const rawLabels = et
+      ? (Array.isArray(et.labels) ? et.labels : (Array.isArray(et.months) ? et.months : []))
+      : [];
+    const rawSavings = et
+      ? (Array.isArray(et.cumulativeSavings)
+          ? et.cumulativeSavings
+          : (Array.isArray(et.savings)
+              ? et.savings
+              : (Array.isArray(et.savingsSeries) ? et.savingsSeries : [])))
+      : [];
+    const rawExposure = et
+      ? (Array.isArray(et.loanExposure)
+          ? et.loanExposure
+          : (Array.isArray(et.exposure)
+              ? et.exposure
+              : (Array.isArray(et.loans)
+                  ? et.loans
+                  : (Array.isArray(et.loanSeries) ? et.loanSeries : []))))
+      : [];
+    const rawCeiling = et && (Array.isArray(et.prudentialCeiling) ? et.prudentialCeiling : (Array.isArray(et.sasraCeiling) ? et.sasraCeiling : null));
+
+    const len = Math.min(rawLabels.length, Math.max(rawSavings.length, rawExposure.length));
+    const labels = [];
+    const cumulativeSavings = [];
+    const loanExposure = [];
+    const sasraCeiling = [];
+
+    for (let i = 0; i < len; i++) {
+      const savVal = Number(rawSavings[i]) || 0;
+      const expVal = Number(rawExposure[i]) || 0;
+      const ceilVal = rawCeiling && rawCeiling[i] !== undefined
+        ? (Number(rawCeiling[i]) || 0)
+        : Math.round(savVal * 0.85 * 100) / 100;
+      labels.push(String(rawLabels[i] || ''));
+      cumulativeSavings.push(savVal);
+      loanExposure.push(expVal);
+      sasraCeiling.push(ceilVal);
+    }
+
+    const lastSeriesSavings = cumulativeSavings.length ? cumulativeSavings[cumulativeSavings.length - 1] : 0;
+    const lastSeriesExposure = loanExposure.length ? loanExposure[loanExposure.length - 1] : 0;
+
+    const totalSavings = (safe.savings !== undefined && safe.savings !== null)
+      ? (Number(safe.savings) || 0)
+      : lastSeriesSavings;
+    const portfolioOutstanding = safe.portfolio && safe.portfolio.totalOutstanding !== undefined && safe.portfolio.totalOutstanding !== null
+      ? (Number(safe.portfolio.totalOutstanding) || 0)
+      : (safe.loans !== undefined && safe.loans !== null ? (Number(safe.loans) || 0) : lastSeriesExposure);
+
+    const hasSeries = len > 0 && (cumulativeSavings.some(function (v) { return v > 0; }) || loanExposure.some(function (v) { return v > 0; }));
+
+    const etSummary = (et && typeof et.summary === 'object') ? et.summary : {};
+    const explicitUtil = etSummary.utilizationRate !== undefined
+      ? Number(etSummary.utilizationRate)
+      : (et && et.utilizationRate !== undefined
+          ? Number(et.utilizationRate)
+          : (et && et.utilizationRatio !== undefined ? Number(et.utilizationRatio) : null));
+    const utilizationRate = explicitUtil !== null && isFinite(explicitUtil)
+      ? explicitUtil
+      : (totalSavings > 0 ? (portfolioOutstanding / totalSavings) * 100 : 0);
+
+    const explicitBuffer = etSummary.idleCapitalBuffer !== undefined
+      ? Number(etSummary.idleCapitalBuffer)
+      : (et && et.idleBuffer !== undefined
+          ? Number(et.idleBuffer)
+          : (et && et.idleCapitalBuffer !== undefined ? Number(et.idleCapitalBuffer) : null));
+    const idleBuffer = explicitBuffer !== null && isFinite(explicitBuffer)
+      ? explicitBuffer
+      : (totalSavings - portfolioOutstanding);
+
+    return {
+      labels: labels,
+      cumulativeSavings: cumulativeSavings,
+      loanExposure: loanExposure,
+      sasraCeiling: sasraCeiling,
+      totalSavings: totalSavings,
+      totalExposure: portfolioOutstanding,
+      utilizationRate: utilizationRate,
+      idleBuffer: idleBuffer,
+      hasSeries: hasSeries
+    };
+  }
+
+  window.renderSavingsExposureTrajectory = function (data) {
+    if (data) {
+      window.latestHomeAnalyticsData = data;
+    }
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildTrajectoryModel_(sourceData);
+    const theme = getChartThemeTokens();
+
+    // 1. Update Capital Utilization Rate + 4-band SASRA Prudential Badge
+    const elUtil = document.getElementById('trajectory-kpi-utilization');
+    const elUtilBadge = document.getElementById('trajectory-kpi-utilization-badge');
+    if (elUtil) {
+      if (m.totalSavings <= 0 && m.totalExposure > 0) {
+        elUtil.textContent = '>100%';
+      } else {
+        elUtil.textContent = m.utilizationRate.toFixed(1) + '%';
+      }
+    }
+    if (elUtilBadge) {
+      if (m.totalSavings <= 0 && m.totalExposure <= 0) {
+        elUtilBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        elUtilBadge.textContent = 'No Capital Base';
+      } else if (m.totalSavings <= 0 && m.totalExposure > 0) {
+        elUtilBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elUtilBadge.textContent = 'Over-leveraged';
+      } else if (m.utilizationRate < 40) {
+        elUtilBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60';
+        elUtilBadge.textContent = 'Under-utilized';
+      } else if (m.utilizationRate <= 75) {
+        elUtilBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
+        elUtilBadge.textContent = 'Healthy';
+      } else if (m.utilizationRate <= 80) {
+        elUtilBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60';
+        elUtilBadge.textContent = 'Elevated';
+      } else {
+        elUtilBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elUtilBadge.textContent = 'Over-leveraged';
+      }
+    }
+
+    // 2. Update Idle Capital Buffer
+    const elBuffer = document.getElementById('trajectory-kpi-buffer');
+    const elBufferSub = document.getElementById('trajectory-kpi-buffer-sub');
+    if (elBuffer) {
+      if (m.idleBuffer >= 0) {
+        elBuffer.textContent = formatChartKes(m.idleBuffer);
+        elBuffer.className = 'text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums';
+      } else {
+        elBuffer.textContent = '-' + formatChartKes(Math.abs(m.idleBuffer));
+        elBuffer.className = 'text-base sm:text-lg font-bold text-rose-700 dark:text-rose-400 tracking-tight font-mono tabular-nums';
+      }
+    }
+    if (elBufferSub) {
+      elBufferSub.textContent = m.idleBuffer >= 0
+        ? 'Available for loans & MMF deployment'
+        : 'Capital deficit: exposure exceeds savings';
+    }
+
+    // 3. Update Portfolio Snapshot
+    const elSnapshot = document.getElementById('trajectory-kpi-snapshot');
+    const elSnapshotSub = document.getElementById('trajectory-kpi-snapshot-sub');
+    if (elSnapshot) {
+      elSnapshot.textContent = formatChartKes(m.totalSavings) + ' / ' + formatChartKes(m.totalExposure);
+    }
+    if (elSnapshotSub) {
+      elSnapshotSub.textContent = 'Total savings vs. outstanding loan balances';
+    }
+
+    // 4. Lazy chart initialization while Analytics subtab is hidden
+    const analyticsPane = document.getElementById('home-subview-analytics');
+    const isAnalyticsVisible = Boolean(analyticsPane && !analyticsPane.classList.contains('hidden'));
+    const ctxTraj = document.getElementById('savingsExposureTrajectoryChart');
+    if (!ctxTraj || !isAnalyticsVisible) {
+      return;
+    }
+
+    if (charts.savingsExposureTrajectoryChart) {
+      charts.savingsExposureTrajectoryChart.destroy();
+      charts.savingsExposureTrajectoryChart = null;
+    }
+
+    if (setChartEmptyState('savingsExposureTrajectoryChart', !m.hasSeries, 'Historical exposure trajectory pending monthly ledger sync')) {
+      return;
+    }
+
+    charts.savingsExposureTrajectoryChart = new Chart(ctxTraj, {
+      type: 'line',
+      data: {
+        labels: m.labels,
+        datasets: [
+          {
+            label: 'Cumulative Member Savings',
+            data: m.cumulativeSavings,
+            borderColor: theme.trajSavingsLine,
+            backgroundColor: theme.trajSavingsFill,
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: theme.trajSavingsLine,
+            pointBorderColor: theme.pointBorderColor,
+            pointBorderWidth: 2
+          },
+          {
+            label: 'Active Loan Exposure',
+            data: m.loanExposure,
+            borderColor: theme.trajExposureLine,
+            backgroundColor: 'transparent',
+            fill: false,
+            tension: 0.3,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            pointBackgroundColor: theme.trajExposureLine,
+            pointBorderColor: theme.pointBorderColor,
+            pointBorderWidth: 2
+          },
+          {
+            label: 'SASRA 85% Ceiling',
+            data: m.sasraCeiling,
+            borderColor: theme.trajCeilingLine,
+            backgroundColor: 'transparent',
+            borderDash: [6, 4],
+            borderWidth: 2,
+            fill: false,
+            tension: 0.3,
+            pointRadius: 0,
+            pointHoverRadius: 3
+          }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function (items) {
+                return items && items[0] ? String(items[0].label || '') : '';
+              },
+              label: function (ctx) {
+                return (ctx.dataset.label || '') + ': ' + formatChartKes(ctx.parsed.y);
+              },
+              afterBody: function (items) {
+                const idx = items && items[0] ? items[0].dataIndex : -1;
+                if (idx < 0) return [];
+                const sav = Number(m.cumulativeSavings[idx]) || 0;
+                const exp = Number(m.loanExposure[idx]) || 0;
+                const spread = sav - exp;
+                const util = sav > 0 ? (exp / sav) * 100 : 0;
+                return [
+                  'Utilization: ' + util.toFixed(1) + '%',
+                  spread >= 0
+                    ? ('Idle Buffer: ' + formatChartKes(spread))
+                    : ('Capital Deficit: -' + formatChartKes(Math.abs(spread)))
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 10 }, color: theme.tickColor }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: theme.gridColor },
+            ticks: {
+              font: { size: 10 },
+              color: theme.tickColor,
+              callback: function (value) { return formatMoneyCompactK(value); }
+            }
+          }
+        }
+      }
+    });
+  };
+
   function renderMainCharts(data) {
     window.latestHomeAnalyticsData = data;
     renderPortfolioAndLiquidityHealth(data);
@@ -1581,6 +1933,7 @@
 
     renderInvestmentCharts(data.investments);
     window.renderCashflowWaterfall(data);
+    window.renderSavingsExposureTrajectory(data);
   }
 
   function renderInvestmentCharts(inv) {
