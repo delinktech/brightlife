@@ -520,8 +520,478 @@
     setLoansPage(loanPage + (Number(direction) || 0));
   }
 
+  const applyLoanState = {
+    policy: {
+      borrowerMultiplier: 3,
+      interestRatePct: 10,
+      minGuarantors: 2,
+      tenorTiers: [
+        { maxAmount: 20000, maxMonths: 6 },
+        { maxAmount: 100000, maxMonths: 12 },
+        { maxAmount: 500000, maxMonths: 24 }
+      ]
+    },
+    borrowerId: "",
+    guarantors: []
+  };
+
+  function getActiveLoanPolicy_() {
+    const entry = typeof cacheGetEntry === "function" ? cacheGetEntry("loan_policy_settings") : null;
+    const raw = (entry && entry.data) || null;
+    if (raw && typeof raw === "object") {
+      const mult = Number(raw.borrowerMultiplier !== undefined ? raw.borrowerMultiplier : raw.savingsMultiplier);
+      const rate = Number(raw.interestRatePct);
+      const guar = Number(raw.minGuarantors);
+      const tiers = Array.isArray(raw.tenorTiers) && raw.tenorTiers.length > 0 ? raw.tenorTiers : applyLoanState.policy.tenorTiers;
+      return {
+        borrowerMultiplier: Number.isFinite(mult) && mult > 0 ? mult : 3,
+        interestRatePct: Number.isFinite(rate) && rate >= 0 ? rate : 10,
+        minGuarantors: Number.isFinite(guar) && guar >= 0 ? Math.round(guar) : 2,
+        tenorTiers: tiers
+      };
+    }
+    return applyLoanState.policy;
+  }
+
+  function getMemberUnencumberedSavings_(m) {
+    if (!m) return 0;
+    return Math.max(0, (Number(m.savings) || 0) - (Number(m.guaranteed) || 0));
+  }
+
+  function syncApplyLoanPolicyBadges_() {
+    const p = applyLoanState.policy;
+    const multBadge = document.getElementById("al-policy-mult-badge");
+    const minGuarBadge = document.getElementById("al-min-guarantors-badge");
+    const rateLabel = document.getElementById("al-prev-rate-label");
+    if (multBadge) multBadge.textContent = p.borrowerMultiplier + "x Limit";
+    if (minGuarBadge) minGuarBadge.textContent = "Min: " + p.minGuarantors;
+    if (rateLabel) rateLabel.textContent = p.interestRatePct + "%";
+  }
+
+  function setupApplyLoanBorrowerCombobox_() {
+    const searchInput = document.getElementById("al-borrower-search");
+    const hiddenId = document.getElementById("al-borrower-id");
+    const combobox = document.getElementById("al-borrower-combobox");
+    if (!searchInput || !hiddenId || !combobox) return;
+    if (searchInput.dataset.comboBound === "true") return;
+    searchInput.dataset.comboBound = "true";
+
+    function renderList(filterText) {
+      const q = (filterText || "").toLowerCase().trim();
+      const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+      const matches = list.filter(function (m) {
+        if (!q) return true;
+        return (m.name || "").toLowerCase().indexOf(q) !== -1 || (m.id || "").toLowerCase().indexOf(q) !== -1;
+      });
+
+      if (!matches.length) {
+        combobox.innerHTML = '<div class="px-3 py-2 text-xs text-slate-400 text-center">No matching members found</div>';
+        combobox.classList.remove("hidden");
+        return;
+      }
+
+      combobox.innerHTML = matches.slice(0, 40).map(function (m) {
+        return (
+          '<div class="custom-combobox-item" onclick="selectApplyLoanBorrower_(\'' + escapeHtmlAttr(m.id) + '\')">' +
+          '<span>' + escapeHtmlAttr(m.name) + '</span>' +
+          '<span class="item-id">' + escapeHtmlAttr(m.id) + ' &bull; ' + formatMoney(m.savings || 0) + '</span>' +
+          '</div>'
+        );
+      }).join("");
+      combobox.classList.remove("hidden");
+    }
+
+    searchInput.addEventListener("focus", function () { renderList(this.value); });
+    searchInput.addEventListener("input", function () {
+      hiddenId.value = "";
+      applyLoanState.borrowerId = "";
+      renderList(this.value);
+      onLoanBorrowerSelected();
+    });
+    document.addEventListener("click", function (e) {
+      if (!searchInput.contains(e.target) && !combobox.contains(e.target)) {
+        combobox.classList.add("hidden");
+      }
+    });
+  }
+
+  function selectApplyLoanBorrower_(memberId) {
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const m = list.find(function (item) { return String(item.id) === String(memberId); });
+    const searchInput = document.getElementById("al-borrower-search");
+    const hiddenId = document.getElementById("al-borrower-id");
+    const combobox = document.getElementById("al-borrower-combobox");
+
+    if (searchInput && m) searchInput.value = m.name + " (" + m.id + ")";
+    if (hiddenId) hiddenId.value = m ? m.id : "";
+    if (combobox) combobox.classList.add("hidden");
+    applyLoanState.borrowerId = m ? String(m.id) : "";
+    onLoanBorrowerSelected();
+  }
+
+  function onLoanBorrowerSelected() {
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const m = list.find(function (item) { return String(item.id) === String(applyLoanState.borrowerId); });
+    const savingsEl = document.getElementById("al-elig-savings");
+    const ceilingEl = document.getElementById("al-elig-ceiling");
+    const activeLoanEl = document.getElementById("al-elig-active-loan");
+
+    const savings = m ? (Number(m.savings) || 0) : 0;
+    const ceiling = savings * (applyLoanState.policy.borrowerMultiplier || 3);
+    const activeBal = m ? (Number(m.loanBalance) || 0) : 0;
+
+    if (savingsEl) savingsEl.textContent = formatMoney(savings);
+    if (ceilingEl) ceilingEl.textContent = formatMoney(ceiling);
+    if (activeLoanEl) {
+      if (!m) {
+        activeLoanEl.textContent = "Select borrower";
+        activeLoanEl.className = "text-sm font-bold text-slate-700 dark:text-slate-200 font-mono tabular-nums mt-0.5";
+      } else if (activeBal > 0) {
+        activeLoanEl.textContent = "Active: " + formatMoney(activeBal);
+        activeLoanEl.className = "text-sm font-bold text-amber-700 dark:text-amber-400 font-mono tabular-nums mt-0.5";
+      } else {
+        activeLoanEl.textContent = "Clear (None)";
+        activeLoanEl.className = "text-sm font-bold text-emerald-700 dark:text-emerald-400 font-mono tabular-nums mt-0.5";
+      }
+    }
+
+    renderApplyLoanGuarantors_();
+    onLoanAmountOrTenorChanged();
+  }
+
+  function onLoanAmountOrTenorChanged() {
+    const amountEl = document.getElementById("al-amount");
+    const tenorEl = document.getElementById("al-tenor");
+    const warnEl = document.getElementById("al-ceiling-warning");
+    const amount = Number(amountEl && amountEl.value) || 0;
+
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const borrower = list.find(function (item) { return String(item.id) === String(applyLoanState.borrowerId); });
+    const ceiling = borrower ? ((Number(borrower.savings) || 0) * (applyLoanState.policy.borrowerMultiplier || 3)) : 0;
+
+    if (warnEl) {
+      warnEl.classList.toggle("hidden", !(borrower && amount > ceiling));
+    }
+
+    if (tenorEl) {
+      const tiers = (applyLoanState.policy.tenorTiers || []).slice().sort(function (a, b) {
+        return Number(a.maxAmount) - Number(b.maxAmount);
+      });
+      let matchedTier = tiers.find(function (t) { return amount <= Number(t.maxAmount); });
+      if (!matchedTier && tiers.length > 0) matchedTier = tiers[tiers.length - 1];
+      const maxMonths = Math.max(3, Number(matchedTier && matchedTier.maxMonths) || 12);
+
+      const standardSteps = [3, 6, 9, 12, 18, 24, 36, 48, 60].filter(function (m) { return m <= maxMonths; });
+      if (standardSteps.indexOf(maxMonths) === -1) standardSteps.push(maxMonths);
+      standardSteps.sort(function (a, b) { return a - b; });
+
+      const prevVal = Number(tenorEl.value);
+      tenorEl.innerHTML = standardSteps.map(function (m) {
+        return '<option value="' + m + '">' + m + ' Months</option>';
+      }).join("");
+      if (standardSteps.indexOf(prevVal) !== -1) {
+        tenorEl.value = String(prevVal);
+      } else {
+        tenorEl.value = String(standardSteps[standardSteps.length - 1]);
+      }
+    }
+
+    updateLoanApplicationCalculator();
+  }
+
+  function renderApplyLoanGuarantors_() {
+    const container = document.getElementById("al-guarantors-list");
+    const addBtn = document.getElementById("al-add-guarantor-btn");
+    if (!container) return;
+
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const eligibleMembers = list.filter(function (m) {
+      return String(m.id) !== String(applyLoanState.borrowerId);
+    });
+
+    if (addBtn) {
+      addBtn.disabled = applyLoanState.guarantors.length >= 3;
+      addBtn.classList.toggle("opacity-45", applyLoanState.guarantors.length >= 3);
+    }
+
+    if (applyLoanState.guarantors.length === 0) {
+      container.innerHTML = '<div class="p-3 text-center text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-900/50 rounded-xl border border-slate-200/80 dark:border-slate-800 text-[11px]">No guarantors added yet. Click "Add Guarantor" above.</div>';
+      return;
+    }
+
+    container.innerHTML = applyLoanState.guarantors.map(function (g, idx) {
+      const selectedMember = eligibleMembers.find(function (m) { return String(m.id) === String(g.memberId); });
+      const freeSavings = getMemberUnencumberedSavings_(selectedMember);
+      const optionsHtml = ['<option value="">-- Select Guarantor --</option>'].concat(
+        eligibleMembers.map(function (m) {
+          const isSelectedHere = String(m.id) === String(g.memberId);
+          const takenElsewhere = applyLoanState.guarantors.some(function (other, oIdx) {
+            return oIdx !== idx && String(other.memberId) === String(m.id);
+          });
+          if (takenElsewhere) return "";
+          const free = getMemberUnencumberedSavings_(m);
+          return '<option value="' + escapeHtmlAttr(m.id) + '" ' + (isSelectedHere ? "selected" : "") + '>' +
+            escapeHtmlAttr(m.name) + " (" + formatMoney(free) + " free)" +
+            "</option>";
+        })
+      ).join("");
+
+      return (
+        '<div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">' +
+          '<div class="sm:col-span-6">' +
+            '<select onchange="onGuarantorSelected(' + idx + ', this.value)" aria-label="Select Guarantor ' + (idx + 1) + '" ' +
+              'class="min-h-[38px] w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-medium outline-none">' +
+              optionsHtml +
+            "</select>" +
+            '<div class="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-mono tabular-nums">' +
+              (selectedMember ? ("Available to pledge: " + formatMoney(freeSavings)) : "Select a member to view free savings") +
+            "</div>" +
+          "</div>" +
+          '<div class="sm:col-span-5">' +
+            '<input type="number" min="0" step="500" value="' + (Number(g.amount) || "") + '" placeholder="Guarantee (KES)" ' +
+              'oninput="onGuarantorAmountChanged(' + idx + ', this.value)" ' +
+              'class="min-h-[38px] w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-semibold outline-none" />' +
+          "</div>" +
+          '<div class="sm:col-span-1 flex justify-end">' +
+            '<button type="button" onclick="removeLoanGuarantorRow(' + idx + ')" aria-label="Remove Guarantor" ' +
+              'class="min-w-[38px] min-h-[38px] inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors">' +
+              '<i class="fas fa-times text-xs"></i>' +
+            "</button>" +
+          "</div>" +
+        "</div>"
+      );
+    }).join("");
+  }
+
+  function addLoanGuarantorRow() {
+    if (applyLoanState.guarantors.length >= 3) return;
+    applyLoanState.guarantors.push({ memberId: "", amount: 0 });
+    renderApplyLoanGuarantors_();
+    updateLoanApplicationCalculator();
+  }
+
+  function removeLoanGuarantorRow(idx) {
+    applyLoanState.guarantors.splice(idx, 1);
+    renderApplyLoanGuarantors_();
+    updateLoanApplicationCalculator();
+  }
+
+  function onGuarantorSelected(idx, memberId) {
+    if (!applyLoanState.guarantors[idx]) return;
+    applyLoanState.guarantors[idx].memberId = memberId || "";
+    renderApplyLoanGuarantors_();
+    updateLoanApplicationCalculator();
+  }
+
+  function onGuarantorAmountChanged(idx, value) {
+    if (!applyLoanState.guarantors[idx]) return;
+    applyLoanState.guarantors[idx].amount = Math.max(0, Number(value) || 0);
+    updateLoanApplicationCalculator();
+  }
+
+  function updateLoanApplicationCalculator() {
+    const principal = Math.max(0, Number(document.getElementById("al-amount")?.value) || 0);
+    const months = Math.max(1, Number(document.getElementById("al-tenor")?.value) || 12);
+    const ratePct = Number(applyLoanState.policy.interestRatePct) || 0;
+    const interest = principal * (ratePct / 100);
+    const totalRepayment = principal + interest;
+    const monthly = totalRepayment / months;
+
+    const setTxt = function (id, txt) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+
+    setTxt("al-prev-principal", formatMoney(principal));
+    setTxt("al-prev-interest", formatMoney(interest));
+    setTxt("al-prev-total", formatMoney(totalRepayment));
+    setTxt("al-prev-monthly", formatMoney(monthly));
+
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const borrower = list.find(function (item) { return String(item.id) === String(applyLoanState.borrowerId); });
+    const borrowerSavings = borrower ? (Number(borrower.savings) || 0) : 0;
+    const totalGuaranteed = applyLoanState.guarantors.reduce(function (sum, g) {
+      return sum + (g.memberId ? (Number(g.amount) || 0) : 0);
+    }, 0);
+    const totalCoverage = borrowerSavings + totalGuaranteed;
+    const shortfall = Math.max(0, totalRepayment - totalCoverage);
+    const pct = totalRepayment > 0 ? Math.min(100, Math.round((totalCoverage / totalRepayment) * 100)) : 0;
+
+    setTxt("al-coverage-amount", formatMoney(totalCoverage));
+    setTxt("al-coverage-target", formatMoney(totalRepayment));
+
+    const barEl = document.getElementById("al-coverage-bar");
+    const statusEl = document.getElementById("al-coverage-status");
+    if (barEl) {
+      barEl.style.width = pct + "%";
+      barEl.className = "h-2 rounded-full transition-all duration-200 " + (
+        totalRepayment <= 0
+          ? "bg-slate-400"
+          : shortfall <= 0
+          ? "bg-emerald-600 dark:bg-emerald-500"
+          : "bg-amber-500 dark:bg-amber-400"
+      );
+    }
+    if (statusEl) {
+      if (totalRepayment <= 0) {
+        statusEl.textContent = "Enter amount";
+        statusEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300";
+      } else if (shortfall <= 0) {
+        statusEl.textContent = "Fully Covered";
+        statusEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60";
+      } else {
+        statusEl.textContent = "Shortfall: " + formatMoney(shortfall);
+        statusEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-mono tabular-nums";
+      }
+    }
+  }
+
   function openRequestLoanModal() {
-    showNotification("Loan requests are not available in the app yet. Contact an administrator.", "info", 5000);
+    if (!window.APP_PERMS || !window.APP_PERMS.loanRequest) {
+      showNotification("You do not have permission to submit loan applications.", "warning");
+      return;
+    }
+
+    applyLoanState.policy = getActiveLoanPolicy_();
+    applyLoanState.borrowerId = "";
+    const minG = Math.max(1, Math.min(3, Number(applyLoanState.policy.minGuarantors) || 2));
+    applyLoanState.guarantors = Array.from({ length: minG }, function () {
+      return { memberId: "", amount: 0 };
+    });
+
+    const form = document.getElementById("applyLoanForm");
+    if (form) form.reset();
+    const searchInput = document.getElementById("al-borrower-search");
+    const hiddenId = document.getElementById("al-borrower-id");
+    if (searchInput) searchInput.value = "";
+    if (hiddenId) hiddenId.value = "";
+
+    syncApplyLoanPolicyBadges_();
+    setupApplyLoanBorrowerCombobox_();
+    onLoanBorrowerSelected();
+
+    if (typeof ensureMembersLoaded === "function") {
+      ensureMembersLoaded().then(function () {
+        renderApplyLoanGuarantors_();
+      }).catch(function () {});
+    }
+
+    if (typeof google !== "undefined" && google.script && google.script.run && typeof google.script.run.getLoanPolicySettings === "function") {
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (res && res.ok !== false && res.success !== false) {
+            const s = res.settings || res.policy || res;
+            if (typeof cacheSet === "function") cacheSet("loan_policy_settings", s, 5 * 60 * 1000);
+            applyLoanState.policy = getActiveLoanPolicy_();
+            syncApplyLoanPolicyBadges_();
+            onLoanBorrowerSelected();
+          }
+        })
+        .getLoanPolicySettings();
+    }
+
+    const modal = document.getElementById("applyLoanModal");
+    if (modal) modal.classList.remove("hidden");
+  }
+
+  function closeApplyLoanModal() {
+    const modal = document.getElementById("applyLoanModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function submitLoanApplicationForm() {
+    const list = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) ? currentMembers : [];
+    const borrower = list.find(function (m) { return String(m.id) === String(applyLoanState.borrowerId); });
+    if (!borrower) {
+      showNotification("Please select a valid borrower.", "warning");
+      return;
+    }
+
+    const amount = Number(document.getElementById("al-amount")?.value) || 0;
+    const tenorMonths = Number(document.getElementById("al-tenor")?.value) || 0;
+    const purpose = document.getElementById("al-purpose")?.value || "";
+
+    if (amount <= 0) {
+      showNotification("Please enter a valid loan amount greater than 0.", "warning");
+      return;
+    }
+    if (tenorMonths < 1) {
+      showNotification("Please select a valid loan tenor.", "warning");
+      return;
+    }
+
+    const validGuarantors = applyLoanState.guarantors.filter(function (g) {
+      return g.memberId && Number(g.amount) > 0;
+    });
+    const minReq = Number(applyLoanState.policy.minGuarantors) || 0;
+    if (validGuarantors.length < minReq) {
+      showNotification("At least " + minReq + " guarantor(s) with valid pledged amounts are required.", "warning");
+      return;
+    }
+
+    for (let i = 0; i < validGuarantors.length; i++) {
+      const g = validGuarantors[i];
+      const gm = list.find(function (m) { return String(m.id) === String(g.memberId); });
+      const free = getMemberUnencumberedSavings_(gm);
+      if (Number(g.amount) > free) {
+        showNotification("Guarantor " + ((gm && gm.name) || g.memberId) + " exceeds unencumbered savings (" + formatMoney(free) + ").", "warning");
+        return;
+      }
+    }
+
+    const btn = document.getElementById("al-submit-btn");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Submitting...</span>';
+    }
+    if (typeof startAppLoader === "function") startAppLoader();
+
+    const payload = {
+      memberId: borrower.id,
+      borrowerId: borrower.id,
+      borrowerName: borrower.name,
+      requestedAmount: amount,
+      amount: amount,
+      tenorMonths: tenorMonths,
+      purpose: purpose,
+      guarantors: validGuarantors.map(function (g) {
+        const gm = list.find(function (m) { return String(m.id) === String(g.memberId); });
+        return {
+          memberId: g.memberId,
+          memberName: gm ? gm.name : g.memberId,
+          amount: Number(g.amount)
+        };
+      })
+    };
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (typeof stopAppLoader === "function") stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-paper-plane text-xs"></i> <span>Submit Loan Application</span>';
+        }
+        if (!res || res.ok === false || res.success === false) {
+          showNotification("Loan application failed: " + ((res && res.error) || "Unknown error"), "error", 6000);
+          return;
+        }
+        if (typeof cacheClear === "function") {
+          cacheClear("loans_");
+          cacheClear("members_list");
+        }
+        closeApplyLoanModal();
+        showNotification("Loan application submitted successfully.", "success");
+        loadLoans(1, true);
+      })
+      .withFailureHandler(function (err) {
+        if (typeof stopAppLoader === "function") stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-paper-plane text-xs"></i> <span>Submit Loan Application</span>';
+        }
+        handleErr(err);
+      })
+      .submitLoanApplication(payload);
   }
 
   function setupLoanBorrowerCombobox() {

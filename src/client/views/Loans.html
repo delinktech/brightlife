@@ -41,8 +41,8 @@
       <button type="button" onclick="openPayLoanModal()" data-require-perm="loanPayment" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
         <i class="fas fa-hand-holding-dollar text-xs"></i> <span>Pay Loan</span>
       </button>
-      <button type="button" onclick="openRequestLoanModal()" data-require-perm="loanRequest" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-sky-700 hover:bg-sky-800 dark:bg-sky-500 dark:hover:bg-sky-400 text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
-        <i class="fas fa-plus text-xs"></i> <span>Request Loan</span>
+      <button type="button" onclick="openRequestLoanModal()" data-require-perm="loanRequest" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+        <i class="fas fa-plus text-xs"></i> <span>Apply for Loan</span>
       </button>
     </div>
   </div>
@@ -296,6 +296,163 @@
         <button type="submit" id="pl-submit-btn"
           class="min-h-[38px] px-5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
           Submit Loan Payment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Apply for Loan Modal (UI-2) -->
+<div id="applyLoanModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
+    <!-- Executive Header -->
+    <div class="bg-white dark:bg-[#090d16] px-6 py-4 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm shrink-0">
+          <i class="fas fa-hand-holding-dollar"></i>
+        </div>
+        <div class="min-w-0">
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-snug truncate">Apply for Loan</h3>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Brightlife SHG Institutional Loan Application</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeApplyLoanModal()" aria-label="Close Loan Application Dialog"
+        class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <form id="applyLoanForm" onsubmit="event.preventDefault(); submitLoanApplicationForm();" class="p-6 space-y-5 text-xs">
+      <!-- Step 1: Borrower Selection & Eligibility Strip -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Step 1 &bull; Borrower Selection &amp; Eligibility</span>
+          <span id="al-policy-mult-badge" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">3x Limit</span>
+        </div>
+
+        <div class="relative">
+          <label for="al-borrower-search" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Borrower (Member) <span class="text-rose-500">*</span></label>
+          <input type="text" id="al-borrower-search" autocomplete="off" placeholder="Search member name or ID..."
+            class="min-h-[38px] w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+          <input type="hidden" id="al-borrower-id" />
+          <div id="al-borrower-combobox" class="custom-combobox-panel hidden"></div>
+        </div>
+
+        <div id="al-eligibility-strip" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Member Savings</div>
+            <div id="al-elig-savings" class="text-sm font-bold text-slate-900 dark:text-white font-mono tabular-nums mt-0.5">KES 0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Max Borrowing Ceiling</div>
+            <div id="al-elig-ceiling" class="text-sm font-bold text-emerald-700 dark:text-emerald-400 font-mono tabular-nums mt-0.5">KES 0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Loan Status</div>
+            <div id="al-elig-active-loan" class="text-sm font-bold text-slate-700 dark:text-slate-200 font-mono tabular-nums mt-0.5">Select borrower</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Loan Request & Terms -->
+      <div class="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Step 2 &bull; Loan Request &amp; Terms</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="al-amount" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Requested Amount (KES) <span class="text-rose-500">*</span></label>
+            <input type="number" id="al-amount" min="100" step="100" required placeholder="e.g. 50000" oninput="onLoanAmountOrTenorChanged()"
+              class="min-h-[38px] w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-bold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+          </div>
+          <div>
+            <label for="al-tenor" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Loan Tenor <span class="text-rose-500">*</span></label>
+            <select id="al-tenor" onchange="updateLoanApplicationCalculator()"
+              class="min-h-[38px] w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-semibold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20">
+              <option value="6">6 Months</option>
+              <option value="12">12 Months</option>
+            </select>
+          </div>
+          <div>
+            <label for="al-purpose" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Loan Purpose <span class="text-rose-500">*</span></label>
+            <select id="al-purpose" required
+              class="min-h-[38px] w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-medium outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20">
+              <option value="Business">Business</option>
+              <option value="School Fees">School Fees</option>
+              <option value="Emergency">Emergency</option>
+              <option value="Agriculture">Agriculture</option>
+              <option value="Personal Development">Personal Development</option>
+              <option value="Asset Acquisition">Asset Acquisition</option>
+            </select>
+          </div>
+        </div>
+        <div id="al-ceiling-warning" class="hidden p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/60 text-[11px] text-rose-700 dark:text-rose-300 flex items-center gap-2">
+          <i class="fas fa-triangle-exclamation shrink-0"></i>
+          <span>Requested amount exceeds the borrower's policy borrowing ceiling.</span>
+        </div>
+      </div>
+
+      <!-- Step 3: Guarantor Allocation & Live Deficit Tracker -->
+      <div class="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Step 3 &bull; Guarantor Allocation</span>
+            <span id="al-min-guarantors-badge" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Min: 2</span>
+          </div>
+          <button type="button" id="al-add-guarantor-btn" onclick="addLoanGuarantorRow()"
+            class="min-h-[34px] px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] font-medium transition-colors inline-flex items-center gap-1">
+            <i class="fas fa-plus text-[10px]"></i> <span>Add Guarantor</span>
+          </button>
+        </div>
+
+        <div id="al-guarantors-list" class="space-y-2">
+          <!-- Dynamic guarantor rows (up to 3) -->
+        </div>
+
+        <!-- Live Coverage Bar -->
+        <div id="al-coverage-box" class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
+          <div class="flex items-center justify-between gap-2 text-[11px]">
+            <span class="font-semibold text-slate-700 dark:text-slate-300">
+              Coverage: <span id="al-coverage-amount" class="font-mono tabular-nums font-bold">KES 0</span> / <span id="al-coverage-target" class="font-mono tabular-nums font-bold">KES 0</span>
+            </span>
+            <span id="al-coverage-status" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Enter amount</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+            <div id="al-coverage-bar" class="h-2 rounded-full bg-emerald-600 dark:bg-emerald-500 transition-all duration-200" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Installment & Amortization Preview -->
+      <div class="space-y-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Step 4 &bull; Installment &amp; Amortization Preview</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Principal</div>
+            <div id="al-prev-principal" class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white font-mono tabular-nums mt-0.5">KES 0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Interest (<span id="al-prev-rate-label">10%</span>)</div>
+            <div id="al-prev-interest" class="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400 font-mono tabular-nums mt-0.5">KES 0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Repayment</div>
+            <div id="al-prev-total" class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white font-mono tabular-nums mt-0.5">KES 0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Monthly Installment</div>
+            <div id="al-prev-monthly" class="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-300 font-mono tabular-nums mt-0.5">KES 0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <button type="button" onclick="closeApplyLoanModal()"
+          class="min-h-[38px] px-4 py-2 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          Cancel
+        </button>
+        <button type="submit" id="al-submit-btn"
+          class="min-h-[38px] px-5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5">
+          <i class="fas fa-paper-plane text-xs"></i> <span>Submit Loan Application</span>
         </button>
       </div>
     </form>

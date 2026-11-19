@@ -952,3 +952,305 @@ function saveLoanPolicySettings(payload) {
     }
   }
 }
+
+/**
+ * UI-2: Native Dashboard Loan Application Workflow.
+ * Validates borrower eligibility, tenor tier, and guarantor coverage against live
+ * Constants policy settings, then atomically appends to Loans & Guarantors while
+ * leaving Row 2 spill-formula columns blank.
+ */
+function submitLoanApplication(payload) {
+  let lock = null;
+  try {
+    const session = requireAccess_();
+    const input = payload && typeof payload === "object" ? payload : {};
+
+    const requestedMemberId = String(input.memberId || input.borrowerId || session.memberId || "").trim();
+    if (!requestedMemberId) {
+      throw new Error("Member ID is required to submit a loan application.");
+    }
+    if (session.permissions && session.permissions.isMemberOnly) {
+      const callerMid = String(session.memberId || "").trim().toLowerCase();
+      if (!callerMid || callerMid !== requestedMemberId.toLowerCase()) {
+        throw new Error("Access denied: You can only submit a loan application for your own Member ID.");
+      }
+    }
+
+    const rawAmount = input.requestedAmount !== undefined ? input.requestedAmount : input.amount;
+    const requestedAmount = Number(rawAmount);
+    if (!isFinite(requestedAmount) || requestedAmount <= 0) {
+      throw new Error("Requested loan amount must be greater than zero.");
+    }
+
+    const tenorMonths = Number(input.tenorMonths);
+    if (!isFinite(tenorMonths) || tenorMonths <= 0 || Math.floor(tenorMonths) !== tenorMonths) {
+      throw new Error("Loan tenor must be a positive whole number of months.");
+    }
+
+    // 1. Read active loan policy settings
+    const policyRes = getLoanPolicySettings();
+    const policy = (policyRes && (policyRes.settings || policyRes.policy)) || {
+      borrowerMultiplier: 3,
+      interestRatePct: 10,
+      minGuarantors: 2,
+      tenorTiers: [
+        { maxAmount: 50000, maxMonths: 3 },
+        { maxAmount: 100000, maxMonths: 6 },
+        { maxAmount: 999999999, maxMonths: 12 },
+      ],
+    };
+
+    // 2. Validate tenor against matching tier
+    const tiers = Array.isArray(policy.tenorTiers) && policy.tenorTiers.length > 0
+      ? policy.tenorTiers.slice().sort(function (a, b) { return a.maxAmount - b.maxAmount; })
+      : [{ maxAmount: 999999999, maxMonths: 12 }];
+    let matchedTier = tiers[tiers.length - 1];
+    for (let t = 0; t < tiers.length; t++) {
+      if (requestedAmount <= Number(tiers[t].maxAmount)) {
+        matchedTier = tiers[t];
+        break;
+      }
+    }
+    const maxAllowedMonths = Number(matchedTier.maxMonths) || 12;
+    if (tenorMonths > maxAllowedMonths) {
+      throw new Error(
+        "Requested tenor (" + tenorMonths + " months) exceeds the maximum allowed " +
+        maxAllowedMonths + " months for a loan of KES " + requestedAmount.toLocaleString() + "."
+      );
+    }
+
+    // 3. Acquire lock before reading Members / Loans / Guarantors for atomic validation & write
+    lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = getSpreadsheet_();
+    const tz = ss.getSpreadsheetTimeZone() || "Africa/Nairobi";
+
+    // Build member lookup map from SHEETS.MEMBERS
+    const memberSheet = getRequiredSheet_(SHEETS.MEMBERS);
+    const mValues = memberSheet.getDataRange().getValues();
+    if (mValues.length <= 1) {
+      throw new Error("Members registry is empty.");
+    }
+    const mCol = getHeaderMap_(mValues[0]);
+    requireHeaders_(mCol, ["Member ID", "Total Savings"], SHEETS.MEMBERS);
+
+    const memberMap = {};
+    for (let r = 1; r < mValues.length; r++) {
+      const row = mValues[r];
+      const mid = String(row[mCol["Member ID"]] || "").trim();
+      if (!mid) continue;
+      const first = mCol["First Name"] !== undefined ? String(row[mCol["First Name"]] || "").trim() : "";
+      const last = mCol["Last Name"] !== undefined ? String(row[mCol["Last Name"]] || "").trim() : "";
+      const fullName = mCol["Full Name"] !== undefined && row[mCol["Full Name"]]
+        ? String(row[mCol["Full Name"]]).trim()
+        : [first, last].filter(Boolean).join(" ");
+      memberMap[mid.toLowerCase()] = {
+        memberId: mid,
+        fullName: fullName || mid,
+        savings: Number(row[mCol["Total Savings"]]) || 0,
+      };
+    }
+
+    const borrower = memberMap[requestedMemberId.toLowerCase()];
+    if (!borrower) {
+      throw new Error("Borrower member not found: " + requestedMemberId);
+    }
+
+    const maxEligible = Math.round(borrower.savings * policy.borrowerMultiplier * 100) / 100;
+    if (requestedAmount > maxEligible) {
+      throw new Error(
+        "Requested amount (KES " + requestedAmount.toLocaleString() + ") exceeds maximum borrowing limit of KES " +
+        maxEligible.toLocaleString() + " (" + policy.borrowerMultiplier + "x your savings of KES " +
+        borrower.savings.toLocaleString() + ")."
+      );
+    }
+
+    // 4. Read Loans & Guarantors under lock to compute existing guarantee liabilities and Loan ID sequence
+    const loanSheet = getRequiredSheet_(SHEETS.LOANS);
+    const loanValues = loanSheet.getDataRange().getValues();
+    if (loanValues.length < 1) {
+      throw new Error("Loans sheet header row is missing.");
+    }
+    const loanHeaders = loanValues[0];
+    const loanCol = getHeaderMap_(loanHeaders);
+    requireHeaders_(loanCol, ["Loan ID", "Member ID", "Requested Amount", "Status"], SHEETS.LOANS);
+
+    const existingLoanIds = {};
+    const loanStatusMap = {};
+    const dateStamp = Utilities.formatDate(new Date(), tz, "yyyyMMdd");
+    const idPrefix = "LN-" + dateStamp + "-";
+    let maxSeq = 0;
+
+    for (let i = 1; i < loanValues.length; i++) {
+      const existingId = String(loanValues[i][loanCol["Loan ID"]] || "").trim();
+      if (!existingId) continue;
+      existingLoanIds[existingId.toUpperCase()] = true;
+      loanStatusMap[existingId.toLowerCase()] = String(loanValues[i][loanCol["Status"]] || "").trim().toLowerCase();
+      if (existingId.indexOf(idPrefix) === 0) {
+        const seqPart = parseInt(existingId.slice(idPrefix.length), 10);
+        if (!isNaN(seqPart) && seqPart > maxSeq) maxSeq = seqPart;
+      }
+    }
+
+    const gSheet = getRequiredSheet_(SHEETS.GUARANTORS);
+    const gValues = gSheet.getDataRange().getValues();
+    if (gValues.length < 1) {
+      throw new Error("Guarantors sheet header row is missing.");
+    }
+    const gHeaders = gValues[0];
+    const gCol = getHeaderMap_(gHeaders);
+    requireHeaders_(gCol, ["Loan ID", "Member ID", "Guaranteed Amount"], SHEETS.GUARANTORS);
+
+    const existingGuaranteesByMember = {};
+    for (let r = 1; r < gValues.length; r++) {
+      const gRow = gValues[r];
+      const gLoanId = String(gRow[gCol["Loan ID"]] || "").trim().toLowerCase();
+      const gMemId = String(gRow[gCol["Member ID"]] || "").trim().toLowerCase();
+      if (!gMemId) continue;
+      const gPledged = Number(gRow[gCol["Guaranteed Amount"]]) || 0;
+      if (gPledged <= 0) continue;
+
+      const statusFromLoans = loanStatusMap[gLoanId];
+      const fallbackStatus = gCol["Loan Status"] !== undefined ? String(gRow[gCol["Loan Status"]] || "").trim().toLowerCase() : "";
+      const effStatus = statusFromLoans !== undefined ? statusFromLoans : fallbackStatus;
+      if (effStatus !== "settled" && effStatus !== "rejected" && effStatus !== "closed") {
+        existingGuaranteesByMember[gMemId] = (existingGuaranteesByMember[gMemId] || 0) + gPledged;
+      }
+    }
+
+    const fmtCur = function (v) {
+      return typeof formatCurrency_ === "function" ? formatCurrency_(v) : "KES " + Number(v || 0).toLocaleString();
+    };
+
+    // 5. Validate guarantors against unencumbered savings
+    const rawGuarantors = Array.isArray(input.guarantors) ? input.guarantors : [];
+    const seenGuarantors = {};
+    const validGuarantors = [];
+    let totalGuaranteed = 0;
+
+    for (let g = 0; g < rawGuarantors.length; g++) {
+      const item = rawGuarantors[g] || {};
+      const gMid = String(item.memberId || "").trim();
+      const gAmt = Number(item.amount !== undefined ? item.amount : item.guaranteedAmount);
+      if (!gMid) continue;
+
+      const gLower = gMid.toLowerCase();
+      if (gLower === borrower.memberId.toLowerCase()) {
+        throw new Error("Borrower cannot guarantee their own loan.");
+      }
+      if (seenGuarantors[gLower]) {
+        throw new Error("Duplicate guarantor selected: " + gMid);
+      }
+      if (!isFinite(gAmt) || gAmt <= 0) {
+        throw new Error("Guaranteed amount for " + gMid + " must be greater than zero.");
+      }
+      const gMember = memberMap[gLower];
+      if (!gMember) {
+        throw new Error("Guarantor member not found: " + gMid);
+      }
+      const existingGuarantees = Math.round((existingGuaranteesByMember[gLower] || 0) * 100) / 100;
+      const guarantorUnencumbered = Math.max(0, Math.round((gMember.savings - existingGuarantees) * 100) / 100);
+      if (gAmt > guarantorUnencumbered) {
+        throw new Error(
+          "Guarantor " + gMember.fullName + " only has " + fmtCur(guarantorUnencumbered) +
+          " unencumbered savings available (Pledged on other loans: " + fmtCur(existingGuarantees) + ")"
+        );
+      }
+
+      seenGuarantors[gLower] = true;
+      totalGuaranteed += gAmt;
+      validGuarantors.push({
+        memberId: gMember.memberId,
+        fullName: gMember.fullName,
+        amount: Math.round(gAmt * 100) / 100,
+      });
+    }
+
+    if (validGuarantors.length < policy.minGuarantors) {
+      throw new Error(
+        "At least " + policy.minGuarantors + " valid guarantor(s) are required (provided " + validGuarantors.length + ")."
+      );
+    }
+
+    const totalCoverage = borrower.savings + totalGuaranteed;
+    if (totalCoverage < requestedAmount) {
+      throw new Error(
+        "Total loan coverage (Borrower Savings + Guaranteed Amounts = KES " + totalCoverage.toLocaleString() +
+        ") must be at least the requested amount (KES " + requestedAmount.toLocaleString() + ")."
+      );
+    }
+
+    // 6. Calculate financials & generate collision-free Loan ID: LN-YYYYMMDD-XXX
+    const interest = Math.round(requestedAmount * (policy.interestRatePct / 100) * 100) / 100;
+    const fee = 0.00;
+
+    let nextSeq = maxSeq + 1;
+    let loanId = idPrefix + String(nextSeq).padStart(3, "0");
+    while (existingLoanIds[loanId.toUpperCase()]) {
+      nextSeq++;
+      loanId = idPrefix + String(nextSeq).padStart(3, "0");
+    }
+
+    // 7. Atomic append to SHEETS.LOANS (leaving Row 2 spill formula columns blank "")
+    const loanRow = new Array(loanHeaders.length).fill("");
+    if (loanCol["Request Date"] !== undefined) loanRow[loanCol["Request Date"]] = new Date();
+    if (loanCol["Loan ID"] !== undefined) loanRow[loanCol["Loan ID"]] = loanId;
+    if (loanCol["Member ID"] !== undefined) loanRow[loanCol["Member ID"]] = borrower.memberId;
+    if (loanCol["Requested Amount"] !== undefined) loanRow[loanCol["Requested Amount"]] = requestedAmount;
+    if (loanCol["Interest"] !== undefined) loanRow[loanCol["Interest"]] = interest;
+    if (loanCol["Transaction Fee"] !== undefined) loanRow[loanCol["Transaction Fee"]] = fee;
+    if (loanCol["Status"] !== undefined) loanRow[loanCol["Status"]] = "Pending Review";
+    loanSheet.appendRow(loanRow);
+
+    // 8. Atomic append to SHEETS.GUARANTORS (leaving Row 2 spill formula columns blank "")
+    validGuarantors.forEach(function (g) {
+      const gRow = new Array(gHeaders.length).fill("");
+      if (gCol["Loan ID"] !== undefined) gRow[gCol["Loan ID"]] = loanId;
+      if (gCol["Member ID"] !== undefined) gRow[gCol["Member ID"]] = g.memberId;
+      if (gCol["Guaranteed Amount"] !== undefined) gRow[gCol["Guaranteed Amount"]] = g.amount;
+      gSheet.appendRow(gRow);
+    });
+
+    SpreadsheetApp.flush();
+
+    if (typeof appendAuditLog_ === "function") {
+      appendAuditLog_(
+        "loan.application_submitted",
+        "Loans",
+        loanId,
+        "Submitted loan application " + loanId + " for " + borrower.fullName + " (KES " + requestedAmount.toLocaleString() + ", " + tenorMonths + "m)",
+        JSON.stringify({
+          loanId: loanId,
+          memberId: borrower.memberId,
+          requestedAmount: requestedAmount,
+          interest: interest,
+          tenorMonths: tenorMonths,
+          guarantors: validGuarantors,
+          purpose: String(input.purpose || "").trim(),
+        })
+      );
+    }
+
+    if (typeof invalidateSheetContextCache_ === "function") {
+      invalidateSheetContextCache_(SHEETS.LOANS);
+      invalidateSheetContextCache_(SHEETS.GUARANTORS);
+    }
+    if (typeof clearDashboardCache_ === "function") clearDashboardCache_();
+
+    return {
+      ok: true,
+      success: true,
+      loanId: loanId,
+      message: "Loan application submitted successfully.",
+    };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message };
+  } finally {
+    if (lock) {
+      try {
+        lock.releaseLock();
+      } catch (eLock) {}
+    }
+  }
+}
