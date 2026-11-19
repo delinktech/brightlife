@@ -10,9 +10,9 @@
 | :--- | :--- |
 | **Current Live Release** | **`v128`** (Google Apps Script Build `@129`, Commits `3236d9f` + `7eb083a`) |
 | **Total Tracked Tasks** | **32 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7` & `COM-3`) |
-| **Completed & Shipped (`[DONE]`)** | **23 Tasks (71.9%)** |
+| **Completed & Shipped (`[DONE]`)** | **24 Tasks (75.0%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **9 Tasks (28.1%)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **8 Tasks (25.0%)** |
 | **Current Sprint Focus** | Tier 2 Priorities — `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` |
 
 ---
@@ -44,12 +44,13 @@
 | **`UI-1B`** | UI/UX | **Responsive Mobile Layout & Touch Targets**: 38–44px touch targets, mobile card wrapping, and responsive table navigation. | `@designer` | **`v95`** (`@96`) | 2026-11-18 |
 | **`UI-1C`** | UI/UX | **Institutional Theme Engine & Modal Purity**: Zero-flash theme boot, Sun/Moon switcher, and 100% pure Light Mode / Dark Mode across all 15 modals. | `@designer` | **`v97`–`v103`** | 2026-11-18 |
 | **`MIG-1`** | Migration | **CIC MMF Historical Statement Ingestion**: Ingested 138 transactions and 66 monthly statements back to May 2021, fully reconciling closing balances to the exact cent. | `@migrator`, `@ledger` | **`v90`–`v92`** | 2026-11-18 |
+| **`COM-1`** | Communications | **Automated WhatsApp & Email Transaction Receipts**: Implemented `triggerTransactionReceipt(txData)`, `buildReceiptHtmlEmail_`, and `buildReceiptWhatsAppMessage_` in `src/comms/notifications.service.js`, integrated into `addContribution`, `updateContributionStatus` (`src/server/contributions.service.js`) and `addLoanRepayment`, `updateLoanRepaymentStatus` (`src/server/loans.service.js`), with UI triggers (`shareContributionWhatsApp`, `shareLoanPaymentWhatsApp`) and `v127` (`COM-3`) polish. | `@messenger`, `@fixer` | **`v66`** (polished **`v127`**) | 2026-11-19 |
 
 ---
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 9 tasks are categorized below in strict execution priority:
+The remaining 8 tasks are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Exports & Data Reconciliation
 
@@ -69,18 +70,11 @@ The remaining 9 tasks are categorized below in strict execution priority:
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
 * **Dependencies:** `ARC-1` (Shipped in v112).
 
-#### 3. `COM-1: Automated WhatsApp & Email Transaction Receipts`
-* **Priority:** `P1 (High)`
-* **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
-* **Location:** `server/comms.service.js`
-* **Objective:** Automatically dispatch instant branded SMS/WhatsApp receipts and email notifications to members whenever their contributions or loan repayments are approved.
-* **Dependencies:** None (`@messenger` infrastructure).
-
 ---
 
 ### Tier 3: Advanced Intelligence, Workflows & Platform Hardening
 
-#### 4. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
+#### 3. `UI-2: Working Member Loan Application Workflow` `[BACKLOGGED / DEFERRED]`
 * **Priority:** `P2 (Deferred by User Request)`
 * **Domain:** User Experience & Core Operations (`@designer` $\to$ `@fixer`)
 * **Location:** `Loans.html` (`Apply for Loan` Modal)
@@ -92,35 +86,35 @@ The remaining 9 tasks are categorized below in strict execution priority:
   - Server-side validation and write to `SHEETS.LOANS` with `Status = "Pending"`.
 * **Dependencies:** None (Data schema in `SHEETS.LOANS` and `SHEETS.GUARANTORS` is ready).
 
-#### 5. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 4. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 6. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
+#### 5. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
 * **Priority:** `P2 (Medium)`
 * **Domain:** UI/UX (`@designer`)
 * **Location:** `Contributions.html`, `Loans.html`, `Members.html`
 * **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
 * **Dependencies:** UI-1A.
 
-#### 7. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 6. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 8. `MIG-3: Legacy Chama Google Sheet Consolidation`
+#### 7. `MIG-3: Legacy Chama Google Sheet Consolidation`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Migration (`@migrator` $\to$ `@ledger`)
 * **Location:** Legacy Workbooks
 * **Objective:** Final ingestion and archival of any legacy standalone spreadsheet tabs into the unified Brightlife database.
 * **Dependencies:** MIG-2.
 
-#### 9. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 8. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
