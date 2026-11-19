@@ -32,7 +32,7 @@ function normalizeKenyanPhone_(phone) {
   if (clean.startsWith("+")) clean = clean.substring(1);
   if (clean.startsWith("0")) clean = "254" + clean.substring(1);
   if (clean.length === 9 && (clean.startsWith("7") || clean.startsWith("1"))) clean = "254" + clean;
-  return clean;
+  return /^254[17]\d{8}$/.test(clean) ? clean : "";
 }
 
 /**
@@ -73,6 +73,19 @@ function formatFriendlyDate_(dateVal) {
   } catch (e) {
     return String(dateVal);
   }
+}
+
+/**
+ * Escapes HTML special characters to prevent injection in email templates
+ */
+function escapeHtml_(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 /**
@@ -219,22 +232,22 @@ function buildReceiptWhatsAppMessage_(data) {
 
   let loanBreakdown = "";
   if (data.isLoanRepayment || type === "Loan Repayment") {
-    if (data.principalPaid || data.interestPaid) {
+    if (data.principalPaid || data.interestPaid || data.feePaid) {
       loanBreakdown = "\n📋 *Repayment Breakdown:*\n• Principal: " + formatCurrency_(data.principalPaid || 0) +
                       "\n• Interest: " + formatCurrency_(data.interestPaid || 0) +
-                      (data.feePaid ? ("\n• Fee: " + formatCurrency_(data.feePaid)) : "");
+                      (data.feePaid ? ("\n• Fee: " + formatCurrency_(data.feePaid)) : "") + "\n";
     }
   }
 
-  let text = "🟢 *BRIGHTLIFE SHG RECEIPT* 🟢\n" +
+  let text = "🟢 *BRIGHTLIFE SHG RECEIPT*\n" +
     "────────────────────────────\n" +
-    "📄 *Receipt No:* " + receiptNo + "\n" +
-    "📅 *Date:* " + dateStr + "\n" +
-    "👤 *Member:* " + memberLine + "\n" +
-    "🏷️ *Type:* " + type + "\n" +
-    "💳 *Channel:* " + channel + "\n" +
-    "💰 *Amount Paid:* " + amountStr + "\n" +
-    (data.tid ? ("🔖 *Ref/TID:* " + data.tid + "\n") : "") +
+    "*Receipt No:* " + receiptNo + "\n" +
+    "*Date:* " + dateStr + "\n" +
+    "*Member:* " + memberLine + "\n" +
+    "*Type:* " + type + "\n" +
+    "*Channel:* " + channel + "\n" +
+    "*Amount Paid:* *" + amountStr + "*\n" +
+    (data.tid ? ("*Ref/TID:* " + data.tid + "\n") : "") +
     "✅ *Status:* Approved & Credited\n" +
     loanBreakdown + "\n" +
     "📊 *UPDATED FINANCIALS:*\n" +
@@ -261,19 +274,25 @@ function buildReceiptHtmlEmail_(data) {
   const type = data.type || "Contribution";
   const amountStr = formatCurrency_(data.amount);
   const savingsStr = formatCurrency_(data.totalSavings || 0);
-  const loanBalStr = formatCurrency_(data.loanBalance || 0);
+  const loanBalanceNum = Number(data.loanBalance) || 0;
+  const loanBalStr = formatCurrency_(loanBalanceNum);
 
   let loanBreakdownHtml = "";
-  if ((data.isLoanRepayment || type === "Loan Repayment") && (data.principalPaid || data.interestPaid)) {
+  if ((data.isLoanRepayment || type === "Loan Repayment") && (data.principalPaid || data.interestPaid || Number(data.feePaid) > 0)) {
     loanBreakdownHtml = `
       <tr>
-        <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Principal Paid</td>
-        <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${formatCurrency_(data.principalPaid || 0)}</td>
+        <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Principal Paid</td>
+        <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(data.principalPaid || 0))}</td>
       </tr>
       <tr>
-        <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Loan Interest Paid</td>
-        <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${formatCurrency_(data.interestPaid || 0)}</td>
+        <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Loan Interest Paid</td>
+        <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(data.interestPaid || 0))}</td>
       </tr>
+      ${Number(data.feePaid) > 0 ? `
+      <tr>
+        <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Fee Paid</td>
+        <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(data.feePaid))}</td>
+      </tr>` : ""}
     `;
   }
 
@@ -283,32 +302,49 @@ function buildReceiptHtmlEmail_(data) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Brightlife SHG Receipt</title>
+  <style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .bl-body { background-color: #0f172a !important; color: #e2e8f0 !important; }
+      .bl-card { background-color: #1e293b !important; border-color: #334155 !important; }
+      .bl-surface { background-color: #0f172a !important; border-color: #334155 !important; }
+      .bl-banner { background-color: #064e3b !important; border-color: #065f46 !important; }
+      .bl-banner-label { color: #a7f3d0 !important; }
+      .bl-banner-amount { color: #ffffff !important; }
+      .bl-text-strong { color: #f8fafc !important; }
+      .bl-text-muted { color: #94a3b8 !important; }
+      .bl-border { border-color: #334155 !important; }
+      .bl-footer { background-color: #0f172a !important; border-color: #334155 !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 24px 12px;">
+<body class="bl-body" style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" class="bl-body" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 24px 12px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" style="max-width: 580px; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+        <table role="presentation" class="bl-card" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 28px 24px; text-align: center;">
+            <td style="background-color: #064e3b; background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 28px 24px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">BRIGHTLIFE SELF HELP GROUP</h1>
               <p style="margin: 6px 0 0 0; color: #a7f3d0; font-size: 13px; font-weight: 500;">Official Transaction Receipt</p>
-              <div style="margin-top: 12px; display: inline-block; background: rgba(255,255,255,0.18); border-radius: 20px; padding: 4px 14px;">
-                <span style="color: #ffffff; font-size: 12px; font-weight: 600;">Receipt #${receiptNo}</span>
+              <div style="margin-top: 12px; display: inline-block; background-color: #065f46; background: rgba(255,255,255,0.18); border-radius: 20px; padding: 4px 14px;">
+                <span style="color: #ffffff; font-size: 12px; font-weight: 600;">Receipt #${escapeHtml_(receiptNo)}</span>
               </div>
             </td>
           </tr>
 
           <!-- Amount Banner -->
           <tr>
-            <td style="padding: 24px 24px 12px 24px; text-align: center; background: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
-              <span style="font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 1px;">Amount Received & Approved</span>
-              <div style="margin-top: 4px; font-size: 32px; font-weight: 800; color: #064e3b;">${amountStr}</div>
+            <td class="bl-banner" style="padding: 24px 24px 12px 24px; text-align: center; background-color: #f0fdf4; border-bottom: 1px solid #bbf7d0;">
+              <span class="bl-banner-label" style="font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 1px;">Amount Received &amp; Approved</span>
+              <div class="bl-banner-amount" style="margin-top: 4px; font-size: 32px; font-weight: 800; color: #064e3b;">${escapeHtml_(amountStr)}</div>
               <div style="margin-top: 4px;">
-                <span style="display: inline-block; background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase;">Verified & Credited ✅</span>
+                <span style="display: inline-block; background-color: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; text-transform: uppercase;">Verified &amp; Credited ✅</span>
               </div>
             </td>
           </tr>
@@ -316,31 +352,31 @@ function buildReceiptHtmlEmail_(data) {
           <!-- Details Table -->
           <tr>
             <td style="padding: 20px 24px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
-                <tr style="background: #f8fafc;">
-                  <td style="padding: 10px 14px; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Transaction Details</td>
+              <table role="presentation" class="bl-border" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+                <tr class="bl-surface" style="background-color: #f8fafc;">
+                  <td class="bl-text-muted" style="padding: 10px 14px; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase;">Transaction Details</td>
                   <td></td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Member</td>
-                  <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${memberLine}</td>
+                  <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Member</td>
+                  <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(memberLine)}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Transaction Date</td>
-                  <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${dateStr}</td>
+                  <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Transaction Date</td>
+                  <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(dateStr)}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Transaction Type</td>
-                  <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${type}</td>
+                  <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Transaction Type</td>
+                  <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(type)}</td>
                 </tr>
                 <tr>
-                  <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Deposit Channel</td>
-                  <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${channel}</td>
+                  <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Deposit Channel</td>
+                  <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(channel)}</td>
                 </tr>
                 ${data.tid ? `
                 <tr>
-                  <td style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Ref / Transaction ID</td>
-                  <td style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-family: monospace; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${data.tid}</td>
+                  <td class="bl-text-muted bl-border" style="padding: 10px 14px; color: #475569; font-size: 13px; border-top: 1px solid #f1f5f9;">Ref / Transaction ID</td>
+                  <td class="bl-text-strong bl-border" style="padding: 10px 14px; color: #0f172a; font-size: 13px; font-family: monospace; font-weight: 600; text-align: right; border-top: 1px solid #f1f5f9;">${escapeHtml_(data.tid)}</td>
                 </tr>` : ""}
                 ${loanBreakdownHtml}
               </table>
@@ -350,15 +386,15 @@ function buildReceiptHtmlEmail_(data) {
           <!-- Balances Card -->
           <tr>
             <td style="padding: 0 24px 20px 24px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 14px;">
+              <table role="presentation" class="bl-surface bl-border" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; padding: 14px;">
                 <tr>
-                  <td width="50%" style="padding: 6px 12px; border-right: 1px solid #e2e8f0; text-align: center;">
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Your Total Savings</div>
-                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #047857;">${savingsStr}</div>
+                  <td class="bl-border" width="50%" style="padding: 6px 12px; border-right: 1px solid #e2e8f0; text-align: center;">
+                    <div class="bl-text-muted" style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Your Total Savings</div>
+                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #047857;">${escapeHtml_(savingsStr)}</div>
                   </td>
                   <td width="50%" style="padding: 6px 12px; text-align: center;">
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Outstanding Loan Debt</div>
-                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: ${data.loanBalance > 0 ? '#b91c1c' : '#64748b'};">${loanBalStr}</div>
+                    <div class="bl-text-muted" style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Outstanding Loan Debt</div>
+                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: ${loanBalanceNum > 0 ? '#b91c1c' : '#64748b'};">${escapeHtml_(loanBalStr)}</div>
                   </td>
                 </tr>
               </table>
@@ -367,9 +403,9 @@ function buildReceiptHtmlEmail_(data) {
 
           <!-- Footer -->
           <tr>
-            <td style="background: #f1f5f9; padding: 18px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; font-size: 12px; color: #64748b;">This is an automated receipt issued by Brightlife Self Help Group Treasury.</p>
-              <p style="margin: 4px 0 0 0; font-size: 11px; color: #94a3b8;">Nairobi, Kenya • Together We Prosper</p>
+            <td class="bl-footer bl-border" style="background-color: #f1f5f9; padding: 18px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p class="bl-text-muted" style="margin: 0; font-size: 12px; color: #64748b;">This is an automated receipt issued by Brightlife Self Help Group Treasury.</p>
+              <p class="bl-text-muted" style="margin: 4px 0 0 0; font-size: 11px; color: #94a3b8;">Nairobi, Kenya • Together We Prosper</p>
             </td>
           </tr>
 
@@ -704,10 +740,16 @@ function buildMonthlyStatementWhatsAppMessage_(stmt) {
 
   let txListText = "";
   if (stmt.transactions && stmt.transactions.length > 0) {
+    const maxTx = 10;
+    const totalTx = stmt.transactions.length;
+    const recentTx = totalTx > maxTx ? stmt.transactions.slice(-maxTx) : stmt.transactions;
     txListText = "\n📋 *TRANSACTIONS IN " + stmt.monthLabel.toUpperCase() + ":*\n";
-    stmt.transactions.forEach(function (tx) {
+    recentTx.forEach(function (tx) {
       txListText += "• " + tx.date + ": " + formatCurrency_(tx.amount) + " (" + tx.type + " via " + tx.channel + ")\n";
     });
+    if (totalTx > maxTx) {
+      txListText += "...and " + (totalTx - maxTx) + " more (see email statement)\n";
+    }
   } else {
     txListText = "\n📋 *TRANSACTIONS:* No direct deposits recorded this month.\n";
   }
@@ -740,24 +782,25 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
   const openingStr = formatCurrency_(stmt.openingSavings);
   const depositsStr = formatCurrency_(stmt.monthDeposits);
   const closingSavingsStr = formatCurrency_(stmt.closingSavings);
-  const loanBalStr = formatCurrency_(stmt.loanBalance);
+  const loanBalanceNum = Number(stmt.loanBalance) || 0;
+  const loanBalStr = formatCurrency_(loanBalanceNum);
 
   let txRowsHtml = "";
   if (stmt.transactions && stmt.transactions.length > 0) {
     txRowsHtml = stmt.transactions.map(function (tx) {
       return `
         <tr>
-          <td style="padding: 10px 12px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9;">${tx.date}</td>
-          <td style="padding: 10px 12px; font-size: 13px; color: #0f172a; font-weight: 600; border-bottom: 1px solid #f1f5f9;">${tx.type}</td>
-          <td style="padding: 10px 12px; font-size: 13px; color: #64748b; border-bottom: 1px solid #f1f5f9;">${tx.channel}</td>
-          <td style="padding: 10px 12px; font-size: 13px; color: #0f172a; font-weight: 700; text-align: right; border-bottom: 1px solid #f1f5f9;">${formatCurrency_(tx.amount)}</td>
+          <td class="bl-text-muted bl-border" style="padding: 10px 12px; font-size: 13px; color: #334155; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(tx.date)}</td>
+          <td class="bl-text-strong bl-border" style="padding: 10px 12px; font-size: 13px; color: #0f172a; font-weight: 600; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(tx.type)}</td>
+          <td class="bl-text-muted bl-border" style="padding: 10px 12px; font-size: 13px; color: #64748b; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(tx.channel)}</td>
+          <td class="bl-text-strong bl-border" style="padding: 10px 12px; font-size: 13px; color: #0f172a; font-weight: 700; text-align: right; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(tx.amount))}</td>
         </tr>
       `;
     }).join("");
   } else {
     txRowsHtml = `
       <tr>
-        <td colspan="4" style="padding: 16px; font-size: 13px; color: #94a3b8; text-align: center;">No direct deposit transactions recorded during this period.</td>
+        <td colspan="4" class="bl-text-muted" style="padding: 16px; font-size: 13px; color: #94a3b8; text-align: center;">No direct deposit transactions recorded during this period.</td>
       </tr>
     `;
   }
@@ -767,12 +810,12 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
     const loanRows = stmt.activeLoans.map(function (ln) {
       return `
         <tr>
-          <td style="padding: 10px 12px; font-size: 13px; color: #0f172a; font-weight: 600; border-bottom: 1px solid #f1f5f9;">${ln.loanId}</td>
-          <td style="padding: 10px 12px; font-size: 13px; color: #334155; text-align: right; border-bottom: 1px solid #f1f5f9;">${formatCurrency_(ln.repaymentAmount)}</td>
-          <td style="padding: 10px 12px; font-size: 13px; color: #15803d; font-weight: 600; text-align: right; border-bottom: 1px solid #f1f5f9;">${formatCurrency_(ln.totalPaid)}</td>
-          <td style="padding: 10px 12px; font-size: 13px; color: #b91c1c; font-weight: 700; text-align: right; border-bottom: 1px solid #f1f5f9;">${formatCurrency_(ln.balance)}</td>
-          <td style="padding: 10px 12px; font-size: 12px; text-align: center; border-bottom: 1px solid #f1f5f9;">
-            <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; background: ${ln.balance === 0 ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'} font-weight: 600;">${ln.status}</span>
+          <td class="bl-text-strong bl-border" style="padding: 10px 12px; font-size: 13px; color: #0f172a; font-weight: 600; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(ln.loanId)}</td>
+          <td class="bl-text-muted bl-border" style="padding: 10px 12px; font-size: 13px; color: #334155; text-align: right; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(ln.repaymentAmount))}</td>
+          <td class="bl-border" style="padding: 10px 12px; font-size: 13px; color: #15803d; font-weight: 600; text-align: right; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(ln.totalPaid))}</td>
+          <td class="bl-border" style="padding: 10px 12px; font-size: 13px; color: #b91c1c; font-weight: 700; text-align: right; border-bottom: 1px solid #f1f5f9;">${escapeHtml_(formatCurrency_(ln.balance))}</td>
+          <td class="bl-border" style="padding: 10px 12px; font-size: 12px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; background-color: ${ln.balance === 0 ? '#dcfce7; color: #15803d;' : '#fef3c7; color: #b45309;'} font-weight: 600;">${escapeHtml_(ln.status)}</span>
           </td>
         </tr>
       `;
@@ -780,14 +823,14 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
 
     loansHtml = `
       <div style="margin-top: 24px;">
-        <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Active Loan Schedule</h3>
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #ffffff;">
-          <tr style="background: #f8fafc;">
-            <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Loan ID</th>
-            <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Total Due</th>
-            <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Paid</th>
-            <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Balance</th>
-            <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: center; text-transform: uppercase;">Status</th>
+        <h3 class="bl-text-strong" style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Active Loan Schedule</h3>
+        <table role="presentation" class="bl-card bl-border" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
+          <tr class="bl-surface" style="background-color: #f8fafc;">
+            <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Loan ID</th>
+            <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Total Due</th>
+            <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Paid</th>
+            <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Balance</th>
+            <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: center; text-transform: uppercase;">Status</th>
           </tr>
           ${loanRows}
         </table>
@@ -801,25 +844,45 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>Brightlife SHG Monthly Statement</title>
+  <style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    @media only screen and (max-width: 560px) {
+      .kpi-cell { display: block !important; width: 100% !important; box-sizing: border-box !important; margin-bottom: 10px !important; }
+      .kpi-spacer { display: none !important; width: 0 !important; height: 0 !important; }
+    }
+    @media (prefers-color-scheme: dark) {
+      .bl-body { background-color: #0f172a !important; color: #e2e8f0 !important; }
+      .bl-card { background-color: #1e293b !important; border-color: #334155 !important; }
+      .bl-surface { background-color: #0f172a !important; border-color: #334155 !important; }
+      .bl-kpi-green { background-color: #064e3b !important; border-color: #065f46 !important; }
+      .bl-kpi-red { background-color: #450a0a !important; border-color: #7f1d1d !important; }
+      .bl-text-strong { color: #f8fafc !important; }
+      .bl-text-muted { color: #94a3b8 !important; }
+      .bl-border { border-color: #334155 !important; }
+      .bl-footer { background-color: #0f172a !important; border-color: #334155 !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 24px 12px;">
+<body class="bl-body" style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+  <table role="presentation" class="bl-body" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 24px 12px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" style="max-width: 620px; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
+        <table role="presentation" class="bl-card" width="100%" style="max-width: 620px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;">
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 28px 24px;">
+            <td style="background-color: #064e3b; background: linear-gradient(135deg, #064e3b 0%, #047857 100%); padding: 28px 24px;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td>
                     <h1 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">BRIGHTLIFE SELF HELP GROUP</h1>
-                    <p style="margin: 4px 0 0 0; color: #a7f3d0; font-size: 13px; font-weight: 500;">Monthly Member Statement • ${stmt.monthLabel}</p>
+                    <p style="margin: 4px 0 0 0; color: #a7f3d0; font-size: 13px; font-weight: 500;">Monthly Member Statement • ${escapeHtml_(stmt.monthLabel)}</p>
                   </td>
                   <td align="right">
-                    <span style="display: inline-block; background: rgba(255,255,255,0.2); color: #ffffff; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 14px;">${stmt.statementDate}</span>
+                    <span style="display: inline-block; background-color: #065f46; background: rgba(255,255,255,0.2); color: #ffffff; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 14px;">${escapeHtml_(stmt.statementDate)}</span>
                   </td>
                 </tr>
               </table>
@@ -828,16 +891,16 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
 
           <!-- Member Header Card -->
           <tr>
-            <td style="padding: 18px 24px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+            <td class="bl-surface bl-border" style="padding: 18px 24px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
                   <td>
-                    <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Statement Issued To</div>
-                    <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 2px;">${memberLine}</div>
+                    <div class="bl-text-muted" style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Statement Issued To</div>
+                    <div class="bl-text-strong" style="font-size: 16px; font-weight: 800; color: #0f172a; margin-top: 2px;">${escapeHtml_(memberLine)}</div>
                   </td>
                   <td align="right">
-                    <div style="font-size: 12px; color: #64748b;">${stmt.phone || "—"}</div>
-                    <div style="font-size: 12px; color: #047857; font-weight: 500;">${stmt.email || "No email on file"}</div>
+                    <div class="bl-text-muted" style="font-size: 12px; color: #64748b;">${escapeHtml_(stmt.phone || "—")}</div>
+                    <div style="font-size: 12px; color: #047857; font-weight: 500;">${escapeHtml_(stmt.email || "No email on file")}</div>
                   </td>
                 </tr>
               </table>
@@ -847,34 +910,38 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
           <!-- Financial Snapshot KPIs -->
           <tr>
             <td style="padding: 24px;">
+              <div class="bl-surface bl-border" style="margin-bottom: 12px; padding: 10px 14px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13px;">
+                <span class="bl-text-muted" style="color: #475569; font-weight: 600;">Opening Savings (Start of Period):</span>
+                <strong class="bl-text-strong" style="color: #0f172a; float: right;">${escapeHtml_(openingStr)}</strong>
+              </div>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td width="32%" style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; text-align: center;">
+                  <td class="kpi-cell bl-kpi-green" width="32%" style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; text-align: center;">
                     <div style="font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase;">Deposited This Month</div>
-                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #15803d;">${depositsStr}</div>
+                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #15803d;">${escapeHtml_(depositsStr)}</div>
                   </td>
-                  <td width="2%"></td>
-                  <td width="32%" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; text-align: center;">
-                    <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Total Savings Balance</div>
-                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #047857;">${closingSavingsStr}</div>
+                  <td class="kpi-spacer" width="2%"></td>
+                  <td class="kpi-cell bl-surface bl-border" width="32%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; text-align: center;">
+                    <div class="bl-text-muted" style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase;">Total Savings Balance</div>
+                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #047857;">${escapeHtml_(closingSavingsStr)}</div>
                   </td>
-                  <td width="2%"></td>
-                  <td width="32%" style="background: ${stmt.loanBalance > 0 ? '#fef2f2' : '#f8fafc'}; border: 1px solid ${stmt.loanBalance > 0 ? '#fecaca' : '#e2e8f0'}; border-radius: 12px; padding: 14px; text-align: center;">
-                    <div style="font-size: 11px; font-weight: 700; color: ${stmt.loanBalance > 0 ? '#991b1b' : '#64748b'}; text-transform: uppercase;">Loan Debt Balance</div>
-                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: ${stmt.loanBalance > 0 ? '#dc2626' : '#64748b'};">${loanBalStr}</div>
+                  <td class="kpi-spacer" width="2%"></td>
+                  <td class="kpi-cell ${loanBalanceNum > 0 ? 'bl-kpi-red' : 'bl-surface bl-border'}" width="32%" style="background-color: ${loanBalanceNum > 0 ? '#fef2f2' : '#f8fafc'}; border: 1px solid ${loanBalanceNum > 0 ? '#fecaca' : '#e2e8f0'}; border-radius: 12px; padding: 14px; text-align: center;">
+                    <div style="font-size: 11px; font-weight: 700; color: ${loanBalanceNum > 0 ? '#991b1b' : '#64748b'}; text-transform: uppercase;">Loan Debt Balance</div>
+                    <div style="margin-top: 4px; font-size: 18px; font-weight: 800; color: ${loanBalanceNum > 0 ? '#dc2626' : '#64748b'};">${escapeHtml_(loanBalStr)}</div>
                   </td>
                 </tr>
               </table>
 
               <!-- Monthly Activity Table -->
               <div style="margin-top: 24px;">
-                <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Activity in ${stmt.monthLabel}</h3>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #ffffff;">
-                  <tr style="background: #f8fafc;">
-                    <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Date</th>
-                    <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Type</th>
-                    <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Channel</th>
-                    <th style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Amount</th>
+                <h3 class="bl-text-strong" style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">Activity in ${escapeHtml_(stmt.monthLabel)}</h3>
+                <table role="presentation" class="bl-card bl-border" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background-color: #ffffff;">
+                  <tr class="bl-surface" style="background-color: #f8fafc;">
+                    <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Date</th>
+                    <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Type</th>
+                    <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: left; text-transform: uppercase;">Channel</th>
+                    <th class="bl-text-muted" style="padding: 10px 12px; font-size: 11px; font-weight: 700; color: #64748b; text-align: right; text-transform: uppercase;">Amount</th>
                   </tr>
                   ${txRowsHtml}
                 </table>
@@ -888,9 +955,9 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
 
           <!-- Footer -->
           <tr>
-            <td style="background: #f1f5f9; padding: 18px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0; font-size: 12px; color: #64748b;">This statement is an official certified summary from Brightlife Self Help Group Treasury.</p>
-              <p style="margin: 4px 0 0 0; font-size: 11px; color: #94a3b8;">Nairobi, Kenya • Together We Prosper • Confidential</p>
+            <td class="bl-footer bl-border" style="background-color: #f1f5f9; padding: 18px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
+              <p class="bl-text-muted" style="margin: 0; font-size: 12px; color: #64748b;">This statement is an official certified summary from Brightlife Self Help Group Treasury.</p>
+              <p class="bl-text-muted" style="margin: 4px 0 0 0; font-size: 11px; color: #94a3b8;">Nairobi, Kenya • Together We Prosper • Confidential</p>
             </td>
           </tr>
 
@@ -929,6 +996,7 @@ function sendMemberMonthlyStatement(params) {
     const stmt = getMemberMonthlyStatementData(memberId, monthKey, startDate, endDate);
     const whatsAppText = buildMonthlyStatementWhatsAppMessage_(stmt);
     const whatsAppUrl = stmt.cleanPhone ? ("https://wa.me/" + stmt.cleanPhone + "?text=" + encodeURIComponent(whatsAppText)) : "";
+    const htmlBody = buildMonthlyStatementHtmlEmail_(stmt);
 
     let emailSent = false;
     let emailError = null;
@@ -936,7 +1004,6 @@ function sendMemberMonthlyStatement(params) {
     if (sendEmail) {
       if (stmt.email && stmt.email.indexOf("@") !== -1) {
         try {
-          const htmlBody = buildMonthlyStatementHtmlEmail_(stmt);
           const settings = getNotificationSettings();
           const mailOptions = {
             to: stmt.email,
@@ -974,6 +1041,7 @@ function sendMemberMonthlyStatement(params) {
       recipientPhone: stmt.phone,
       whatsAppUrl: whatsAppUrl,
       whatsAppText: whatsAppText,
+      htmlBody: htmlBody,
       statementData: stmt,
     };
   } catch (err) {
@@ -1030,6 +1098,7 @@ function sendBulkMonthlyStatements(params) {
         MailApp.sendEmail(mailOptions);
         results.sent++;
         results.details.push({ memberId: mId, name: stmt.memberName, status: "Sent", email: stmt.email });
+        Utilities.sleep(200);
       } else {
         results.skippedNoEmail++;
         results.details.push({ memberId: mId, name: stmt.memberName, status: "Skipped (No Email)", email: "" });

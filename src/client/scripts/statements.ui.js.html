@@ -24,6 +24,20 @@ function formatKshStmt(val) {
   return "KES " + Math.round(num).toLocaleString();
 }
 
+function formatKshStmtExact_(val) {
+  const num = Number(val) || 0;
+  return "KES " + num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function normalizeKenyanPhoneClient_(phone) {
+  if (!phone) return "";
+  let clean = String(phone).replace(/[^\d+]/g, "").trim();
+  if (clean.startsWith("+")) clean = clean.substring(1);
+  if (clean.startsWith("0")) clean = "254" + clean.substring(1);
+  if (clean.length === 9 && (clean.startsWith("7") || clean.startsWith("1"))) clean = "254" + clean;
+  return /^254[17]\d{8}$/.test(clean) ? clean : "";
+}
+
 function formatIsoDateLocal_(d) {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -459,7 +473,7 @@ function previewMemberStatement(memberId) {
   google.script.run
     .withSuccessHandler(function (res) {
       if (!res || !res.success) {
-        if (container) container.innerHTML = '<div class="p-6 text-center text-rose-700 dark:text-rose-400 font-semibold">' + ((res && res.error) || 'Failed to generate statement.') + '</div>';
+        if (container) container.innerHTML = '<div class="p-6 text-center text-rose-700 dark:text-rose-400 font-semibold">' + escapeHtmlAttr((res && res.error) || 'Failed to generate statement.') + '</div>';
         return;
       }
 
@@ -571,17 +585,27 @@ function isValidWhatsAppUrl_(url) {
 
 function buildDirectWhatsAppUrl_(m) {
   if (!m) return "";
-  const rawDigits = m.cleanPhone ? String(m.cleanPhone) : String(m.phone || "").replace(/\D/g, "");
-  const digits = rawDigits.replace(/\D/g, "");
+  const digits = normalizeKenyanPhoneClient_(m.cleanPhone || m.phone || "");
   if (!digits) return "";
-  const name = m.fullName || m.name || "Member";
+  const rawName = String(m.fullName || m.name || "Member").trim().toUpperCase();
+  const memberId = String(m.id || "").trim().toUpperCase();
+  const memberLine = memberId ? (rawName + " (" + memberId + ")") : rawName;
   const period = statementsState.selectedPeriodLabel || statementsState.selectedMonthKey || "Current Period";
+  const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
   const lines = [
-    "Hello " + name + ",",
-    "Here is your Brightlife SHG financial summary for " + period + ":",
-    "\u2022 Total Savings: " + formatKshStmt(m.savings),
-    "\u2022 Active Loan Balance: " + (Number(m.loanBalance) > 0 ? formatKshStmt(m.loanBalance) : "KES 0"),
-    "Thank you for saving with Brightlife SHG."
+    "📊 *BRIGHTLIFE SHG - MONTHLY STATEMENT* 📊",
+    "────────────────────────────",
+    "📅 *Period:* " + period,
+    "👤 *Member:* " + memberLine,
+    "────────────────────────────",
+    "💰 *SAVINGS OVERVIEW:*",
+    "• Closing Total Savings: " + formatKshStmtExact_(m.savings),
+    "",
+    "📋 *LOAN OVERVIEW:*",
+    "• Outstanding Loan Balance: " + formatKshStmtExact_(m.loanBalance),
+    "────────────────────────────",
+    "_For any balance questions, contact the Treasurer._",
+    "_Brightlife SHG Treasury • " + dateStr + "_"
   ];
   const url = "https://wa.me/" + encodeURIComponent(digits) + "?text=" + encodeURIComponent(lines.join("\n"));
   return isValidWhatsAppUrl_(url) ? url : "";
@@ -820,23 +844,27 @@ function handleSaveNotificationSettings(e) {
 }
 
 function buildClientSideStatementHtml_(stmt) {
-  const mNameUpper = String(stmt.memberName || "").toUpperCase();
+  const mNameUpper = escapeHtmlAttr(String(stmt.memberName || "").toUpperCase());
+  const mId = escapeHtmlAttr(stmt.memberId || "");
+  const mLabel = escapeHtmlAttr(stmt.monthLabel || "");
+  const mEmail = escapeHtmlAttr(stmt.email || "—");
+  const mPhone = escapeHtmlAttr(stmt.phone || "—");
   return '<div style="font-family:sans-serif;padding:20px;color:#1e293b;">' +
     '<h2 style="color:#064e3b;margin:0;">BRIGHTLIFE SELF HELP GROUP</h2>' +
-    '<p style="color:#64748b;margin:4px 0 16px 0;">Monthly Financial Statement • ' + (stmt.monthLabel || "") + '</p>' +
+    '<p style="color:#64748b;margin:4px 0 16px 0;">Monthly Financial Statement • ' + mLabel + '</p>' +
     '<div style="background:#f8fafc;padding:12px;border-radius:8px;margin-bottom:16px;">' +
-      '<strong>Member:</strong> ' + mNameUpper + ' (' + stmt.memberId + ')<br>' +
-      '<strong>Email:</strong> ' + (stmt.email || "—") + '<br>' +
-      '<strong>Phone:</strong> ' + (stmt.phone || "—") +
+      '<strong>Member:</strong> ' + mNameUpper + ' (' + mId + ')<br>' +
+      '<strong>Email:</strong> ' + mEmail + '<br>' +
+      '<strong>Phone:</strong> ' + mPhone +
     '</div>' +
     '<div style="display:flex;gap:12px;margin-bottom:16px;">' +
       '<div style="flex:1;background:#f0fdf4;padding:12px;border-radius:8px;border:1px solid #bbf7d0;">' +
         '<div style="font-size:11px;color:#166534;font-weight:bold;">TOTAL SAVINGS</div>' +
-        '<div style="font-size:20px;font-weight:bold;color:#047857;">' + formatKshStmt(stmt.closingSavings) + '</div>' +
+        '<div style="font-size:20px;font-weight:bold;color:#047857;">' + escapeHtmlAttr(formatKshStmtExact_(stmt.closingSavings)) + '</div>' +
       '</div>' +
       '<div style="flex:1;background:#fef2f2;padding:12px;border-radius:8px;border:1px solid #fecaca;">' +
         '<div style="font-size:11px;color:#991b1b;font-weight:bold;">LOAN BALANCE</div>' +
-        '<div style="font-size:20px;font-weight:bold;color:#dc2626;">' + formatKshStmt(stmt.loanBalance) + '</div>' +
+        '<div style="font-size:20px;font-weight:bold;color:#dc2626;">' + escapeHtmlAttr(formatKshStmtExact_(stmt.loanBalance)) + '</div>' +
       '</div>' +
     '</div>' +
   '</div>';
