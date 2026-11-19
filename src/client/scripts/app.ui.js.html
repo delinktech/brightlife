@@ -988,6 +988,10 @@
       } else {
         renderAnalyticsView();
       }
+    } else if (cleanKey === "reports") {
+      if (window.latestHomeAnalyticsData && typeof window.renderBalanceSheet === "function") {
+        window.renderBalanceSheet(window.latestHomeAnalyticsData);
+      }
     }
   }
   window.switchHomeSubTab = switchHomeSubTab;

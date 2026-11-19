@@ -23,9 +23,14 @@
     window.print();
   }
 
-  function showPrintModal_() {
+  function showPrintModal_(options) {
+    const opts = options || {};
     const refEl = document.getElementById("print-ref-display");
     if (refEl) refEl.textContent = "Ref: BLG-RPT-" + Date.now().toString(36).toUpperCase();
+    const signoffEl = document.getElementById("print-signoff-block");
+    if (signoffEl) {
+      signoffEl.classList.toggle("hidden", !opts.showSignoff);
+    }
     const modal = document.getElementById("printReportModal");
     if (modal) modal.classList.remove("hidden");
     document.body.classList.add("print-modal-open");
@@ -441,5 +446,126 @@
       bodyHtml || '<tr><td colspan="6" class="text-center py-6 text-slate-400">No account records found.</td></tr>';
 
     showPrintModal_();
+  }
+
+  function formatPrintBsMoney_(val) {
+    const num = Number(val) || 0;
+    const fmt = new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return num < 0 ? ("-" + fmt.format(Math.abs(num))) : fmt.format(num);
+  }
+
+  function openPrintBalanceSheetReport() {
+    const m = window.latestBalanceSheetModel;
+    if (!m) {
+      if (typeof showNotification === "function") {
+        showNotification("Balance Sheet data is still loading.", "warning");
+      }
+      return;
+    }
+
+    const asOfEl = document.getElementById("bs-as-of-date");
+    const asOfLabel = asOfEl ? asOfEl.textContent : formatDateForLetterhead(new Date());
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "STATEMENT OF FINANCIAL POSITION (BALANCE SHEET)";
+    document.getElementById("print-report-badge").textContent = "IFRS / IAS 1";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official Statement of Financial Position • IFRS for SACCOs & Chamas • As of " + asOfLabel;
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Group Assets</div>' +
+      '<div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.assets.totalAssets) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Members\' Equity</div>' +
+      '<div class="text-sm font-bold text-indigo-700 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.equity.subtotal) + "</div>" +
+      "</div>" +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Solvency Ratio</div>' +
+      '<div class="text-sm font-bold text-emerald-700 font-mono tabular-nums mt-0.5">' + (m.solvencyDenominator > 0 ? m.solvencyRatio.toFixed(1) + "%" : "N/A") + "</div>" +
+      "</div>";
+
+    document.getElementById("print-table-head").innerHTML =
+      "<tr>" +
+      '<th class="px-4 py-3">Account / Classification (IFRS / SASRA)</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      "</tr>";
+
+    const sectionHdr = function (title) {
+      return (
+        '<tr class="bg-slate-100/80">' +
+        '<td colspan="2" class="px-4 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-700">' + escapePrintHtml(title) + "</td>" +
+        "</tr>"
+      );
+    };
+    const itemRow = function (label, amountHtml, isMutedItalic) {
+      return (
+        "<tr>" +
+        '<td class="px-4 py-2 pl-8 ' + (isMutedItalic ? "italic text-slate-500" : "text-slate-700") + '">' + escapePrintHtml(label) + "</td>" +
+        '<td class="px-4 py-2 text-right font-mono tabular-nums ' + (isMutedItalic ? "text-amber-700" : "text-slate-800 font-medium") + '">' + amountHtml + "</td>" +
+        "</tr>"
+      );
+    };
+    const subtotalRow = function (label, val) {
+      return (
+        '<tr class="bg-slate-50/80 border-t border-slate-200">' +
+        '<td class="px-4 py-2.5 pl-6 font-bold text-slate-900">' + escapePrintHtml(label) + "</td>" +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900">' + formatPrintBsMoney_(val) + "</td>" +
+        "</tr>"
+      );
+    };
+    const grandTotalRow = function (label, val) {
+      return (
+        '<tr class="bg-slate-100 border-t-2 border-slate-300 border-b-4 border-double border-b-slate-900">' +
+        '<td class="px-4 py-3 font-extrabold uppercase tracking-wider text-slate-900">' + escapePrintHtml(label) + "</td>" +
+        '<td class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-slate-900">' + formatPrintBsMoney_(val) + "</td>" +
+        "</tr>"
+      );
+    };
+
+    const statusText = m.isBalanced
+      ? "Balanced (+/- 0.00)"
+      : ("Variance: " + formatPrintBsMoney_(m.variance));
+
+    document.getElementById("print-table-body").innerHTML =
+      sectionHdr("A. Assets — Current Assets") +
+      itemRow("Physical Bank Balances", formatPrintBsMoney_(m.assets.current.bankBalances)) +
+      itemRow("Mobile Till / Paybill", formatPrintBsMoney_(m.assets.current.mobileMoney)) +
+      itemRow("CIC Money Market Fund", formatPrintBsMoney_(m.assets.current.cicMmf)) +
+      subtotalRow("Subtotal Cash & Cash Equivalents", m.assets.current.subtotal) +
+      sectionHdr("A. Assets — Financial Assets (Loan Portfolio)") +
+      itemRow("Gross Loans Receivable", formatPrintBsMoney_(m.assets.loans.grossLoans)) +
+      itemRow("Less: Allowance for Credit Losses (SASRA Reserve)", "(" + formatPrintBsMoney_(m.assets.loans.lossAllowance) + ")", true) +
+      subtotalRow("Net Loan Portfolio", m.assets.loans.netLoans) +
+      sectionHdr("A. Assets — External Financial Investments") +
+      itemRow("Mansa X", formatPrintBsMoney_(m.assets.investments.mansaX)) +
+      itemRow("M-Akiba", formatPrintBsMoney_(m.assets.investments.makiba)) +
+      itemRow("Fixed Investments", formatPrintBsMoney_(m.assets.investments.fixedInvestments)) +
+      subtotalRow("Subtotal External Investments", m.assets.investments.subtotal) +
+      grandTotalRow("TOTAL ASSETS", m.assets.totalAssets) +
+      sectionHdr("B. Liabilities") +
+      itemRow("Accounts Payable", formatPrintBsMoney_(m.liabilities.accountsPayable)) +
+      itemRow("Accrued Expenses", formatPrintBsMoney_(m.liabilities.accruedExpenses)) +
+      itemRow("Unallocated Deposits", formatPrintBsMoney_(m.liabilities.unallocatedDeposits)) +
+      subtotalRow("Subtotal Liabilities", m.liabilities.subtotal) +
+      sectionHdr("C. Members' Funds & Equity") +
+      itemRow("Accumulated Member Savings", formatPrintBsMoney_(m.equity.memberSavings)) +
+      itemRow("Statutory Reserve Fund (20%)", formatPrintBsMoney_(m.equity.statutoryReserve)) +
+      itemRow("Retained Distributable Surplus", formatPrintBsMoney_(m.equity.retainedSurplus)) +
+      subtotalRow("Subtotal Equity & Members' Funds", m.equity.subtotal) +
+      grandTotalRow("TOTAL LIABILITIES & MEMBERS' FUNDS", m.totalLiabilitiesAndEquity) +
+      '<tr class="bg-slate-50 border-t border-slate-200">' +
+      '<td class="px-4 py-2.5 text-[11px] font-semibold text-slate-600">Audit Reconciliation Check</td>' +
+      '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-[11px] font-bold ' + (m.isBalanced ? "text-emerald-700" : "text-amber-700") + '">' + escapePrintHtml(statusText) + "</td>" +
+      "</tr>";
+
+    showPrintModal_({ showSignoff: true });
   }
 </script>

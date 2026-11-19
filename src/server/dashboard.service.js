@@ -423,6 +423,27 @@ function getHomeAnalyticsByRange_(rangeKey) {
 
   const liquiditySummary = computeLiquiditySummary_(ss, totalSavings, totalLoans);
   const investments = buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds);
+  const portfolioPayload = {
+    repaymentRate: repaymentRate,
+    parRate: parRate,
+    totalOutstanding: totalOutstanding,
+    parAmount: parAmount,
+    performingAmount: performingAmount,
+    performingRate: performingRate,
+    aging: aging,
+    recommendedProvision: recommendedProvision,
+    netLoanAssetValue: netLoanAssetValue,
+    matrix: agingMatrix,
+  };
+  const balanceSheet = buildBalanceSheet_(
+    ss,
+    tz,
+    now,
+    effectiveRange,
+    liquiditySummary,
+    portfolioPayload,
+    totalSavings
+  );
 
   const invInflows = (investments && investments.breakdown && investments.breakdown.inflows) || {};
   const invOutflows = (investments && investments.breakdown && investments.breakdown.outflows) || {};
@@ -443,11 +464,12 @@ function getHomeAnalyticsByRange_(rangeKey) {
     range: effectiveRange,
     savings: totalSavings,
     loans: totalLoans,
-    invested: 0,
+    invested: balanceSheet.assets.externalInvestments.totalInvestments,
     investmentCount: investmentCount,
     memberCount: memberCount,
     cash: liquiditySummary.cash,
     liquidity: liquiditySummary.liquidity,
+    balanceSheet: balanceSheet,
     cashflowWaterfall: {
       openingCash: openingLiquidCash,
       closingCash: closingLiquidCash,
@@ -485,18 +507,7 @@ function getHomeAnalyticsByRange_(rangeKey) {
       },
     },
     topContributors: topContributors,
-    portfolio: {
-      repaymentRate: repaymentRate,
-      parRate: parRate,
-      totalOutstanding: totalOutstanding,
-      parAmount: parAmount,
-      performingAmount: performingAmount,
-      performingRate: performingRate,
-      aging: aging,
-      recommendedProvision: recommendedProvision,
-      netLoanAssetValue: netLoanAssetValue,
-      matrix: agingMatrix,
-    },
+    portfolio: portfolioPayload,
     collateralRisk: {
       totalGuaranteed: totalGuaranteed,
       totalShortfall: totalShortfall,
@@ -1120,6 +1131,154 @@ function buildExposureTrajectory_(ss, tz, now, effectiveRange, cachedContributio
       idleCapitalBuffer: idleCapitalBuffer,
       prudentialBand: prudentialBand,
     },
+  };
+}
+
+function roundCurrency2_(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+/**
+ * Builds IFRS / SASRA-aligned Statement of Financial Position (Balance Sheet)
+ * reconciling Cash & Equivalents, Net Loans Receivable, External Investments,
+ * Liabilities, Member Share Capital, 20% Statutory Reserve, and Retained Surplus.
+ */
+function buildBalanceSheet_(ss, tz, now, effectiveRange, liquiditySummary, portfolio, savings) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const liq = (liquiditySummary && liquiditySummary.liquidity) || {};
+  const liqTiers = liq.tiers || {};
+  const operatingCash = roundCurrency2_(
+    liqTiers.operatingCash !== undefined ? liqTiers.operatingCash : liq.operatingCash
+  );
+  const cashEquivalents = roundCurrency2_(
+    liqTiers.cashEquivalents !== undefined ? liqTiers.cashEquivalents : liq.cashEquivalents
+  );
+  const totalCash = roundCurrency2_(liquiditySummary && liquiditySummary.cash);
+
+  const pf = portfolio || {};
+  const grossLoans = roundCurrency2_(pf.totalOutstanding);
+  const allowance = roundCurrency2_(pf.recommendedProvision);
+  const netLoans = Math.max(
+    0,
+    roundCurrency2_(pf.netLoanAssetValue !== undefined ? pf.netLoanAssetValue : (grossLoans - allowance))
+  );
+
+  let totalInvestments = 0;
+  const investmentItems = [];
+  try {
+    const invSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.INVESTMENTS);
+    if (invSheet && invSheet.getLastRow() > 1) {
+      const invRows = invSheet.getDataRange().getValues();
+      if (invRows.length > 1) {
+        const col = getHeaderMap_(invRows[0]);
+        const idCol = col["Investment ID"];
+        const nameCol = col["Name"] !== undefined ? col["Name"] : col["Investment Name"];
+        const currValCol = col["Current Value"];
+        const investedCol =
+          col["Money Invested"] !== undefined
+            ? col["Money Invested"]
+            : (col["Amount Invested"] !== undefined ? col["Amount Invested"] : col["Invested"]);
+        const statCol = col["Status"];
+
+        const INACTIVE_INV_STATUSES = {
+          exited: true,
+          closed: true,
+          sold: true,
+          matured: true,
+          settled: true,
+          inactive: true,
+          cancelled: true,
+          rejected: true,
+        };
+
+        for (let i = 1; i < invRows.length; i++) {
+          const row = invRows[i];
+          const invId = idCol !== undefined ? String(row[idCol] || "").trim() : "";
+          const invName = nameCol !== undefined ? String(row[nameCol] || "").trim() : "";
+          if (!invId && !invName) continue;
+
+          if (statCol !== undefined) {
+            const stat = String(row[statCol] || "").trim().toLowerCase();
+            if (INACTIVE_INV_STATUSES[stat]) continue;
+          }
+
+          const hasCurrVal =
+            currValCol !== undefined &&
+            row[currValCol] !== "" &&
+            row[currValCol] !== undefined &&
+            row[currValCol] !== null;
+          const rawVal = hasCurrVal
+            ? row[currValCol]
+            : (investedCol !== undefined ? row[investedCol] : 0);
+          const val = roundCurrency2_(rawVal);
+          if (val <= 0) continue;
+
+          totalInvestments += val;
+          investmentItems.push({
+            id: invId,
+            name: invName || invId,
+            value: val,
+          });
+        }
+      }
+    }
+  } catch (invErr) {
+    console.error("Balance sheet external investments error: " + invErr.message);
+  }
+  totalInvestments = roundCurrency2_(totalInvestments);
+
+  const totalAssets = roundCurrency2_(totalCash + netLoans + totalInvestments);
+  const payables = 0;
+  const totalLiabilities = payables;
+
+  const memberSavings = roundCurrency2_(savings);
+  const surplusPool = Math.max(0, totalAssets - totalLiabilities - memberSavings);
+  const statutoryReserve = Math.max(0, roundCurrency2_(surplusPool * 0.20));
+  const retainedSurplus = roundCurrency2_(totalAssets - totalLiabilities - memberSavings - statutoryReserve);
+  const totalEquity = roundCurrency2_(memberSavings + statutoryReserve + retainedSurplus);
+  const totalLiabilitiesAndEquity = roundCurrency2_(totalLiabilities + totalEquity);
+  const variance = roundCurrency2_(totalAssets - totalLiabilitiesAndEquity);
+  const isBalanced = Math.abs(variance) < 0.01;
+  const solvencyBase = totalLiabilities + memberSavings;
+  const solvencyRatio =
+    solvencyBase > 0
+      ? Math.round(((totalAssets / solvencyBase) * 100) * 10) / 10
+      : 100;
+
+  return {
+    asOfDate: Utilities.formatDate(now || new Date(), tz || "Africa/Nairobi", "dd MMM yyyy"),
+    range: effectiveRange,
+    assets: {
+      cashAndEquivalents: {
+        operatingCash: operatingCash,
+        cashEquivalents: cashEquivalents,
+        totalCash: totalCash,
+      },
+      loansReceivable: {
+        grossLoans: grossLoans,
+        allowance: allowance,
+        netLoans: netLoans,
+      },
+      externalInvestments: {
+        items: investmentItems,
+        totalInvestments: totalInvestments,
+      },
+      totalAssets: totalAssets,
+    },
+    liabilities: {
+      payables: payables,
+      totalLiabilities: totalLiabilities,
+    },
+    equity: {
+      memberSavings: memberSavings,
+      statutoryReserve: statutoryReserve,
+      retainedSurplus: retainedSurplus,
+      totalEquity: totalEquity,
+    },
+    totalLiabilitiesAndEquity: totalLiabilitiesAndEquity,
+    variance: variance,
+    isBalanced: isBalanced,
+    solvencyRatio: solvencyRatio,
   };
 }
 

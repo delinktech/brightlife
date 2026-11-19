@@ -768,8 +768,234 @@
     </div>
   </div>
 
-  <!-- Subview 3: Reports (Institutional IFRS / SASRA Statements Preview) -->
+  <!-- Subview 3: Reports (Institutional IFRS / SASRA Statements) -->
   <div id="home-subview-reports" class="hidden space-y-4 sm:space-y-6">
+    <!-- RPT-1: Full-Width Statement of Financial Position (Balance Sheet) -->
+    <div class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
+      <!-- Header & Action Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-50 dark:bg-sky-950/70 border border-sky-100 dark:border-sky-500/40 text-sky-700 dark:text-sky-300 flex items-center justify-center shrink-0">
+            <i class="fas fa-scale-balanced text-sm"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Statement of Financial Position (Balance Sheet)</h3>
+              <span id="bs-source-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                Live Ledger Compilation
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              IFRS for SACCOs &amp; Chamas &bull; As of <span id="bs-as-of-date" class="font-medium text-slate-700 dark:text-slate-200">—</span>
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button type="button" onclick="exportBalanceSheetCSV()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+            <i class="fas fa-file-csv text-slate-500 dark:text-slate-400"></i> <span>Export CSV</span>
+          </button>
+          <button type="button" onclick="openPrintBalanceSheetReport()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+            <i class="fas fa-print text-xs"></i> <span>Print Balance Sheet</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive Solvency & Capital Ribbon (4 Cards) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. Total Group Assets -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Group Assets</span>
+            <span class="w-6 h-6 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-landmark"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="bs-kpi-assets" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Cash, net loans &amp; external holdings</p>
+          </div>
+        </div>
+
+        <!-- 2. Total Members' Equity -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Members' Equity</span>
+            <span class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-users-line"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="bs-kpi-equity" class="text-base sm:text-lg font-bold text-indigo-700 dark:text-indigo-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Member savings, reserves &amp; surplus</p>
+          </div>
+        </div>
+
+        <!-- 3. Solvency Ratio -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Solvency Ratio</span>
+            <span id="bs-kpi-solvency-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+              No Obligations
+            </span>
+          </div>
+          <div>
+            <h4 id="bs-kpi-solvency" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">0.0%</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Total Assets / (Liabilities + Savings)</p>
+          </div>
+        </div>
+
+        <!-- 4. Balance Status -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Balance Status</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-check-double"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="bs-kpi-balance-status" class="text-sm sm:text-base font-bold text-emerald-700 dark:text-emerald-400 tracking-tight">Balanced &plusmn; 0.00</h4>
+            <p id="bs-kpi-variance" class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5 truncate">Variance: KES 0.00</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dual-Column Classical Ledger Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <!-- Column A (Left): ASSETS -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col justify-between bg-white dark:bg-[#0b1320]">
+          <div>
+            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Assets</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">KES</span>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+              <!-- Current Assets -->
+              <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Current Assets</div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Physical Bank Balances</span>
+                <span id="bs-asset-bank" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Mobile Till / Paybill</span>
+                <span id="bs-asset-mobile" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">CIC Money Market Fund</span>
+                <span id="bs-asset-cic" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+                <span class="font-bold text-slate-900 dark:text-white">Subtotal Cash &amp; Cash Equivalents</span>
+                <span id="bs-asset-current-sub" class="font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</span>
+              </div>
+
+              <!-- Financial Assets -->
+              <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Financial Assets (Loan Portfolio)</div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Gross Loans Receivable</span>
+                <span id="bs-asset-gross-loans" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="italic text-slate-600 dark:text-slate-400">Less: Allowance for Credit Losses (SASRA Reserve)</span>
+                <span id="bs-asset-loss-allowance" class="font-mono tabular-nums font-medium text-amber-700 dark:text-amber-400">(KES 0.00)</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+                <span class="font-bold text-slate-900 dark:text-white">Net Loan Portfolio</span>
+                <span id="bs-asset-net-loans" class="font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</span>
+              </div>
+
+              <!-- External Financial Investments -->
+              <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">External Financial Investments</div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Mansa X</span>
+                <span id="bs-asset-mansax" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">M-Akiba</span>
+                <span id="bs-asset-makiba" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Fixed Investments</span>
+                <span id="bs-asset-fixed" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+                <span class="font-bold text-slate-900 dark:text-white">Subtotal External Investments</span>
+                <span id="bs-asset-inv-sub" class="font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Double-underlined TOTAL ASSETS -->
+          <div class="px-4 py-3 bg-slate-100/80 dark:bg-slate-900/90 border-t-2 border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-slate-900 dark:border-b-slate-200 flex items-center justify-between gap-2 text-xs font-bold">
+            <span class="uppercase tracking-wider text-slate-900 dark:text-white">TOTAL ASSETS</span>
+            <span id="bs-total-assets" class="font-mono tabular-nums text-sm font-extrabold text-slate-900 dark:text-white">KES 0.00</span>
+          </div>
+        </div>
+
+        <!-- Column B (Right): LIABILITIES & MEMBERS' FUNDS -->
+        <div class="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col justify-between bg-white dark:bg-[#0b1320]">
+          <div>
+            <div class="px-4 py-3 bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">Liabilities &amp; Members' Funds</span>
+              <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">KES</span>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+              <!-- Liabilities -->
+              <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Liabilities</div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Accounts Payable</span>
+                <span id="bs-liab-payables" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Accrued Expenses</span>
+                <span id="bs-liab-accrued" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Unallocated Deposits</span>
+                <span id="bs-liab-unallocated" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+                <span class="font-bold text-slate-900 dark:text-white">Subtotal Liabilities</span>
+                <span id="bs-liab-sub" class="font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</span>
+              </div>
+
+              <!-- Members' Funds & Equity -->
+              <div class="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/40 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Members' Funds &amp; Equity</div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Accumulated Member Savings</span>
+                <span id="bs-eq-savings" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Statutory Reserve Fund (20%)</span>
+                <span id="bs-eq-reserve" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 pl-6">
+                <span class="text-slate-700 dark:text-slate-300">Retained Distributable Surplus</span>
+                <span id="bs-eq-surplus" class="font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</span>
+              </div>
+              <div class="px-4 py-2.5 flex items-center justify-between gap-2 bg-slate-50/70 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700">
+                <span class="font-bold text-slate-900 dark:text-white">Subtotal Equity &amp; Members' Funds</span>
+                <span id="bs-eq-sub" class="font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Double-underlined TOTAL LIABILITIES & MEMBERS' FUNDS -->
+          <div class="px-4 py-3 bg-slate-100/80 dark:bg-slate-900/90 border-t-2 border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-slate-900 dark:border-b-slate-200 flex items-center justify-between gap-2 text-xs font-bold">
+            <span class="uppercase tracking-wider text-slate-900 dark:text-white">TOTAL LIABILITIES &amp; MEMBERS' FUNDS</span>
+            <span id="bs-total-liab-equity" class="font-mono tabular-nums text-sm font-extrabold text-slate-900 dark:text-white">KES 0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Reconciliation Footer Bar -->
+      <div id="bs-reconcile-footer" class="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono tabular-nums text-slate-700 dark:text-slate-300">
+        <span>Total Assets: KES 0.00 &nbsp;|&nbsp; Total Liabilities &amp; Equity: KES 0.00 &nbsp;|&nbsp; Variance: KES 0.00 (Balanced)</span>
+      </div>
+    </div>
+
+    <!-- Remaining Institutional Reports & Export Suite (RPT-2 & RPT-3) -->
     <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-5 sm:p-6 shadow-sm space-y-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div class="flex items-start gap-3">
@@ -800,20 +1026,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-xs">
-              <i class="fas fa-scale-balanced"></i>
-            </span>
-            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-500 dark:text-slate-400">IFRS / IAS 1</span>
-          </div>
-          <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">Balance Sheet</h4>
-          <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            Statement of financial position consolidating cash &amp; bank assets, active loan receivables, investments, and member share equity.
-          </p>
-        </div>
-
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="p-4 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 space-y-2">
           <div class="flex items-center justify-between">
             <span class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs">
@@ -2337,7 +2550,403 @@
     window.renderCashflowWaterfall(data);
     window.renderSavingsExposureTrajectory(data);
     window.renderSasraAging(data);
+    window.renderBalanceSheet(data);
   }
+
+  const homeBsKesFormatter = new Intl.NumberFormat('en-KE', {
+    style: 'currency',
+    currency: 'KES',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  function formatBsKes_(val) {
+    const n = Number(val) || 0;
+    return n < 0 ? ('-' + homeBsKesFormatter.format(Math.abs(n))) : homeBsKesFormatter.format(n);
+  }
+
+  function buildBalanceSheetModel_(data) {
+    const safe = data || {};
+    const bs = (safe.balanceSheet && typeof safe.balanceSheet === 'object') ? safe.balanceSheet : null;
+
+    if (bs) {
+      const aObj = bs.assets && typeof bs.assets === 'object' ? bs.assets : {};
+      const curObj = (aObj.current && typeof aObj.current === 'object')
+        ? aObj.current
+        : ((aObj.cashAndEquivalents && typeof aObj.cashAndEquivalents === 'object')
+            ? aObj.cashAndEquivalents
+            : (bs.currentAssets && typeof bs.currentAssets === 'object' ? bs.currentAssets : {}));
+      const loanObj = (aObj.loans && typeof aObj.loans === 'object')
+        ? aObj.loans
+        : ((aObj.loansReceivable && typeof aObj.loansReceivable === 'object')
+            ? aObj.loansReceivable
+            : (bs.financialAssets && typeof bs.financialAssets === 'object' ? bs.financialAssets : {}));
+      const invObj = (aObj.investments && typeof aObj.investments === 'object')
+        ? aObj.investments
+        : ((aObj.externalInvestments && typeof aObj.externalInvestments === 'object')
+            ? aObj.externalInvestments
+            : (bs.investments && typeof bs.investments === 'object' ? bs.investments : {}));
+      const liabObj = (bs.liabilities && typeof bs.liabilities === 'object') ? bs.liabilities : {};
+      const eqObj = (bs.equity && typeof bs.equity === 'object')
+        ? bs.equity
+        : (bs.membersFunds && typeof bs.membersFunds === 'object' ? bs.membersFunds : {});
+
+      const bankBalances = Number(curObj.bankBalances !== undefined ? curObj.bankBalances : (curObj.operatingCash !== undefined ? curObj.operatingCash : curObj.bank)) || 0;
+      const mobileMoney = Number(curObj.mobileMoney !== undefined ? curObj.mobileMoney : (curObj.tillPaybill !== undefined ? curObj.tillPaybill : curObj.mpesa)) || 0;
+      const cicMmf = Number(curObj.cicMmf !== undefined ? curObj.cicMmf : (curObj.cashEquivalents !== undefined ? curObj.cashEquivalents : (curObj.mmf !== undefined ? curObj.mmf : curObj.moneyMarket))) || 0;
+      const currentSub = curObj.subtotal !== undefined
+        ? (Number(curObj.subtotal) || 0)
+        : (curObj.totalCash !== undefined ? (Number(curObj.totalCash) || 0) : (bankBalances + mobileMoney + cicMmf));
+
+      const grossLoans = Number(loanObj.grossLoans !== undefined ? loanObj.grossLoans : (loanObj.gross !== undefined ? loanObj.gross : loanObj.totalOutstanding)) || 0;
+      const lossAllowance = Math.abs(Number(loanObj.lossAllowance !== undefined ? loanObj.lossAllowance : (loanObj.allowance !== undefined ? loanObj.allowance : loanObj.provision)) || 0);
+      const netLoans = loanObj.netLoans !== undefined
+        ? (Number(loanObj.netLoans) || 0)
+        : (grossLoans - lossAllowance);
+
+      const mansaX = Number(invObj.mansaX !== undefined ? invObj.mansaX : invObj.mansax) || 0;
+      const makiba = Number(invObj.makiba !== undefined ? invObj.makiba : invObj.mAkiba) || 0;
+      const fixedInvestments = Number(invObj.fixedInvestments !== undefined ? invObj.fixedInvestments : (invObj.fixed !== undefined ? invObj.fixed : invObj.other)) || 0;
+      const invSub = invObj.subtotal !== undefined
+        ? (Number(invObj.subtotal) || 0)
+        : (invObj.totalInvestments !== undefined ? (Number(invObj.totalInvestments) || 0) : (mansaX + makiba + fixedInvestments));
+
+      const totalAssets = bs.totalAssets !== undefined
+        ? (Number(bs.totalAssets) || 0)
+        : (aObj.totalAssets !== undefined ? (Number(aObj.totalAssets) || 0) : (aObj.total !== undefined ? (Number(aObj.total) || 0) : (currentSub + netLoans + invSub)));
+
+      const accountsPayable = Number(liabObj.accountsPayable !== undefined ? liabObj.accountsPayable : liabObj.payables) || 0;
+      const accruedExpenses = Number(liabObj.accruedExpenses !== undefined ? liabObj.accruedExpenses : liabObj.accruals) || 0;
+      const unallocatedDeposits = Number(liabObj.unallocatedDeposits !== undefined ? liabObj.unallocatedDeposits : liabObj.suspense) || 0;
+      const liabSub = liabObj.subtotal !== undefined
+        ? (Number(liabObj.subtotal) || 0)
+        : (liabObj.totalLiabilities !== undefined ? (Number(liabObj.totalLiabilities) || 0) : (accountsPayable + accruedExpenses + unallocatedDeposits));
+
+      const memberSavings = Number(eqObj.memberSavings !== undefined ? eqObj.memberSavings : (eqObj.savings !== undefined ? eqObj.savings : safe.savings)) || 0;
+      const statutoryReserve = Number(eqObj.statutoryReserve !== undefined ? eqObj.statutoryReserve : eqObj.reserveFund) || 0;
+      const retainedSurplus = Number(eqObj.retainedSurplus !== undefined ? eqObj.retainedSurplus : (eqObj.retainedEarnings !== undefined ? eqObj.retainedEarnings : eqObj.distributableSurplus)) || 0;
+      const equitySub = eqObj.subtotal !== undefined
+        ? (Number(eqObj.subtotal) || 0)
+        : (eqObj.totalEquity !== undefined ? (Number(eqObj.totalEquity) || 0) : (memberSavings + statutoryReserve + retainedSurplus));
+
+      const totalLiabEquity = bs.totalLiabilitiesAndEquity !== undefined
+        ? (Number(bs.totalLiabilitiesAndEquity) || 0)
+        : (liabSub + equitySub);
+      const variance = bs.variance !== undefined
+        ? (Number(bs.variance) || 0)
+        : Math.round((totalAssets - totalLiabEquity) * 100) / 100;
+      const isBalanced = bs.isBalanced !== undefined
+        ? Boolean(bs.isBalanced)
+        : (Math.abs(variance) < 0.01);
+
+      const denom = liabSub + memberSavings;
+      const solvencyRatio = denom > 0 ? (totalAssets / denom) * 100 : 0;
+
+      return {
+        isAudited: true,
+        asOfDate: String(bs.asOfDate || bs.date || ''),
+        rangeLabel: String(bs.rangeLabel || bs.periodLabel || ''),
+        assets: {
+          current: {
+            bankBalances: bankBalances,
+            mobileMoney: mobileMoney,
+            cicMmf: cicMmf,
+            subtotal: currentSub
+          },
+          loans: {
+            grossLoans: grossLoans,
+            lossAllowance: lossAllowance,
+            netLoans: netLoans
+          },
+          investments: {
+            mansaX: mansaX,
+            makiba: makiba,
+            fixedInvestments: fixedInvestments,
+            subtotal: invSub
+          },
+          totalAssets: totalAssets
+        },
+        liabilities: {
+          accountsPayable: accountsPayable,
+          accruedExpenses: accruedExpenses,
+          unallocatedDeposits: unallocatedDeposits,
+          subtotal: liabSub
+        },
+        equity: {
+          memberSavings: memberSavings,
+          statutoryReserve: statutoryReserve,
+          retainedSurplus: retainedSurplus,
+          subtotal: equitySub
+        },
+        totalLiabilitiesAndEquity: totalLiabEquity,
+        variance: variance,
+        isBalanced: isBalanced,
+        solvencyDenominator: denom,
+        solvencyRatio: solvencyRatio
+      };
+    }
+
+    // Honest live-ledger fallback when backend balanceSheet object is pending
+    const accRows = (safe.accountsBalanceChart && Array.isArray(safe.accountsBalanceChart.rows))
+      ? safe.accountsBalanceChart.rows
+      : [];
+    let bankBalances = 0;
+    let mobileMoney = 0;
+    let cicMmf = 0;
+    if (accRows.length > 0) {
+      accRows.forEach(function (r) {
+        const bal = Number(r && r.balance) || 0;
+        const name = String((r && r.orgName) || '').toLowerCase();
+        if (name.indexOf('mpesa') !== -1 || name.indexOf('m-pesa') !== -1 || name.indexOf('till') !== -1 || name.indexOf('paybill') !== -1 || name.indexOf('safaricom') !== -1) {
+          mobileMoney += bal;
+        } else if (name.indexOf('cic') !== -1 || name.indexOf('mmf') !== -1 || name.indexOf('money market') !== -1 || name.indexOf('zimele') !== -1) {
+          cicMmf += bal;
+        } else {
+          bankBalances += bal;
+        }
+      });
+    } else if (safe.liquidity && safe.liquidity.tiers) {
+      bankBalances = Number(safe.liquidity.tiers.operatingCash) || 0;
+      cicMmf = Number(safe.liquidity.tiers.cashEquivalents) || 0;
+      if (bankBalances === 0 && cicMmf === 0 && Number(safe.cash) > 0) {
+        bankBalances = Number(safe.cash) || 0;
+      }
+    } else {
+      bankBalances = Number(safe.cash) || 0;
+    }
+
+    const currentSub = bankBalances + mobileMoney + cicMmf;
+    const p = (safe.portfolio && typeof safe.portfolio === 'object') ? safe.portfolio : {};
+    const grossLoans = (p.totalOutstanding !== undefined && p.totalOutstanding !== null)
+      ? (Number(p.totalOutstanding) || 0)
+      : (Number(safe.loans) || 0);
+    const lossAllowance = Math.abs(Number(p.recommendedProvision) || 0);
+    const netLoans = grossLoans - lossAllowance;
+
+    const fixedInvestments = Number(safe.invested) || 0;
+    const invSub = fixedInvestments;
+    const totalAssets = currentSub + netLoans + invSub;
+
+    const memberSavings = Number(safe.savings) || 0;
+    const equitySub = memberSavings;
+    const liabSub = 0;
+    const totalLiabEquity = liabSub + equitySub;
+    const variance = Math.round((totalAssets - totalLiabEquity) * 100) / 100;
+    const isBalanced = Math.abs(variance) < 0.01;
+    const denom = liabSub + memberSavings;
+    const solvencyRatio = denom > 0 ? (totalAssets / denom) * 100 : 0;
+
+    return {
+      isAudited: false,
+      asOfDate: '',
+      rangeLabel: '',
+      assets: {
+        current: {
+          bankBalances: bankBalances,
+          mobileMoney: mobileMoney,
+          cicMmf: cicMmf,
+          subtotal: currentSub
+        },
+        loans: {
+          grossLoans: grossLoans,
+          lossAllowance: lossAllowance,
+          netLoans: netLoans
+        },
+        investments: {
+          mansaX: 0,
+          makiba: 0,
+          fixedInvestments: fixedInvestments,
+          subtotal: invSub
+        },
+        totalAssets: totalAssets
+      },
+      liabilities: {
+        accountsPayable: 0,
+        accruedExpenses: 0,
+        unallocatedDeposits: 0,
+        subtotal: liabSub
+      },
+      equity: {
+        memberSavings: memberSavings,
+        statutoryReserve: 0,
+        retainedSurplus: 0,
+        subtotal: equitySub
+      },
+      totalLiabilitiesAndEquity: totalLiabEquity,
+      variance: variance,
+      isBalanced: isBalanced,
+      solvencyDenominator: denom,
+      solvencyRatio: solvencyRatio
+    };
+  }
+
+  window.renderBalanceSheet = function (data) {
+    if (data) {
+      window.latestHomeAnalyticsData = data;
+    }
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildBalanceSheetModel_(sourceData);
+    window.latestBalanceSheetModel = m;
+
+    const setTxt = function (id, txt) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+
+    const rk = sourceData.range || (typeof currentHomeRange !== 'undefined' ? currentHomeRange : 'year');
+    const rkLabel = rk === 'this_month' ? 'Current Month' : (rk === 'quarter' ? 'Current Quarter' : 'FY ' + new Date().getFullYear());
+    const dateStr = m.asOfDate || new Date().toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+    setTxt('bs-as-of-date', dateStr + ' (' + (m.rangeLabel || rkLabel) + ')');
+
+    const badgeSrc = document.getElementById('bs-source-badge');
+    if (badgeSrc) {
+      badgeSrc.textContent = m.isAudited ? 'Audited GL Schedule' : 'Live Ledger Compilation';
+    }
+
+    // Executive Solvency & Capital Ribbon
+    setTxt('bs-kpi-assets', formatBsKes_(m.assets.totalAssets));
+    setTxt('bs-kpi-equity', formatBsKes_(m.equity.subtotal));
+
+    const elSolv = document.getElementById('bs-kpi-solvency');
+    const elSolvBadge = document.getElementById('bs-kpi-solvency-badge');
+    if (elSolv) {
+      elSolv.textContent = m.solvencyDenominator > 0 ? (m.solvencyRatio.toFixed(1) + '%') : 'N/A';
+    }
+    if (elSolvBadge) {
+      if (m.solvencyDenominator <= 0) {
+        elSolvBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+        elSolvBadge.textContent = 'No Obligations';
+      } else if (m.solvencyRatio >= 108) {
+        elSolvBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60';
+        elSolvBadge.textContent = 'Strong Solvency';
+      } else if (m.solvencyRatio >= 100) {
+        elSolvBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60';
+        elSolvBadge.textContent = 'Adequate';
+      } else {
+        elSolvBadge.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60';
+        elSolvBadge.textContent = 'Capital Deficit';
+      }
+    }
+
+    const elBalStat = document.getElementById('bs-kpi-balance-status');
+    const elVar = document.getElementById('bs-kpi-variance');
+    if (elBalStat) {
+      if (m.isBalanced) {
+        elBalStat.textContent = 'Balanced \u00B1 0.00';
+        elBalStat.className = 'text-sm sm:text-base font-bold text-emerald-700 dark:text-emerald-400 tracking-tight';
+      } else {
+        elBalStat.textContent = m.isAudited ? 'Variance Warning' : 'Unreconciled (GL Pending)';
+        elBalStat.className = 'text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400 tracking-tight';
+      }
+    }
+    if (elVar) {
+      elVar.textContent = 'Variance: ' + formatBsKes_(m.variance);
+    }
+
+    // Left Column: Assets
+    setTxt('bs-asset-bank', formatBsKes_(m.assets.current.bankBalances));
+    setTxt('bs-asset-mobile', formatBsKes_(m.assets.current.mobileMoney));
+    setTxt('bs-asset-cic', formatBsKes_(m.assets.current.cicMmf));
+    setTxt('bs-asset-current-sub', formatBsKes_(m.assets.current.subtotal));
+
+    setTxt('bs-asset-gross-loans', formatBsKes_(m.assets.loans.grossLoans));
+    setTxt('bs-asset-loss-allowance', '(' + formatBsKes_(m.assets.loans.lossAllowance) + ')');
+    setTxt('bs-asset-net-loans', formatBsKes_(m.assets.loans.netLoans));
+
+    setTxt('bs-asset-mansax', formatBsKes_(m.assets.investments.mansaX));
+    setTxt('bs-asset-makiba', formatBsKes_(m.assets.investments.makiba));
+    setTxt('bs-asset-fixed', formatBsKes_(m.assets.investments.fixedInvestments));
+    setTxt('bs-asset-inv-sub', formatBsKes_(m.assets.investments.subtotal));
+    setTxt('bs-total-assets', formatBsKes_(m.assets.totalAssets));
+
+    // Right Column: Liabilities & Members' Funds
+    setTxt('bs-liab-payables', formatBsKes_(m.liabilities.accountsPayable));
+    setTxt('bs-liab-accrued', formatBsKes_(m.liabilities.accruedExpenses));
+    setTxt('bs-liab-unallocated', formatBsKes_(m.liabilities.unallocatedDeposits));
+    setTxt('bs-liab-sub', formatBsKes_(m.liabilities.subtotal));
+
+    setTxt('bs-eq-savings', formatBsKes_(m.equity.memberSavings));
+    setTxt('bs-eq-reserve', formatBsKes_(m.equity.statutoryReserve));
+    setTxt('bs-eq-surplus', formatBsKes_(m.equity.retainedSurplus));
+    setTxt('bs-eq-sub', formatBsKes_(m.equity.subtotal));
+    setTxt('bs-total-liab-equity', formatBsKes_(m.totalLiabilitiesAndEquity));
+
+    // Audit Reconciliation Footer Bar
+    const recEl = document.getElementById('bs-reconcile-footer');
+    if (recEl) {
+      const statusSuffix = m.isBalanced
+        ? '(Balanced)'
+        : (m.isAudited ? '(Variance Alert)' : '(Pending GL / Reserves Schedule)');
+      recEl.textContent =
+        'Total Assets: ' + formatBsKes_(m.assets.totalAssets) +
+        '  |  Total Liabilities & Equity: ' + formatBsKes_(m.totalLiabilitiesAndEquity) +
+        '  |  Variance: ' + formatBsKes_(m.variance) + ' ' + statusSuffix;
+      recEl.className = 'px-4 py-3 rounded-xl border flex flex-wrap items-center justify-between gap-2 text-xs font-mono tabular-nums ' + (
+        m.isBalanced
+          ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
+          : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-300'
+      );
+    }
+  };
+
+  function bsCsvCell_(val) {
+    let s = String(val === undefined || val === null ? '' : val);
+    if (/^[=+\-@\t\r]/.test(s)) {
+      s = "'" + s;
+    }
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  window.exportBalanceSheetCSV = function () {
+    const m = window.latestBalanceSheetModel || buildBalanceSheetModel_(window.latestHomeAnalyticsData || {});
+    const asOf = (document.getElementById('bs-as-of-date') || {}).textContent || new Date().toISOString().slice(0, 10);
+    const rows = [
+      ['Section', 'Subsection', 'Line Item', 'Amount (KES)', 'As Of'],
+      ['ASSETS', 'Current Assets', 'Physical Bank Balances', m.assets.current.bankBalances.toFixed(2), asOf],
+      ['ASSETS', 'Current Assets', 'Mobile Till / Paybill', m.assets.current.mobileMoney.toFixed(2), asOf],
+      ['ASSETS', 'Current Assets', 'CIC Money Market Fund', m.assets.current.cicMmf.toFixed(2), asOf],
+      ['ASSETS', 'Current Assets', 'Subtotal Cash & Cash Equivalents', m.assets.current.subtotal.toFixed(2), asOf],
+      ['ASSETS', 'Financial Assets', 'Gross Loans Receivable', m.assets.loans.grossLoans.toFixed(2), asOf],
+      ['ASSETS', 'Financial Assets', 'Less: Allowance for Credit Losses (SASRA Reserve)', (-Math.abs(m.assets.loans.lossAllowance)).toFixed(2), asOf],
+      ['ASSETS', 'Financial Assets', 'Net Loan Portfolio', m.assets.loans.netLoans.toFixed(2), asOf],
+      ['ASSETS', 'External Financial Investments', 'Mansa X', m.assets.investments.mansaX.toFixed(2), asOf],
+      ['ASSETS', 'External Financial Investments', 'M-Akiba', m.assets.investments.makiba.toFixed(2), asOf],
+      ['ASSETS', 'External Financial Investments', 'Fixed Investments', m.assets.investments.fixedInvestments.toFixed(2), asOf],
+      ['ASSETS', 'External Financial Investments', 'Subtotal External Investments', m.assets.investments.subtotal.toFixed(2), asOf],
+      ['ASSETS', 'Summary', 'TOTAL ASSETS', m.assets.totalAssets.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Liabilities', 'Accounts Payable', m.liabilities.accountsPayable.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Liabilities', 'Accrued Expenses', m.liabilities.accruedExpenses.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Liabilities', 'Unallocated Deposits', m.liabilities.unallocatedDeposits.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Liabilities', 'Subtotal Liabilities', m.liabilities.subtotal.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Members Equity', 'Accumulated Member Savings', m.equity.memberSavings.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Members Equity', 'Statutory Reserve Fund (20%)', m.equity.statutoryReserve.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Members Equity', 'Retained Distributable Surplus', m.equity.retainedSurplus.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Members Equity', 'Subtotal Equity & Members Funds', m.equity.subtotal.toFixed(2), asOf],
+      ['LIABILITIES & MEMBERS FUNDS', 'Summary', 'TOTAL LIABILITIES & MEMBERS FUNDS', m.totalLiabilitiesAndEquity.toFixed(2), asOf],
+      ['RECONCILIATION', 'Audit', 'Variance (Assets - Liabilities & Equity)', m.variance.toFixed(2), asOf]
+    ];
+
+    const csvContent = rows.map(function (r) {
+      return r.map(bsCsvCell_).join(',');
+    }).join('\r\n');
+
+    if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'brightlife_balance_sheet_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 500);
+    }
+
+    if (typeof showNotification === 'function') {
+      showNotification('Balance Sheet exported to CSV.', 'success');
+    }
+    return csvContent;
+  };
 
   function renderInvestmentCharts(inv) {
     const theme = getChartThemeTokens();

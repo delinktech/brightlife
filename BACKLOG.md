@@ -11,9 +11,9 @@
 | **Current Live Release** | **`v109`** (Google Apps Script Build `@110`, Commit `97dc786`) |
 | **Total Tracked Tasks** | **23 Tasks** |
 | **Completed & Shipped (`[DONE]`)** | **11 Tasks (47.8%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **12 Tasks (52.2%)** |
-| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite & Member Loan Application |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`RPT-1`)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **11 Tasks (47.8%)** |
+| **Current Sprint Focus** | Phase 2: Institutional Reporting Suite (`RPT-1: Statement of Financial Position`) |
 
 ---
 
@@ -41,7 +41,7 @@ The remaining 12 tasks are categorized below in strict execution priority:
 
 ### Tier 1: Immediate Strategic Priorities (Sprint Next)
 
-#### 1. `RPT-1: Statement of Financial Position (Balance Sheet)`
+#### 1. `RPT-1: Statement of Financial Position (Balance Sheet)` `[IN PROGRESS]`
 * **Priority:** `P0 (Critical)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab (`#home-subview-reports`)
