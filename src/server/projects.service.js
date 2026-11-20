@@ -267,7 +267,7 @@ function migrateAndRetireLegacyInvestmentLedger_(ss) {
           if (existingKeys[dedupKey]) continue;
 
           appendRowByHeaders_(cf, {
-            "Transaction ID": "ICF-HIST-" + String(r).padStart(3, "0"),
+            "Transaction ID": "BLICF-HIST-" + String(r).padStart(3, "0"),
             "Date": dt,
             "Entity Type": "Investment",
             "Entity ID": invId,
@@ -652,7 +652,7 @@ function prepopulateInvestmentEngine_(ss) {
   const tz = ss.getSpreadsheetTimeZone();
   projectCandidates.forEach(function (c) {
     if (linked[c.id]) return;
-    const pid = nextSequentialId_(prj, "Project ID", "PRJ-");
+    const pid = nextSequentialId_(prj, "Project ID", "BLPRJ-");
     const rowObj = {
       "Project ID": pid,
       "Project Name": c.name,
@@ -686,7 +686,66 @@ function classifyInvestmentName_(name) {
  * ------------------------------------------------------------------ */
 
 function nextSequentialId_(sheet, headerName, prefix) {
+  if (headerName === "Investment ID" || (prefix && /INV/i.test(prefix))) {
+    let tz = "GMT+3";
+    try {
+      if (sheet && typeof sheet.getParent === "function" && sheet.getParent() && sheet.getParent().getSpreadsheetTimeZone) {
+        tz = sheet.getParent().getSpreadsheetTimeZone();
+      } else if (typeof getSpreadsheet_ === "function") {
+        tz = getSpreadsheet_().getSpreadsheetTimeZone();
+      }
+    } catch (e) {}
+    const year = Utilities.formatDate(new Date(), tz, "yyyy");
+    const invPrefix = "BLINV-" + year + "-";
+    let max = 0;
+    if (sheet.getLastRow() > 1) {
+      const vals = sheet.getDataRange().getValues();
+      const idx = getHeaderMap_(vals[0])[headerName];
+      if (idx !== undefined) {
+        for (let r = 1; r < vals.length; r++) {
+          const str = String(vals[r][idx] || "").trim();
+          if (!str) continue;
+          // Match new year-based format BLINV-YYYY-XX
+          const mYear = str.match(new RegExp("^BLINV-" + year + "-(\\d+)$", "i"));
+          if (mYear) {
+            max = Math.max(max, parseInt(mYear[1], 10));
+            continue;
+          }
+          // Match legacy format INV-XXX or BLINV-XXX without year
+          const mLegacy = str.match(/^(?:BL)?INV-(\d+)$/i);
+          if (mLegacy) {
+            max = Math.max(max, parseInt(mLegacy[1], 10));
+            continue;
+          }
+        }
+      }
+    }
+    return invPrefix + String(max + 1).padStart(2, "0");
+  }
+
+  if (headerName === "Project ID" || (prefix && /PRJ/i.test(prefix))) {
+    const prjPrefix = "BLPRJ-";
+    let max = 0;
+    if (sheet.getLastRow() > 1) {
+      const vals = sheet.getDataRange().getValues();
+      const idx = getHeaderMap_(vals[0])[headerName];
+      if (idx !== undefined) {
+        for (let r = 1; r < vals.length; r++) {
+          const str = String(vals[r][idx] || "").trim();
+          if (!str) continue;
+          // Match BLPRJ-XX or legacy PRJ-XXX / PRJ-XX
+          const m = str.match(/^(?:BL)?PRJ-(\d+)$/i);
+          if (m) {
+            max = Math.max(max, parseInt(m[1], 10));
+          }
+        }
+      }
+    }
+    return prjPrefix + String(max + 1).padStart(2, "0");
+  }
+
   let max = 0;
+  const effPrefix = prefix || "";
   if (sheet.getLastRow() > 1) {
     const vals = sheet.getDataRange().getValues();
     const idx = getHeaderMap_(vals[0])[headerName];
@@ -697,7 +756,7 @@ function nextSequentialId_(sheet, headerName, prefix) {
       }
     }
   }
-  return prefix + String(max + 1).padStart(3, "0");
+  return effPrefix + String(max + 1).padStart(2, "0");
 }
 
 function appendRowByHeaders_(sheet, rowObj) {
@@ -1109,7 +1168,7 @@ function addInvestmentAsset(payload) {
     const tz = ss.getSpreadsheetTimeZone();
     return withInvestmentLock_(function () {
       const sheet = getRequiredSheet_(SHEETS.INVESTMENTS);
-      const id = nextSequentialId_(sheet, "Investment ID", "INV-");
+      const id = nextSequentialId_(sheet, "Investment ID", "BLINV-");
       appendRowByHeaders_(sheet, {
         "Investment ID": id,
         "Name": name,
@@ -1179,7 +1238,7 @@ function addInvestmentProject(payload) {
     const tz = ss.getSpreadsheetTimeZone();
     return withInvestmentLock_(function () {
       const sheet = getRequiredSheet_(SHEETS.INVESTMENT_PROJECTS);
-      const id = nextSequentialId_(sheet, "Project ID", "PRJ-");
+      const id = nextSequentialId_(sheet, "Project ID", "BLPRJ-");
       appendRowByHeaders_(sheet, {
         "Project ID": id,
         "Project Name": name,
@@ -1229,12 +1288,12 @@ function recordInvestmentCashflow(payload) {
     const reg = getRequiredSheet_(registry);
     const regVals = reg.getDataRange().getValues();
     const regIdx = getHeaderMap_(regVals[0])[idHeader];
-    const exists = regIdx !== undefined && regVals.slice(1).some(function (r) { return String(r[regIdx] || "").trim() === entityId; });
+    const exists = regIdx !== undefined && regVals.slice(1).some(function (r) { return String(r[regIdx] || "").trim().toLowerCase() === entityId.toLowerCase(); });
     if (!exists) return { success: false, error: entityType + " " + entityId + " was not found in " + registry + "." };
 
     return withInvestmentLock_(function () {
       const sheet = getRequiredSheet_(SHEETS.INVESTMENT_CASHFLOWS);
-      const txId = "ICF-" + Utilities.formatDate(date, tz, "yyyyMMdd") + "-" + Utilities.getUuid().slice(0, 6).toUpperCase();
+      const txId = "BLICF-" + Utilities.formatDate(date, tz, "yyyyMMdd") + "-" + Utilities.getUuid().slice(0, 6).toUpperCase();
       appendRowByHeaders_(sheet, {
         "Transaction ID": txId,
         "Date": date,

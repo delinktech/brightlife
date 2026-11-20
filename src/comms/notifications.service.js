@@ -140,9 +140,9 @@ function getMemberContactAndFinancials_(memberIdOrName) {
   const rawKey = String(memberIdOrName).trim();
   const searchKey = rawKey.toLowerCase();
 
-  // Extract Member ID if passed in format "Name (BL25-XXXX)" or "(BL25-XXXX)"
+  // Extract Member ID if passed in format "Name (BLM-01)", "Name (BL25-XXXX)", or "(BLM-01)"
   let extractedId = "";
-  const idMatch = rawKey.match(/\((BL\d{2}-\d+)\)/i) || rawKey.match(/(BL\d{2}-\d+)/i);
+  const idMatch = rawKey.match(/\((BL[A-Za-z0-9]*-?\d+)\)/i) || rawKey.match(/(BL[A-Za-z0-9]*-?\d+)\)/i) || rawKey.match(/(BL[A-Za-z0-9]*-?\d+)/i);
   if (idMatch) extractedId = idMatch[1].trim().toLowerCase();
 
   const ss = getSpreadsheet_();

@@ -1079,7 +1079,8 @@ function submitLoanApplication(payload) {
     const existingLoanIds = {};
     const loanStatusMap = {};
     const dateStamp = Utilities.formatDate(new Date(), tz, "yyyyMMdd");
-    const idPrefix = "LN-" + dateStamp + "-";
+    const idPrefix = "BLLN-" + dateStamp + "-";
+    const legacyPrefix = "LN-" + dateStamp + "-";
     let maxSeq = 0;
 
     for (let i = 1; i < loanValues.length; i++) {
@@ -1089,6 +1090,9 @@ function submitLoanApplication(payload) {
       loanStatusMap[existingId.toLowerCase()] = String(loanValues[i][loanCol["Status"]] || "").trim().toLowerCase();
       if (existingId.indexOf(idPrefix) === 0) {
         const seqPart = parseInt(existingId.slice(idPrefix.length), 10);
+        if (!isNaN(seqPart) && seqPart > maxSeq) maxSeq = seqPart;
+      } else if (existingId.indexOf(legacyPrefix) === 0) {
+        const seqPart = parseInt(existingId.slice(legacyPrefix.length), 10);
         if (!isNaN(seqPart) && seqPart > maxSeq) maxSeq = seqPart;
       }
     }
@@ -1180,7 +1184,7 @@ function submitLoanApplication(payload) {
       );
     }
 
-    // 6. Calculate financials & generate collision-free Loan ID: LN-YYYYMMDD-XXX
+    // 6. Calculate financials & generate collision-free Loan ID: BLLN-YYYYMMDD-XXX
     const interest = Math.round(requestedAmount * (policy.interestRatePct / 100) * 100) / 100;
     const fee = 0.00;
 

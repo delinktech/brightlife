@@ -152,167 +152,177 @@ function getMembersData(page, limit) {
 }
 
 function generateNextMemberId_(sheet, colIndex) {
-  const year = Utilities.formatDate(new Date(), "GMT+3", "yy");
-  const prefix = "BL" + year + "-";
+  const prefix = "BLM-";
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return prefix + "0001";
+  if (lastRow < 2) return prefix + "01";
 
   const ids = sheet.getRange(2, colIndex, lastRow - 1, 1).getValues().flat();
   let maxNumber = 0;
   ids.forEach(function (id) {
-    if (typeof id !== "string" || id.indexOf(prefix) !== 0) return;
-    const parts = id.split("-");
-    const num = parseInt(parts[1], 10);
-    if (!isNaN(num) && num > maxNumber) maxNumber = num;
+    if (typeof id !== "string") return;
+    const trimmed = id.trim();
+    if (!trimmed) return;
+    // Support new "BLM-" (e.g. BLM-01, BLM-10) and legacy "BL..." (e.g. BL25-0001, BL24-0012, BL-0001)
+    const match = trimmed.match(/^BL[A-Za-z0-9]*-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (!isNaN(num) && num > maxNumber) maxNumber = num;
+    }
   });
 
-  return prefix + String(maxNumber + 1).padStart(4, "0");
+  return prefix + String(maxNumber + 1).padStart(2, "0");
 }
 
 function saveMember(data) {
   requirePermission_("membersWrite");
-  const ss = getSpreadsheet_();
-  const sheet = getRequiredSheet_(SHEETS.MEMBERS);
-  const values = sheet.getDataRange().getValues();
-  const headers = values[0];
-  const col = getHeaderMap_(headers);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const ss = getSpreadsheet_();
+    const sheet = getRequiredSheet_(SHEETS.MEMBERS);
+    const values = sheet.getDataRange().getValues();
+    const headers = values[0];
+    const col = getHeaderMap_(headers);
 
-  requireHeaders_(
-    col,
-    [
-      "Member ID",
-      "First Name",
-      "Middle Name",
-      "Last Name",
-      "National Id",
-      "Gender",
-      "Date of Birth",
-      "Registration Date",
-      "Status",
-    ],
-    SHEETS.MEMBERS
-  );
+    requireHeaders_(
+      col,
+      [
+        "Member ID",
+        "First Name",
+        "Middle Name",
+        "Last Name",
+        "National Id",
+        "Gender",
+        "Date of Birth",
+        "Registration Date",
+        "Status",
+      ],
+      SHEETS.MEMBERS
+    );
 
-  const memberId = (data.memberId || data.id || "").trim();
-  const isUpdate = Boolean(memberId);
-  const tz = ss.getSpreadsheetTimeZone();
+    const memberId = (data.memberId || data.id || "").trim();
+    const isUpdate = Boolean(memberId);
+    const tz = ss.getSpreadsheetTimeZone();
 
-  let targetRowIndex = -1;
-  if (isUpdate) {
-    for (let i = 1; i < values.length; i++) {
-      if (values[i][col["Member ID"]] === memberId) {
-        targetRowIndex = i + 1;
-        break;
+    let targetRowIndex = -1;
+    if (isUpdate) {
+      for (let i = 1; i < values.length; i++) {
+        if (values[i][col["Member ID"]] === memberId) {
+          targetRowIndex = i + 1;
+          break;
+        }
+      }
+      if (targetRowIndex === -1) {
+        throw new Error("Member not found for update: " + memberId);
       }
     }
-    if (targetRowIndex === -1) {
-      throw new Error("Member not found for update: " + memberId);
+
+    const assignedId = isUpdate
+      ? memberId
+      : generateNextMemberId_(sheet, col["Member ID"] + 1);
+
+    const rowData = isUpdate
+      ? values[targetRowIndex - 1].slice()
+      : new Array(headers.length).fill("");
+
+    rowData[col["Member ID"]] = assignedId;
+    rowData[col["First Name"]] = (data.firstName || "").trim();
+    rowData[col["Middle Name"]] = (data.middleName || "").trim();
+    rowData[col["Last Name"]] = (data.lastName || "").trim();
+    rowData[col["National Id"]] = (data.nationalId || "").trim();
+    rowData[col["Gender"]] = (data.gender || "").trim();
+    rowData[col["Date of Birth"]] = parseDateInput_(data.dob, tz);
+    rowData[col["Registration Date"]] = parseDateInput_(data.registrationDate, tz);
+    rowData[col["Status"]] = (data.status || "Active").trim();
+
+    if (col["Phone Number"] !== undefined) {
+      rowData[col["Phone Number"]] = (data.phone || data.phoneNumber || "").trim();
     }
-  }
+    if (col["Email"] !== undefined) {
+      rowData[col["Email"]] = (data.email || "").trim().toLowerCase();
+    }
 
-  const assignedId = isUpdate
-    ? memberId
-    : generateNextMemberId_(sheet, col["Member ID"] + 1);
+    if (col["Full Name"] !== undefined) {
+      if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, col["Full Name"])) {
+        rowData[col["Full Name"]] = "";
+      } else {
+        rowData[col["Full Name"]] = (
+          (data.firstName || "") +
+          " " +
+          (data.middleName || "") +
+          " " +
+          (data.lastName || "")
+        )
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+    }
 
-  const rowData = isUpdate
-    ? values[targetRowIndex - 1].slice()
-    : new Array(headers.length).fill("");
+    // ARC-3: Any column governed by a Row 1 header spill formula must remain blank ("") on insert & update
+    // so that row writes never obstruct the array spill with #REF!.
+    const spillComputedHeaders = [
+      "Total Savings",
+      "Current Loan Balance",
+      "Guaranteed Amount",
+      "Max Loan Eligibility",
+      "Available to Guarantee",
+      "Full Name",
+    ];
+    spillComputedHeaders.forEach(function (h) {
+      if (col[h] !== undefined && typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, col[h])) {
+        rowData[col[h]] = "";
+      }
+    });
 
-  rowData[col["Member ID"]] = assignedId;
-  rowData[col["First Name"]] = (data.firstName || "").trim();
-  rowData[col["Middle Name"]] = (data.middleName || "").trim();
-  rowData[col["Last Name"]] = (data.lastName || "").trim();
-  rowData[col["National Id"]] = (data.nationalId || "").trim();
-  rowData[col["Gender"]] = (data.gender || "").trim();
-  rowData[col["Date of Birth"]] = parseDateInput_(data.dob, tz);
-  rowData[col["Registration Date"]] = parseDateInput_(data.registrationDate, tz);
-  rowData[col["Status"]] = (data.status || "Active").trim();
-
-  if (col["Phone Number"] !== undefined) {
-    rowData[col["Phone Number"]] = (data.phone || data.phoneNumber || "").trim();
-  }
-  if (col["Email"] !== undefined) {
-    rowData[col["Email"]] = (data.email || "").trim().toLowerCase();
-  }
-
-  if (col["Full Name"] !== undefined) {
-    if (typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, col["Full Name"])) {
-      rowData[col["Full Name"]] = "";
+    if (isUpdate) {
+      let savedRow2Formulas = null;
+      if (targetRowIndex === 2) {
+        savedRow2Formulas = [];
+        for (let c = 0; c < headers.length; c++) {
+          try {
+            const cell = sheet.getRange(2, c + 1);
+            const f = cell && typeof cell.getFormula === "function" ? String(cell.getFormula() || "").trim() : "";
+            if (f.indexOf("=") === 0 && (f.indexOf("MAP(") !== -1 || f.indexOf("ARRAYFORMULA(") !== -1 || f.indexOf("{") !== -1)) {
+              savedRow2Formulas.push({ col1: c + 1, formula: f });
+            }
+          } catch (e) {}
+        }
+      }
+      sheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
+      if (targetRowIndex === 2 && savedRow2Formulas && savedRow2Formulas.length) {
+        savedRow2Formulas.forEach(function (item) {
+          try {
+            const cell = sheet.getRange(2, item.col1);
+            if (cell && typeof cell.setFormula === "function") cell.setFormula(item.formula);
+          } catch (e) {}
+        });
+      }
     } else {
-      rowData[col["Full Name"]] = (
-        (data.firstName || "") +
-        " " +
-        (data.middleName || "") +
-        " " +
-        (data.lastName || "")
-      )
-        .replace(/\s+/g, " ")
-        .trim();
+      sheet.appendRow(rowData);
     }
+
+    const action = isUpdate ? "member.update" : "member.create";
+    const fullName = [data.firstName, data.middleName, data.lastName]
+      .filter(Boolean)
+      .join(" ");
+
+    appendAuditLog_(
+      action,
+      "Member",
+      assignedId,
+      (isUpdate ? "Updated" : "Registered") + " member " + fullName,
+      JSON.stringify({
+        assignedId: assignedId,
+        status: data.status,
+        nationalId: data.nationalId,
+      })
+    );
+
+    clearDashboardCache_();
+    return { success: true, memberId: assignedId };
+  } finally {
+    lock.releaseLock();
   }
-
-  // ARC-3: Any column governed by a Row 1 header spill formula must remain blank ("") on insert & update
-  // so that row writes never obstruct the array spill with #REF!.
-  const spillComputedHeaders = [
-    "Total Savings",
-    "Current Loan Balance",
-    "Guaranteed Amount",
-    "Max Loan Eligibility",
-    "Available to Guarantee",
-    "Full Name",
-  ];
-  spillComputedHeaders.forEach(function (h) {
-    if (col[h] !== undefined && typeof hasHeaderSpillFormula_ === "function" && hasHeaderSpillFormula_(sheet, col[h])) {
-      rowData[col[h]] = "";
-    }
-  });
-
-  if (isUpdate) {
-    let savedRow2Formulas = null;
-    if (targetRowIndex === 2) {
-      savedRow2Formulas = [];
-      for (let c = 0; c < headers.length; c++) {
-        try {
-          const cell = sheet.getRange(2, c + 1);
-          const f = cell && typeof cell.getFormula === "function" ? String(cell.getFormula() || "").trim() : "";
-          if (f.indexOf("=") === 0 && (f.indexOf("MAP(") !== -1 || f.indexOf("ARRAYFORMULA(") !== -1 || f.indexOf("{") !== -1)) {
-            savedRow2Formulas.push({ col1: c + 1, formula: f });
-          }
-        } catch (e) {}
-      }
-    }
-    sheet.getRange(targetRowIndex, 1, 1, rowData.length).setValues([rowData]);
-    if (targetRowIndex === 2 && savedRow2Formulas && savedRow2Formulas.length) {
-      savedRow2Formulas.forEach(function (item) {
-        try {
-          const cell = sheet.getRange(2, item.col1);
-          if (cell && typeof cell.setFormula === "function") cell.setFormula(item.formula);
-        } catch (e) {}
-      });
-    }
-  } else {
-    sheet.appendRow(rowData);
-  }
-
-  const action = isUpdate ? "member.update" : "member.create";
-  const fullName = [data.firstName, data.middleName, data.lastName]
-    .filter(Boolean)
-    .join(" ");
-
-  appendAuditLog_(
-    action,
-    "Member",
-    assignedId,
-    (isUpdate ? "Updated" : "Registered") + " member " + fullName,
-    JSON.stringify({
-      assignedId: assignedId,
-      status: data.status,
-      nationalId: data.nationalId,
-    })
-  );
-
-  clearDashboardCache_();
-  return { success: true, memberId: assignedId };
 }
 
 function parseDateInput_(val, tz) {
