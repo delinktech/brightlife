@@ -3,7 +3,8 @@ Maintained by `@shipper`
 
 | Release | GAS Build | Deployment ID (Masked) | Git Commit | Channel | Release Date | Summary |
 | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **v135** | `@136` | `AKfycbx4........wRCA` | `ccfe9a1` | **Production** | 2026-11-20 | Fixer: Guarantor unencumbered savings now computed as savings minus pledges, so eligible members are no longer flagged ineligible (`loans.ui.js.html`). |
+| **v136** | `@137` | `AKfycbx4........wRCA` | `2e9778d` | **Production** | 2026-11-20 | Sentinel & Fixer: Standardize 'BL' prefix across all system entities: loans (`BLLN-YYYYMMDD-XXX`), members (`BLM-XX`), investments (`BLINV-YYYY-XX`), capital projects (`BLPRJ-XX`), and investment cashflows (`BLICF-YYYYMMDD-XXXXXX`), with backward compatibility for legacy identifiers. |
+| **v135** | `@136` | `AKfycbx4........wRCA` | `ccfe9a1` | Archived | 2026-11-20 | Fixer: Guarantor unencumbered savings now computed as savings minus pledges, so eligible members are no longer flagged ineligible (`loans.ui.js.html`). |
 | **v134** | `@135` | `AKfycbx4........wRCA` | `86fc96f` | **Production** | 2026-11-20 | Fixer & Sentinel: Protected member financial privacy in guarantor directory and enforced strict guarantor solvency limits (`loans.service.js`, `loans.ui.js.html`). |
 | **v133** | `@134` | `AKfycbx4........wRCA` | `3b067dd` | Archived | 2026-11-20 | Designer & Sentinel: Implemented searchable combobox with type-ahead filtering for loan guarantors (`loans.ui.js.html`). |
 | **v132** | `@133` | `AKfycbx4........wRCA` | `799e174` | Archived | 2026-11-20 | Designer, Fixer & Sentinel: Enabled dynamic guarantor dropdowns and enforced member-only borrower pre-population locking in Apply Loan modal (`app.ui.js.html`, `loans.ui.js.html`, `Loans.html`). |
