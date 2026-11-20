@@ -27,7 +27,8 @@ function normalizeRoleKey_(raw) {
   var s = String(raw || "")
     .trim()
     .toLowerCase();
-  if (s === "admin" || s === "administrator" || s === "chairperson") return ROLE_KEY.ADMIN;
+  if (s === "admin" || s === "administrator") return ROLE_KEY.ADMIN;
+  if (s === "chairperson" || s === "chair" || s === "chairlady" || s === "chairman") return ROLE_KEY.CHAIRPERSON;
   if (s === "treasurer" || s === "finance") return ROLE_KEY.TREASURER;
   if (s === "secretary") return ROLE_KEY.SECRETARY;
   if (s === "member" || s === "members") return ROLE_KEY.MEMBER;
@@ -225,15 +226,34 @@ function lookupRoleRowForEmail_(email) {
 }
 
 function getPermissionsForRoleKey_(roleKey) {
+  if (typeof ROLE_PERMISSIONS !== "undefined" && ROLE_PERMISSIONS[roleKey]) {
+    return Object.assign({}, ROLE_PERMISSIONS[roleKey]);
+  }
   if (roleKey === ROLE_KEY.ADMIN) {
     return {
       membersWrite: true,
       contributionsWrite: true,
       loanPayment: true,
       loanRequest: true,
+      loanReview: true,
+      loanDisburse: true,
       accountsWrite: true,
       investmentsWrite: true,
       isAdmin: true,
+      isMemberOnly: false,
+    };
+  }
+  if (roleKey === ROLE_KEY.CHAIRPERSON) {
+    return {
+      membersWrite: false,
+      contributionsWrite: false,
+      loanPayment: false,
+      loanRequest: true,
+      loanReview: true,
+      loanDisburse: false,
+      accountsWrite: false,
+      investmentsWrite: false,
+      isAdmin: false,
       isMemberOnly: false,
     };
   }
@@ -243,6 +263,8 @@ function getPermissionsForRoleKey_(roleKey) {
       contributionsWrite: true,
       loanPayment: true,
       loanRequest: false,
+      loanReview: false,
+      loanDisburse: true,
       accountsWrite: true,
       investmentsWrite: true,
       isAdmin: false,
@@ -255,6 +277,8 @@ function getPermissionsForRoleKey_(roleKey) {
       contributionsWrite: false,
       loanPayment: false,
       loanRequest: true,
+      loanReview: false,
+      loanDisburse: false,
       accountsWrite: false,
       investmentsWrite: false,
       isAdmin: false,
@@ -267,6 +291,8 @@ function getPermissionsForRoleKey_(roleKey) {
       contributionsWrite: false,
       loanPayment: false,
       loanRequest: true,
+      loanReview: false,
+      loanDisburse: false,
       accountsWrite: false,
       investmentsWrite: false,
       isAdmin: false,
@@ -278,6 +304,8 @@ function getPermissionsForRoleKey_(roleKey) {
     contributionsWrite: false,
     loanPayment: false,
     loanRequest: false,
+    loanReview: false,
+    loanDisburse: false,
     accountsWrite: false,
     investmentsWrite: false,
     isAdmin: false,
@@ -294,6 +322,7 @@ function getSessionRoleContext_(email) {
   var perms = getPermissionsForRoleKey_(roleKey);
   var labels = {};
   labels[ROLE_KEY.ADMIN] = "Admin";
+  labels[ROLE_KEY.CHAIRPERSON] = "Chairperson";
   labels[ROLE_KEY.TREASURER] = "Treasurer";
   labels[ROLE_KEY.SECRETARY] = "Secretary";
   labels[ROLE_KEY.MEMBER] = "Member";
@@ -421,6 +450,7 @@ function getRolesData() {
 
       var roleLabel = "Member";
       if (roleKey === ROLE_KEY.ADMIN) roleLabel = "Admin";
+      else if (roleKey === ROLE_KEY.CHAIRPERSON) roleLabel = "Chairperson";
       else if (roleKey === ROLE_KEY.TREASURER) roleLabel = "Treasurer";
       else if (roleKey === ROLE_KEY.SECRETARY) roleLabel = "Secretary";
       else if (roleKey === ROLE_KEY.MEMBER) roleLabel = "Member";
@@ -468,11 +498,12 @@ function saveUserRole(data) {
   var rawRole = String(data.role || "Member").trim();
   var normKey = normalizeRoleKey_(rawRole);
   if (normKey === ROLE_KEY.NONE) {
-    throw new Error("Invalid role selection. Must be Admin, Treasurer, Secretary, or Member.");
+    throw new Error("Invalid role selection. Must be Admin, Chairperson, Treasurer, Secretary, or Member.");
   }
 
   var roleLabel = "Member";
   if (normKey === ROLE_KEY.ADMIN) roleLabel = "Admin";
+  else if (normKey === ROLE_KEY.CHAIRPERSON) roleLabel = "Chairperson";
   else if (normKey === ROLE_KEY.TREASURER) roleLabel = "Treasurer";
   else if (normKey === ROLE_KEY.SECRETARY) roleLabel = "Secretary";
   else if (normKey === ROLE_KEY.MEMBER) roleLabel = "Member";

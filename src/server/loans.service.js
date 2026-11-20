@@ -107,6 +107,14 @@ function getLoansData(page, limit) {
         feePaid: col["Fee Paid"] !== undefined ? (Number(row[col["Fee Paid"]]) || 0) : 0,
         balance: Number(row[col["Balance"]]) || 0,
         status: row[col["Status"]] || LOAN_STATUS.PENDING,
+        tenorMonths: (col["Loan Tenor"] !== undefined && row[col["Loan Tenor"]]) ? (Number(row[col["Loan Tenor"]]) || 12) : ((col["Tenor"] !== undefined && row[col["Tenor"]]) ? (Number(row[col["Tenor"]]) || 12) : 12),
+        purpose: (col["Loan Purpose"] !== undefined && row[col["Loan Purpose"]]) ? String(row[col["Loan Purpose"]]).trim() : ((col["Purpose"] !== undefined && row[col["Purpose"]]) ? String(row[col["Purpose"]]).trim() : "Business"),
+        reviewedBy: col["Reviewed By"] !== undefined ? String(row[col["Reviewed By"]] || "") : "",
+        reviewedDate: col["Reviewed Date"] !== undefined ? formatDateValue_(row[col["Reviewed Date"]], tz) : "",
+        approvedBy: col["Approved By"] !== undefined ? String(row[col["Approved By"]] || "") : "",
+        reviewNotes: col["Review Notes"] !== undefined ? String(row[col["Review Notes"]] || "") : "",
+        disbursementChannel: col["Disbursement Channel"] !== undefined ? String(row[col["Disbursement Channel"]] || "") : "",
+        disbursementReference: col["Disbursement Reference"] !== undefined ? String(row[col["Disbursement Reference"]] || "") : "",
         isGuarantorOnly: isMemberOnly && !isMyLoan,
       };
     });
@@ -1401,5 +1409,902 @@ function checkGuarantorCapacity(guarantorId, amount) {
     }
   } catch (err) {
     return { ok: false, sufficient: false, error: err.message };
+  }
+}
+
+/**
+ * Fetches the list of guarantors and their unencumbered capacity for a specific loan.
+ */
+function getLoanGuarantors(loanId) {
+  try {
+    requireAccess_();
+    const lid = String(loanId || "").trim();
+    if (!lid) {
+      return { ok: true, success: true, loanId: "", guarantors: [] };
+    }
+    const ss = getSpreadsheet_();
+    const gSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+    if (!gSheet || gSheet.getLastRow() <= 1) {
+      return { ok: true, success: true, loanId: lid, guarantors: [] };
+    }
+
+    const gVals = gSheet.getDataRange().getValues();
+    const gCol = getHeaderMap_(gVals[0]);
+    const gLidCol = gCol["Loan ID"];
+    const gMidCol = gCol["Member ID"];
+    const gNameCol = gCol["Guarantor Name"];
+    const gAmtCol = gCol["Guaranteed Amount"];
+    const gStatusCol = gCol["Status"] !== undefined ? gCol["Status"] : (gCol["Loan Status"] !== undefined ? gCol["Loan Status"] : gCol["Guarantor Status"]);
+
+    if (gLidCol === undefined || gMidCol === undefined) {
+      return { ok: true, success: true, loanId: lid, guarantors: [] };
+    }
+
+    // Unencumbered capacity map
+    const unencMap = {};
+    try {
+      const list = computeMemberUnencumberedMap_(ss);
+      list.forEach(function (m) {
+        unencMap[String(m.id || "").trim().toLowerCase()] = m.unencumbered || 0;
+      });
+    } catch (eU) {
+      console.warn("computeMemberUnencumberedMap_ in getLoanGuarantors: " + eU.message);
+    }
+
+    const guarantors = [];
+    const lidLower = lid.toLowerCase();
+    for (let r = 1; r < gVals.length; r++) {
+      const rowLid = String(gVals[r][gLidCol] || "").trim().toLowerCase();
+      if (rowLid === lidLower) {
+        const mid = String(gVals[r][gMidCol] || "").trim();
+        const name = gNameCol !== undefined ? String(gVals[r][gNameCol] || "").trim() : "";
+        const amt = gAmtCol !== undefined ? (Number(gVals[r][gAmtCol]) || 0) : 0;
+        const st = gStatusCol !== undefined ? String(gVals[r][gStatusCol] || "").trim() : "Pending";
+        const unenc = unencMap[mid.toLowerCase()] !== undefined ? unencMap[mid.toLowerCase()] : 0;
+
+        guarantors.push({
+          memberId: mid,
+          fullName: name || mid,
+          amount: amt,
+          status: st,
+          unencumbered: unenc,
+        });
+      }
+    }
+
+    return { ok: true, success: true, loanId: lid, guarantors: guarantors };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message, guarantors: [] };
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow
+ * ------------------------------------------------------------------ */
+
+/**
+ * Ensures SHEETS.LOANS has the necessary columns for dual-officer governance.
+ * Row 2 spill formulas are never touched or overwritten.
+ */
+function ensureLoansReviewHeaders_(sheet) {
+  const targetHeaders = [
+    "Reviewed By",
+    "Reviewed Date",
+    "Approved By",
+    "Approved Date",
+    "Review Notes",
+    "Disbursement Channel",
+    "Disbursement Reference",
+  ];
+  const lastCol = sheet.getLastColumn();
+  const existingHeaders = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+  const map = getHeaderMap_(existingHeaders);
+  let nextCol = lastCol + 1;
+  let added = false;
+
+  targetHeaders.forEach(function (h) {
+    if (map[h] === undefined) {
+      if (nextCol > sheet.getMaxColumns()) {
+        sheet.insertColumnAfter(sheet.getMaxColumns());
+      }
+      sheet.getRange(1, nextCol).setValue(h);
+      map[h] = nextCol - 1;
+      nextCol++;
+      added = true;
+    }
+  });
+
+  if (added) {
+    const width = sheet.getLastColumn();
+    sheet.getRange(1, 1, 1, width).setFontWeight("bold");
+    if (typeof invalidateSheetContextCache_ === "function") {
+      invalidateSheetContextCache_(SHEETS.LOANS);
+    }
+  }
+
+  return map;
+}
+
+/**
+ * 1. reviewLoanApplication(payload)
+ * First signature: Chairperson or Admin reviews loan application.
+ * Anti-self-approval: Blocks if caller is the borrower.
+ * Validates status is "Pending Review" (or legacy "Pending").
+ * Transitions status to "Reviewed".
+ */
+function reviewLoanApplication(payload) {
+  const p = payload || {};
+  const loanId = String(p.loanId || p.id || "").trim();
+  const notes = String(p.notes || p.reviewNotes || "").trim();
+
+  if (!loanId) {
+    return { ok: false, success: false, error: "Loan ID is required." };
+  }
+
+  let session = null;
+  try {
+    session = requireRole_(["Chairperson", "Admin"]);
+  } catch (errRole) {
+    const ctx = requireAccess_();
+    if (ctx && ctx.permissions && ctx.permissions.loanReview) {
+      session = ctx;
+    } else {
+      return { ok: false, success: false, error: errRole.message };
+    }
+  }
+
+  const callerEmail = String(getCurrentUserEmail_() || "").trim().toLowerCase();
+  const callerMemberId = String(session.memberId || "").trim().toLowerCase();
+  const callerMemberName = String(session.memberName || "").trim().toLowerCase();
+  const reviewerIdentifier = String(session.roleSheetName || session.memberName || callerEmail || "Chairperson").trim();
+
+  let lock = null;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = getSpreadsheet_();
+    const sheet = getRequiredSheet_(SHEETS.LOANS);
+    const col = ensureLoansReviewHeaders_(sheet);
+    requireHeaders_(col, ["Loan ID", "Status"], SHEETS.LOANS);
+
+    const values = sheet.getDataRange().getValues();
+    let targetRowIndex = -1;
+    let targetRow = null;
+
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][col["Loan ID"]] || "").trim().toLowerCase() === loanId.toLowerCase()) {
+        targetRowIndex = r + 1;
+        targetRow = values[r];
+        break;
+      }
+    }
+
+    if (targetRowIndex === -1 || !targetRow) {
+      return { ok: false, success: false, error: "Loan " + loanId + " not found." };
+    }
+
+    // Extract borrower details
+    const midCol = col["Member ID"] !== undefined ? col["Member ID"] : col["Member id"];
+    const borrowerMemberId = midCol !== undefined ? String(targetRow[midCol] || "").trim() : "";
+    const borrowerName = col["Borrower Name"] !== undefined ? String(targetRow[col["Borrower Name"]] || "").trim() : "";
+    const requestedAmount = col["Requested Amount"] !== undefined ? (Number(targetRow[col["Requested Amount"]]) || 0) : 0;
+
+    let borrowerEmail = "";
+    try {
+      const bContact = typeof getMemberContactAndFinancials_ === "function"
+        ? getMemberContactAndFinancials_(borrowerMemberId || borrowerName)
+        : null;
+      if (bContact && bContact.email) {
+        borrowerEmail = String(bContact.email).trim().toLowerCase();
+      }
+    } catch (eB) {}
+
+    // Anti-self-approval enforcement
+    const isBorrower = (callerMemberId && borrowerMemberId && callerMemberId === borrowerMemberId.toLowerCase()) ||
+                       (callerEmail && borrowerEmail && callerEmail === borrowerEmail) ||
+                       (callerMemberName && borrowerName && callerMemberName === borrowerName.toLowerCase());
+
+    if (isBorrower) {
+      return {
+        ok: false,
+        success: false,
+        error: "Self-approval prohibited: You cannot review your own loan application.",
+      };
+    }
+
+    // Status validation
+    const currentStatus = String(targetRow[col["Status"]] || "").trim();
+    const currentStatusLower = currentStatus.toLowerCase();
+
+    if (currentStatusLower === "reviewed") {
+      return { ok: false, success: false, error: "Loan is already reviewed." };
+    }
+    if (currentStatusLower !== "pending review" && currentStatusLower !== "pending") {
+      return {
+        ok: false,
+        success: false,
+        error: "Loan is not pending review (current status: " + currentStatus + ").",
+      };
+    }
+
+    // State transition to Reviewed (Row 2 spill formulas preserved)
+    const now = new Date();
+    sheet.getRange(targetRowIndex, col["Status"] + 1).setValue("Reviewed");
+
+    if (col["Reviewed By"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Reviewed By"] + 1).setValue(reviewerIdentifier);
+    }
+    if (col["Reviewed Date"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Reviewed Date"] + 1).setValue(now);
+    }
+    if (col["Review Notes"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Review Notes"] + 1).setValue(notes);
+    }
+
+    SpreadsheetApp.flush();
+
+    // Audit log
+    appendAuditLog_(
+      "loan.reviewed",
+      "Loan",
+      loanId,
+      "Loan reviewed by " + reviewerIdentifier + (notes ? " (Notes: " + notes + ")" : ""),
+      JSON.stringify({
+        notes: notes,
+        reviewer: reviewerIdentifier,
+        reviewerEmail: callerEmail,
+        borrower: borrowerName,
+        borrowerMemberId: borrowerMemberId,
+        requestedAmount: requestedAmount,
+      })
+    );
+
+    // Notifications (non-blocking)
+    try {
+      notifyLoanReviewed_(loanId, borrowerName, borrowerMemberId, borrowerEmail, reviewerIdentifier, notes, requestedAmount);
+    } catch (eNotif) {
+      console.error("notifyLoanReviewed_ error: " + eNotif.message);
+    }
+
+    if (typeof invalidateSheetContextCache_ === "function") {
+      invalidateSheetContextCache_(SHEETS.LOANS);
+    }
+    if (typeof clearDashboardCache_ === "function") {
+      clearDashboardCache_();
+    }
+
+    return {
+      ok: true,
+      success: true,
+      loanId: loanId,
+      status: "Reviewed",
+      reviewedBy: reviewerIdentifier,
+      message: "Loan " + loanId + " successfully reviewed and queued for treasurer disbursement authorization.",
+    };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message };
+  } finally {
+    if (lock) {
+      try { lock.releaseLock(); } catch (eL) {}
+    }
+  }
+}
+
+/**
+ * 2. authorizeLoanDisbursement(payload)
+ * Second signature: Treasurer or Admin authorizes loan disbursement.
+ * Anti-collusion separation-of-duties: Strictly blocks if authorizer == reviewer.
+ * Anti-self-approval: Blocks if authorizer == borrower.
+ * Validates status is "Reviewed".
+ * Transitions status to "Approved" (or "Active").
+ * In SHEETS.GUARANTORS: marks matching guarantor commitments as "Active".
+ */
+function authorizeLoanDisbursement(payload) {
+  const p = payload || {};
+  const loanId = String(p.loanId || p.id || "").trim();
+  const notes = String(p.notes || "").trim();
+  const paymentChannel = normalizeDepositChannel_(p.paymentChannel || p.channel || DEPOSIT_CHANNELS.EQUITY_BANK);
+  const reference = String(p.reference || p.ref || "").trim();
+
+  if (!loanId) {
+    return { ok: false, success: false, error: "Loan ID is required." };
+  }
+
+  let session = null;
+  try {
+    session = requireRole_(["Treasurer", "Admin"]);
+  } catch (errRole) {
+    const ctx = requireAccess_();
+    if (ctx && ctx.permissions && ctx.permissions.loanDisburse) {
+      session = ctx;
+    } else {
+      return { ok: false, success: false, error: errRole.message };
+    }
+  }
+
+  const callerEmail = String(getCurrentUserEmail_() || "").trim().toLowerCase();
+  const callerMemberId = String(session.memberId || "").trim().toLowerCase();
+  const callerMemberName = String(session.memberName || "").trim().toLowerCase();
+  const authorizerIdentifier = String(session.roleSheetName || session.memberName || callerEmail || "Treasurer").trim();
+
+  let lock = null;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = getSpreadsheet_();
+    const sheet = getRequiredSheet_(SHEETS.LOANS);
+    const col = ensureLoansReviewHeaders_(sheet);
+    requireHeaders_(col, ["Loan ID", "Status"], SHEETS.LOANS);
+
+    const values = sheet.getDataRange().getValues();
+    let targetRowIndex = -1;
+    let targetRow = null;
+
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][col["Loan ID"]] || "").trim().toLowerCase() === loanId.toLowerCase()) {
+        targetRowIndex = r + 1;
+        targetRow = values[r];
+        break;
+      }
+    }
+
+    if (targetRowIndex === -1 || !targetRow) {
+      return { ok: false, success: false, error: "Loan " + loanId + " not found." };
+    }
+
+    // 1. Borrower check (Anti-self-approval)
+    const midCol = col["Member ID"] !== undefined ? col["Member ID"] : col["Member id"];
+    const borrowerMemberId = midCol !== undefined ? String(targetRow[midCol] || "").trim() : "";
+    const borrowerName = col["Borrower Name"] !== undefined ? String(targetRow[col["Borrower Name"]] || "").trim() : "";
+    const requestedAmount = col["Requested Amount"] !== undefined ? (Number(targetRow[col["Requested Amount"]]) || 0) : 0;
+
+    let borrowerEmail = "";
+    try {
+      const bContact = typeof getMemberContactAndFinancials_ === "function"
+        ? getMemberContactAndFinancials_(borrowerMemberId || borrowerName)
+        : null;
+      if (bContact && bContact.email) {
+        borrowerEmail = String(bContact.email).trim().toLowerCase();
+      }
+    } catch (eB) {}
+
+    const isBorrower = (callerMemberId && borrowerMemberId && callerMemberId === borrowerMemberId.toLowerCase()) ||
+                       (callerEmail && borrowerEmail && callerEmail === borrowerEmail) ||
+                       (callerMemberName && borrowerName && callerMemberName === borrowerName.toLowerCase());
+
+    if (isBorrower) {
+      return {
+        ok: false,
+        success: false,
+        error: "Self-approval prohibited: You cannot authorize disbursement of your own loan.",
+      };
+    }
+
+    // 2. Reviewer check (Strict Anti-Collusion Separation-of-Duties)
+    const reviewedByVal = col["Reviewed By"] !== undefined ? String(targetRow[col["Reviewed By"]] || "").trim().toLowerCase() : "";
+    if (reviewedByVal) {
+      const isSameAsReviewer = (callerEmail && reviewedByVal === callerEmail) ||
+                               (callerMemberName && reviewedByVal === callerMemberName) ||
+                               (callerMemberId && reviewedByVal === callerMemberId) ||
+                               (session.roleSheetName && reviewedByVal === String(session.roleSheetName).trim().toLowerCase());
+      if (isSameAsReviewer) {
+        return {
+          ok: false,
+          success: false,
+          error: "Anti-collusion separation-of-duties violation: The reviewer and disbursement authorizer cannot be the same individual.",
+        };
+      }
+    }
+
+    // 3. Status validation: Must be "Reviewed"
+    const currentStatus = String(targetRow[col["Status"]] || "").trim();
+    if (currentStatus.toLowerCase() !== "reviewed") {
+      return {
+        ok: false,
+        success: false,
+        error: "Loan must be reviewed before disbursement authorization (current status: " + currentStatus + ").",
+      };
+    }
+
+    // 4. State transition to Approved
+    const now = new Date();
+    sheet.getRange(targetRowIndex, col["Status"] + 1).setValue("Approved");
+
+    if (col["Approved By"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Approved By"] + 1).setValue(authorizerIdentifier);
+    }
+    if (col["Approved Date"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Approved Date"] + 1).setValue(now);
+    }
+    if (col["Disbursement Channel"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Disbursement Channel"] + 1).setValue(paymentChannel);
+    }
+    if (col["Disbursement Reference"] !== undefined) {
+      sheet.getRange(targetRowIndex, col["Disbursement Reference"] + 1).setValue(reference);
+    }
+
+    // 5. In SHEETS.GUARANTORS: marks matching guarantor commitments as "Active"
+    let updatedGuarantorCount = 0;
+    try {
+      const gSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+      if (gSheet && gSheet.getLastRow() > 1) {
+        const gVals = gSheet.getDataRange().getValues();
+        const gCol = getHeaderMap_(gVals[0]);
+        const gLidCol = gCol["Loan ID"];
+        let gStatusCol = gCol["Status"] !== undefined ? gCol["Status"] : (gCol["Loan Status"] !== undefined ? gCol["Loan Status"] : gCol["Guarantor Status"]);
+
+        if (gStatusCol === undefined) {
+          const nextGCol = gSheet.getLastColumn() + 1;
+          gSheet.getRange(1, nextGCol).setValue("Status").setFontWeight("bold");
+          gStatusCol = nextGCol - 1;
+        }
+
+        if (gLidCol !== undefined && gStatusCol !== undefined) {
+          for (let gr = 1; gr < gVals.length; gr++) {
+            if (String(gVals[gr][gLidCol] || "").trim().toLowerCase() === loanId.toLowerCase()) {
+              gSheet.getRange(gr + 1, gStatusCol + 1).setValue("Active");
+              updatedGuarantorCount++;
+            }
+          }
+        }
+      }
+    } catch (eG) {
+      console.error("Guarantors update error: " + eG.message);
+    }
+
+    SpreadsheetApp.flush();
+
+    // Audit log
+    appendAuditLog_(
+      "loan.approved",
+      "Loan",
+      loanId,
+      "Loan disbursement authorized by " + authorizerIdentifier + " via " + paymentChannel + (reference ? " (Ref: " + reference + ")" : ""),
+      JSON.stringify({
+        notes: notes,
+        paymentChannel: paymentChannel,
+        reference: reference,
+        authorizer: authorizerIdentifier,
+        authorizerEmail: callerEmail,
+        borrower: borrowerName,
+        guarantorsActivated: updatedGuarantorCount,
+      })
+    );
+
+    // Notifications (WhatsApp & Email receipts to borrower and copy-notifies guarantors)
+    try {
+      notifyLoanDisbursed_(loanId, borrowerName, borrowerMemberId, borrowerEmail, requestedAmount, paymentChannel, reference, authorizerIdentifier);
+    } catch (eNotif) {
+      console.error("notifyLoanDisbursed_ error: " + eNotif.message);
+    }
+
+    if (typeof invalidateSheetContextCache_ === "function") {
+      invalidateSheetContextCache_(SHEETS.LOANS);
+      invalidateSheetContextCache_(SHEETS.GUARANTORS);
+    }
+    if (typeof clearDashboardCache_ === "function") {
+      clearDashboardCache_();
+    }
+
+    return {
+      ok: true,
+      success: true,
+      loanId: loanId,
+      status: "Approved",
+      approvedBy: authorizerIdentifier,
+      paymentChannel: paymentChannel,
+      reference: reference,
+      guarantorsActivated: updatedGuarantorCount,
+      message: "Loan " + loanId + " disbursement successfully authorized via " + paymentChannel + ".",
+    };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message };
+  } finally {
+    if (lock) {
+      try { lock.releaseLock(); } catch (eL) {}
+    }
+  }
+}
+
+/**
+ * 3. rejectLoanApplication(payload)
+ * Chairperson, Treasurer, or Admin rejects the loan application.
+ * Validates status is "Pending Review" (or "Pending") or "Reviewed".
+ * Transitions status to "Rejected".
+ * In SHEETS.GUARANTORS: marks guarantor commitments as "Released".
+ */
+function rejectLoanApplication(payload) {
+  const p = payload || {};
+  const loanId = String(p.loanId || p.id || "").trim();
+  const reason = String(p.reason || p.notes || "").trim();
+
+  if (!loanId) {
+    return { ok: false, success: false, error: "Loan ID is required." };
+  }
+  if (!reason) {
+    return { ok: false, success: false, error: "Rejection reason is required." };
+  }
+
+  let session = null;
+  try {
+    session = requireRole_(["Chairperson", "Treasurer", "Admin"]);
+  } catch (errRole) {
+    const ctx = requireAccess_();
+    if (ctx && ctx.permissions && (ctx.permissions.loanReview || ctx.permissions.loanDisburse || ctx.permissions.isAdmin)) {
+      session = ctx;
+    } else {
+      return { ok: false, success: false, error: errRole.message };
+    }
+  }
+
+  const callerEmail = String(getCurrentUserEmail_() || "").trim().toLowerCase();
+  const rejecterIdentifier = String(session.roleSheetName || session.memberName || callerEmail || session.roleLabel || "Officer").trim();
+
+  let lock = null;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(15000);
+
+    const ss = getSpreadsheet_();
+    const sheet = getRequiredSheet_(SHEETS.LOANS);
+    const col = ensureLoansReviewHeaders_(sheet);
+    requireHeaders_(col, ["Loan ID", "Status"], SHEETS.LOANS);
+
+    const values = sheet.getDataRange().getValues();
+    let targetRowIndex = -1;
+    let targetRow = null;
+
+    for (let r = 1; r < values.length; r++) {
+      if (String(values[r][col["Loan ID"]] || "").trim().toLowerCase() === loanId.toLowerCase()) {
+        targetRowIndex = r + 1;
+        targetRow = values[r];
+        break;
+      }
+    }
+
+    if (targetRowIndex === -1 || !targetRow) {
+      return { ok: false, success: false, error: "Loan " + loanId + " not found." };
+    }
+
+    // Status validation
+    const currentStatus = String(targetRow[col["Status"]] || "").trim();
+    const currentStatusLower = currentStatus.toLowerCase();
+
+    if (currentStatusLower === "rejected") {
+      return { ok: false, success: false, error: "Loan is already rejected." };
+    }
+    if (currentStatusLower === "settled" || currentStatusLower === "approved" || currentStatusLower === "active") {
+      return {
+        ok: false,
+        success: false,
+        error: "Cannot reject loan with status '" + currentStatus + "'.",
+      };
+    }
+    if (currentStatusLower !== "pending review" && currentStatusLower !== "pending" && currentStatusLower !== "reviewed") {
+      return {
+        ok: false,
+        success: false,
+        error: "Loan is not in a reviewable state (current status: " + currentStatus + ").",
+      };
+    }
+
+    // State transition to Rejected
+    sheet.getRange(targetRowIndex, col["Status"] + 1).setValue("Rejected");
+
+    if (col["Review Notes"] !== undefined) {
+      const existingNotes = String(targetRow[col["Review Notes"]] || "").trim();
+      const updatedNotes = existingNotes ? (existingNotes + " | Rejected: " + reason) : ("Rejected: " + reason);
+      sheet.getRange(targetRowIndex, col["Review Notes"] + 1).setValue(updatedNotes);
+    }
+
+    // In SHEETS.GUARANTORS: marks guarantor commitments as "Released"
+    let releasedGuarantorCount = 0;
+    try {
+      const gSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+      if (gSheet && gSheet.getLastRow() > 1) {
+        const gVals = gSheet.getDataRange().getValues();
+        const gCol = getHeaderMap_(gVals[0]);
+        const gLidCol = gCol["Loan ID"];
+        let gStatusCol = gCol["Status"] !== undefined ? gCol["Status"] : (gCol["Loan Status"] !== undefined ? gCol["Loan Status"] : gCol["Guarantor Status"]);
+
+        if (gStatusCol === undefined) {
+          const nextGCol = gSheet.getLastColumn() + 1;
+          gSheet.getRange(1, nextGCol).setValue("Status").setFontWeight("bold");
+          gStatusCol = nextGCol - 1;
+        }
+
+        if (gLidCol !== undefined && gStatusCol !== undefined) {
+          for (let gr = 1; gr < gVals.length; gr++) {
+            if (String(gVals[gr][gLidCol] || "").trim().toLowerCase() === loanId.toLowerCase()) {
+              gSheet.getRange(gr + 1, gStatusCol + 1).setValue("Released");
+              releasedGuarantorCount++;
+            }
+          }
+        }
+      }
+    } catch (eG) {
+      console.error("Guarantors release error: " + eG.message);
+    }
+
+    SpreadsheetApp.flush();
+
+    const midCol = col["Member ID"] !== undefined ? col["Member ID"] : col["Member id"];
+    const borrowerMemberId = midCol !== undefined ? String(targetRow[midCol] || "").trim() : "";
+    const borrowerName = col["Borrower Name"] !== undefined ? String(targetRow[col["Borrower Name"]] || "").trim() : "";
+
+    let borrowerEmail = "";
+    try {
+      const bContact = typeof getMemberContactAndFinancials_ === "function"
+        ? getMemberContactAndFinancials_(borrowerMemberId || borrowerName)
+        : null;
+      if (bContact && bContact.email) {
+        borrowerEmail = String(bContact.email).trim().toLowerCase();
+      }
+    } catch (eB) {}
+
+    // Audit log
+    appendAuditLog_(
+      "loan.rejected",
+      "Loan",
+      loanId,
+      "Loan application rejected by " + rejecterIdentifier + ": " + reason,
+      JSON.stringify({
+        reason: reason,
+        rejecter: rejecterIdentifier,
+        rejecterEmail: callerEmail,
+        borrower: borrowerName,
+        borrowerMemberId: borrowerMemberId,
+        guarantorsReleased: releasedGuarantorCount,
+      })
+    );
+
+    // Notification to borrower
+    try {
+      notifyLoanRejected_(loanId, borrowerName, borrowerMemberId, borrowerEmail, reason, rejecterIdentifier);
+    } catch (eNotif) {
+      console.error("notifyLoanRejected_ error: " + eNotif.message);
+    }
+
+    if (typeof invalidateSheetContextCache_ === "function") {
+      invalidateSheetContextCache_(SHEETS.LOANS);
+      invalidateSheetContextCache_(SHEETS.GUARANTORS);
+    }
+    if (typeof clearDashboardCache_ === "function") {
+      clearDashboardCache_();
+    }
+
+    return {
+      ok: true,
+      success: true,
+      loanId: loanId,
+      status: "Rejected",
+      reason: reason,
+      guarantorsReleased: releasedGuarantorCount,
+      message: "Loan " + loanId + " application has been rejected and guarantor liabilities released.",
+    };
+  } catch (err) {
+    return { ok: false, success: false, error: err.message };
+  } finally {
+    if (lock) {
+      try { lock.releaseLock(); } catch (eL) {}
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Notification Helpers for Multi-Signature Loan Workflow
+ * ------------------------------------------------------------------ */
+
+/**
+ * Dispatches notification when a loan application has been reviewed.
+ * Notifies the borrower and the Treasurer.
+ */
+function notifyLoanReviewed_(loanId, borrowerName, borrowerMemberId, borrowerEmail, reviewerIdentifier, notes, requestedAmount) {
+  try {
+    if (typeof MailApp === "undefined") return;
+
+    const ss = getSpreadsheet_();
+    const formattedAmt = "KES " + (Number(requestedAmount) || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
+
+    // 1. Notify Borrower
+    if (borrowerEmail && borrowerEmail.indexOf("@") !== -1) {
+      try {
+        MailApp.sendEmail({
+          to: borrowerEmail,
+          subject: "Brightlife SHG - Loan Application #" + loanId + " Reviewed",
+          name: "Brightlife SHG Governance",
+          htmlBody:
+            '<div style="font-family: Arial, sans-serif; max-width: 600px; color: #1e293b; padding: 20px;">' +
+            '<h2 style="color: #0f172a; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">Loan Application Reviewed</h2>' +
+            "<p>Dear " + (borrowerName || "Member") + ",</p>" +
+            "<p>Your loan application <strong>#" + loanId + "</strong> for <strong>" + formattedAmt + "</strong> has been reviewed by <strong>" + reviewerIdentifier + "</strong> and queued for Treasurer disbursement authorization.</p>" +
+            (notes ? '<p style="background: #f1f5f9; padding: 10px; border-radius: 6px;"><em>Review Notes:</em> ' + notes + "</p>" : "") +
+            '<p style="color: #64748b; font-size: 12px; margin-top: 24px;">Brightlife Self Help Group • Governance & Credit Committee</p>' +
+            "</div>",
+        });
+      } catch (eMailB) {
+        console.error("notifyLoanReviewed_ borrower email error: " + eMailB.message);
+      }
+    }
+
+    // 2. Notify Treasurer(s)
+    try {
+      const rSheet = ss.getSheetByName(SHEETS.ROLES);
+      if (rSheet && rSheet.getLastRow() > 1) {
+        const rVals = rSheet.getDataRange().getValues();
+        const rCol = getHeaderMap_(rVals[0]);
+        const emailIdx = rCol["Email"];
+        const roleIdx = rCol["Role"];
+        const activeIdx = rCol["Active"];
+
+        if (emailIdx !== undefined && roleIdx !== undefined) {
+          const treasurerEmails = [];
+          for (let i = 1; i < rVals.length; i++) {
+            const role = String(rVals[i][roleIdx] || "").trim().toLowerCase();
+            const isActive = activeIdx === undefined || isActiveRoleFlag_(rVals[i][activeIdx]);
+            if (isActive && (role === "treasurer" || role === "finance" || role === "admin")) {
+              const tEmail = String(rVals[i][emailIdx] || "").trim();
+              if (tEmail && tEmail.indexOf("@") !== -1 && treasurerEmails.indexOf(tEmail) === -1) {
+                treasurerEmails.push(tEmail);
+              }
+            }
+          }
+
+          if (treasurerEmails.length > 0) {
+            MailApp.sendEmail({
+              to: treasurerEmails.join(","),
+              subject: "Brightlife SHG - Action Required: Loan #" + loanId + " Ready for Disbursement",
+              name: "Brightlife SHG Governance",
+              htmlBody:
+                '<div style="font-family: Arial, sans-serif; max-width: 600px; color: #1e293b; padding: 20px;">' +
+                '<h2 style="color: #0f172a; border-bottom: 2px solid #059669; padding-bottom: 8px;">Action Required: Loan Disbursement Authorization</h2>' +
+                "<p>A loan application has been reviewed and requires Treasurer authorization for disbursement:</p>" +
+                "<ul>" +
+                "<li><strong>Loan ID:</strong> " + loanId + "</li>" +
+                "<li><strong>Borrower:</strong> " + (borrowerName || borrowerMemberId) + "</li>" +
+                "<li><strong>Amount:</strong> " + formattedAmt + "</li>" +
+                "<li><strong>Reviewed By:</strong> " + reviewerIdentifier + "</li>" +
+                (notes ? "<li><strong>Review Notes:</strong> " + notes + "</li>" : "") +
+                "</ul>" +
+                "<p>Please log in to the Brightlife Dashboard to authorize disbursement.</p>" +
+                '<p style="color: #64748b; font-size: 12px; margin-top: 24px;">Brightlife Self Help Group • Governance & Credit Committee</p>' +
+                "</div>",
+            });
+          }
+        }
+      }
+    } catch (eMailT) {
+      console.error("notifyLoanReviewed_ treasurer email error: " + eMailT.message);
+    }
+  } catch (err) {
+    console.error("notifyLoanReviewed_ error: " + err.message);
+  }
+}
+
+/**
+ * Dispatches notification when a loan is disbursed.
+ * Sends email receipt to borrower and copy-notifies guarantors.
+ */
+function notifyLoanDisbursed_(loanId, borrowerName, borrowerMemberId, borrowerEmail, requestedAmount, paymentChannel, reference, authorizerIdentifier) {
+  try {
+    if (typeof MailApp === "undefined") return;
+
+    const ss = getSpreadsheet_();
+    const formattedAmt = "KES " + (Number(requestedAmount) || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
+    const nowStr = Utilities.formatDate(new Date(), ss.getSpreadsheetTimeZone() || "GMT+3", "yyyy-MM-dd HH:mm");
+
+    // 1. Notify Borrower
+    if (borrowerEmail && borrowerEmail.indexOf("@") !== -1) {
+      try {
+        MailApp.sendEmail({
+          to: borrowerEmail,
+          subject: "Brightlife SHG - Loan Disbursement Confirmed #" + loanId,
+          name: "Brightlife SHG Treasury",
+          htmlBody:
+            '<div style="font-family: Arial, sans-serif; max-width: 600px; color: #1e293b; padding: 20px;">' +
+            '<h2 style="color: #0f172a; border-bottom: 2px solid #059669; padding-bottom: 8px;">Loan Disbursement Confirmed</h2>' +
+            "<p>Dear " + (borrowerName || "Member") + ",</p>" +
+            "<p>Your loan disbursement has been authorized and executed:</p>" +
+            "<ul>" +
+            "<li><strong>Loan ID:</strong> " + loanId + "</li>" +
+            "<li><strong>Disbursed Amount:</strong> " + formattedAmt + "</li>" +
+            "<li><strong>Payment Channel:</strong> " + paymentChannel + "</li>" +
+            (reference ? "<li><strong>Reference:</strong> " + reference + "</li>" : "") +
+            "<li><strong>Authorized By:</strong> " + authorizerIdentifier + "</li>" +
+            "<li><strong>Date:</strong> " + nowStr + "</li>" +
+            "</ul>" +
+            "<p>Thank you for partnering with Brightlife SHG.</p>" +
+            '<p style="color: #64748b; font-size: 12px; margin-top: 24px;">Brightlife Self Help Group • Treasury</p>' +
+            "</div>",
+        });
+      } catch (eMailB) {
+        console.error("notifyLoanDisbursed_ borrower email error: " + eMailB.message);
+      }
+    }
+
+    // 2. Copy-notify Guarantors
+    try {
+      const gSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+      if (gSheet && gSheet.getLastRow() > 1) {
+        const gVals = gSheet.getDataRange().getValues();
+        const gCol = getHeaderMap_(gVals[0]);
+        const gLidCol = gCol["Loan ID"];
+        const gMidCol = gCol["Member ID"];
+        const gNameCol = gCol["Guarantor Name"];
+        const gAmtCol = gCol["Guaranteed Amount"];
+
+        if (gLidCol !== undefined && gMidCol !== undefined) {
+          for (let gr = 1; gr < gVals.length; gr++) {
+            if (String(gVals[gr][gLidCol] || "").trim().toLowerCase() === loanId.toLowerCase()) {
+              const gMid = String(gVals[gr][gMidCol] || "").trim();
+              const gName = gNameCol !== undefined ? String(gVals[gr][gNameCol] || "").trim() : "";
+              const gPledged = gAmtCol !== undefined ? (Number(gVals[gr][gAmtCol]) || 0) : 0;
+              const formattedPledged = "KES " + gPledged.toLocaleString("en-US", { minimumFractionDigits: 2 });
+
+              let gEmail = "";
+              try {
+                const gContact = typeof getMemberContactAndFinancials_ === "function"
+                  ? getMemberContactAndFinancials_(gMid || gName)
+                  : null;
+                if (gContact && gContact.email) {
+                  gEmail = String(gContact.email).trim().toLowerCase();
+                }
+              } catch (eGC) {}
+
+              if (gEmail && gEmail.indexOf("@") !== -1) {
+                MailApp.sendEmail({
+                  to: gEmail,
+                  subject: "Brightlife SHG - Loan Guarantee Activated #" + loanId,
+                  name: "Brightlife SHG Treasury",
+                  htmlBody:
+                    '<div style="font-family: Arial, sans-serif; max-width: 600px; color: #1e293b; padding: 20px;">' +
+                    '<h2 style="color: #0f172a; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">Loan Guarantee Activated</h2>' +
+                    "<p>Dear " + (gName || "Guarantor") + ",</p>" +
+                    "<p>This is to confirm that the loan for <strong>" + (borrowerName || "Member") + "</strong> (Loan ID: <strong>#" + loanId + "</strong>) has been disbursed.</p>" +
+                    "<p>Your guarantee commitment of <strong>" + formattedPledged + "</strong> is now <strong>Active</strong>.</p>" +
+                    '<p style="color: #64748b; font-size: 12px; margin-top: 24px;">Brightlife Self Help Group • Treasury</p>' +
+                    "</div>",
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (eMailG) {
+      console.error("notifyLoanDisbursed_ guarantors email error: " + eMailG.message);
+    }
+  } catch (err) {
+    console.error("notifyLoanDisbursed_ error: " + err.message);
+  }
+}
+
+/**
+ * Dispatches notification when a loan application is rejected.
+ */
+function notifyLoanRejected_(loanId, borrowerName, borrowerMemberId, borrowerEmail, reason, rejecterIdentifier) {
+  try {
+    if (typeof MailApp === "undefined") return;
+
+    if (borrowerEmail && borrowerEmail.indexOf("@") !== -1) {
+      MailApp.sendEmail({
+        to: borrowerEmail,
+        subject: "Brightlife SHG - Loan Application #" + loanId + " Status Update",
+        name: "Brightlife SHG Credit Committee",
+        htmlBody:
+          '<div style="font-family: Arial, sans-serif; max-width: 600px; color: #1e293b; padding: 20px;">' +
+          '<h2 style="color: #0f172a; border-bottom: 2px solid #dc2626; padding-bottom: 8px;">Loan Application Update</h2>' +
+          "<p>Dear " + (borrowerName || "Member") + ",</p>" +
+          "<p>We regret to inform you that your loan application <strong>#" + loanId + "</strong> has been <strong>Rejected</strong>.</p>" +
+          '<p style="background: #fef2f2; border-left: 4px solid #dc2626; padding: 10px; margin: 15px 0;"><strong>Reason:</strong> ' + reason + "</p>" +
+          "<p>Any savings pledged by your guarantors for this application have been released.</p>" +
+          "<p>If you have any questions or require clarification, please reach out to the group leadership.</p>" +
+          '<p style="color: #64748b; font-size: 12px; margin-top: 24px;">Brightlife Self Help Group • Credit Committee</p>' +
+          "</div>",
+      });
+    }
+  } catch (err) {
+    console.error("notifyLoanRejected_ error: " + err.message);
   }
 }

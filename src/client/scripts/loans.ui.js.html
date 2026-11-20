@@ -291,7 +291,8 @@
     const s = String(status || "").toLowerCase().trim();
     if (s === "active") return "badge-success";
     if (s === "approved") return "badge-info";
-    if (s === "pending") return "badge-warning";
+    if (s === "pending" || s === "pending review") return "badge-warning";
+    if (s === "reviewed") return "badge-info";
     if (s === "settled" || s === "cleared") return "badge-secondary";
     if (s === "rejected") return "badge-danger";
     return "badge-secondary";
@@ -302,13 +303,20 @@
     if (!body) return;
     if (!loans || !loans.length) {
       body.innerHTML =
-        '<tr><td colspan="10" class="px-4 py-8 text-center text-xs text-slate-400">' +
+        '<tr><td colspan="11" class="px-4 py-8 text-center text-xs text-slate-400">' +
         (loadedLoans.length > 0
           ? "No loans match your search or status filter."
           : "No loan records found.") +
         "</td></tr>";
       return;
     }
+
+    const perms = window.APP_PERMS || {};
+    const isMemberOnly = perms.isMemberOnly !== false;
+    const canReview = Boolean(!isMemberOnly && (perms.loanReview || perms.isAdmin));
+    const canDisburse = Boolean(!isMemberOnly && (perms.loanDisburse || perms.isAdmin));
+    const curEmail = String((window.currentUser && window.currentUser.email) || "").toLowerCase().trim();
+
     body.innerHTML = loans
       .map(function (loan) {
         const requested = Number(loan.requested) || 0;
@@ -340,6 +348,59 @@
         const loanStatusHtml = typeof renderStatusPill === "function"
           ? renderStatusPill(loan.status)
           : '<span class="' + getStatusStyle(loan.status) + '">' + loan.status + '</span>';
+
+        const isPendingReview = loanStatusLower === "pending review" || loanStatusLower === "pending";
+        const isReviewed = loanStatusLower === "reviewed";
+        const reviewerEmail = String(loan.reviewedBy || "").toLowerCase().trim();
+        const isReviewedByMe = Boolean(curEmail && reviewerEmail && (reviewerEmail === curEmail || reviewerEmail.indexOf(curEmail) !== -1));
+
+        let actionsHtml = "";
+        if (isPendingReview) {
+          if (canReview) {
+            actionsHtml =
+              '<div class="flex items-center justify-center gap-1.5">' +
+              '<button type="button" onclick="openGovReviewModal(\'' + escapeHtmlAttr(loan.id) + '\', \'review\')" ' +
+              'class="min-h-[32px] px-2.5 py-1 text-xs rounded-lg font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-xs transition-colors inline-flex items-center gap-1" ' +
+              'title="Review & Endorse Application">' +
+              '<i class="fas fa-clipboard-check text-[10px]"></i> <span>Review</span>' +
+              '</button>' +
+              '<button type="button" onclick="openGovReviewModal(\'' + escapeHtmlAttr(loan.id) + '\', \'reject\')" ' +
+              'class="min-h-[32px] px-2 py-1 text-xs rounded-lg font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors inline-flex items-center gap-1" ' +
+              'title="Reject Application">' +
+              '<i class="fas fa-xmark text-[10px]"></i> <span>Reject</span>' +
+              '</button>' +
+              '</div>';
+          } else {
+            actionsHtml = '<span class="text-slate-400 dark:text-slate-500 text-xs">—</span>';
+          }
+        } else if (isReviewed) {
+          if (isReviewedByMe) {
+            actionsHtml =
+              '<div class="flex items-center justify-center">' +
+              '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60" title="You reviewed this application. Dual-officer policy requires Treasurer authorization.">' +
+              '<i class="fas fa-user-clock text-[10px]"></i> <span>Awaiting Treasurer Sign-off</span>' +
+              '</span>' +
+              '</div>';
+          } else if (canDisburse) {
+            actionsHtml =
+              '<div class="flex items-center justify-center gap-1.5">' +
+              '<button type="button" onclick="openGovReviewModal(\'' + escapeHtmlAttr(loan.id) + '\', \'authorize\')" ' +
+              'class="min-h-[32px] px-2.5 py-1 text-xs rounded-lg font-medium bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white shadow-xs transition-colors inline-flex items-center gap-1" ' +
+              'title="Authorize Disbursement">' +
+              '<i class="fas fa-check-double text-[10px]"></i> <span>Authorize</span>' +
+              '</button>' +
+              '<button type="button" onclick="openGovReviewModal(\'' + escapeHtmlAttr(loan.id) + '\', \'reject\')" ' +
+              'class="min-h-[32px] px-2 py-1 text-xs rounded-lg font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors inline-flex items-center gap-1" ' +
+              'title="Reject Application">' +
+              '<i class="fas fa-xmark text-[10px]"></i> <span>Reject</span>' +
+              '</button>' +
+              '</div>';
+          } else {
+            actionsHtml = '<span class="text-slate-400 dark:text-slate-500 text-xs">—</span>';
+          }
+        } else {
+          actionsHtml = '<span class="text-slate-400 dark:text-slate-500 text-xs">—</span>';
+        }
 
         return (
           '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
@@ -373,6 +434,8 @@
           formatMoney(loan.balance) +
           '</td><td class="col-l-status px-4 py-3 text-center">' +
           loanStatusHtml +
+          '</td><td class="col-l-actions px-3 py-3 text-center whitespace-nowrap">' +
+          actionsHtml +
           "</td></tr>"
         );
       })
@@ -398,6 +461,10 @@
         const st = String(loan.status || "").toLowerCase().trim();
         if (statusFilter === "settled") {
           if (st !== "settled" && st !== "cleared") return false;
+        } else if (statusFilter === "pending") {
+          if (st !== "pending" && st !== "pending review") return false;
+        } else if (statusFilter === "pending review") {
+          if (st !== "pending review" && st !== "pending") return false;
         } else if (st !== statusFilter) {
           return false;
         }
@@ -1555,4 +1622,480 @@
         tid: document.getElementById("pl-tid") ? document.getElementById("pl-tid").value.trim() : "",
       });
   });
+
+  /* ------------------------------------------------------------------ *
+   * GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow
+   * ------------------------------------------------------------------ */
+
+  function openGovReviewModal(loanId, mode) {
+    const loan = (loadedLoans || []).find(function (l) {
+      return String(l.id || "").toLowerCase() === String(loanId || "").toLowerCase();
+    });
+    if (!loan) {
+      showNotification("Loan record #" + loanId + " not found.", "warning");
+      return;
+    }
+
+    const modal = document.getElementById("govReviewModal");
+    if (!modal) return;
+
+    window._activeGovLoan = loan;
+
+    // Set hidden loan ID
+    const idEl = document.getElementById("gov-loan-id");
+    if (idEl) idEl.value = loan.id;
+
+    // Populate loan summary fields
+    const borrowerEl = document.getElementById("gov-loan-borrower");
+    if (borrowerEl) borrowerEl.textContent = loan.borrower || "—";
+
+    const midEl = document.getElementById("gov-loan-mid");
+    if (midEl) midEl.textContent = loan.memberId ? "ID: " + loan.memberId : "—";
+
+    const princEl = document.getElementById("gov-loan-principal");
+    if (princEl) princEl.textContent = formatMoney(loan.requested || 0);
+
+    const lidDispEl = document.getElementById("gov-loan-id-display");
+    if (lidDispEl) lidDispEl.textContent = "#" + loan.id;
+
+    const intEl = document.getElementById("gov-loan-interest");
+    if (intEl) intEl.textContent = formatMoney((loan.interest || 0) + (loan.trsfee || 0));
+
+    const tenorMonths = Number(loan.tenorMonths) || 12;
+    const tenorBadge = document.getElementById("gov-loan-tenor-badge");
+    if (tenorBadge) tenorBadge.textContent = tenorMonths + "m";
+
+    const purposeEl = document.getElementById("gov-loan-purpose");
+    if (purposeEl) purposeEl.textContent = loan.purpose || "Business";
+
+    const repaymentTotal = Number(loan.repayment) || ((loan.requested || 0) + (loan.interest || 0) + (loan.trsfee || 0));
+    const totalEl = document.getElementById("gov-loan-total");
+    if (totalEl) totalEl.textContent = formatMoney(repaymentTotal);
+
+    const monthlyInstallment = repaymentTotal / tenorMonths;
+    const monthlyEl = document.getElementById("gov-loan-monthly");
+    if (monthlyEl) monthlyEl.textContent = formatMoney(monthlyInstallment) + " / mo";
+
+    // Review history card
+    const histSection = document.getElementById("gov-review-history-section");
+    const histReviewer = document.getElementById("gov-history-reviewer");
+    const histDate = document.getElementById("gov-history-date");
+    const histNotes = document.getElementById("gov-history-notes");
+
+    const statusLower = String(loan.status || "").toLowerCase().trim();
+    const isReviewedStatus = statusLower === "reviewed" || Boolean(loan.reviewedBy);
+    if (histSection) {
+      if (isReviewedStatus) {
+        histSection.classList.remove("hidden");
+        if (histReviewer) histReviewer.textContent = loan.reviewedBy || "Chairperson";
+        if (histDate) histDate.textContent = loan.reviewedDate || "Endorsed";
+        if (histNotes) histNotes.textContent = loan.reviewNotes || "Application verified and endorsed for Treasurer disbursement.";
+      } else {
+        histSection.classList.add("hidden");
+      }
+    }
+
+    // Reset inputs
+    const revNotes = document.getElementById("gov-review-notes");
+    if (revNotes) revNotes.value = "";
+    const authRef = document.getElementById("gov-auth-reference");
+    if (authRef) authRef.value = "";
+    const authNotes = document.getElementById("gov-auth-notes");
+    if (authNotes) authNotes.value = "";
+    const authChannel = document.getElementById("gov-auth-channel");
+    if (authChannel) authChannel.value = "Equity Bank";
+    const rejReason = document.getElementById("gov-reject-reason");
+    if (rejReason) rejReason.value = "";
+
+    // Set initial mode
+    let targetMode = mode;
+    if (!targetMode) {
+      targetMode = isReviewedStatus ? "authorize" : "review";
+    }
+    switchGovModalMode(targetMode, true);
+
+    // Render guarantor table
+    renderGovGuarantorTable(loan);
+
+    // Show modal dialog
+    modal.classList.remove("hidden");
+  }
+
+  function switchGovModalMode(targetMode, isInitial) {
+    const currentModeEl = document.getElementById("gov-current-mode");
+    const prevModeEl = document.getElementById("gov-previous-mode");
+    let mode = targetMode;
+
+    if (mode === "back") {
+      mode = (prevModeEl && prevModeEl.value) || "review";
+    } else if (!isInitial && currentModeEl && currentModeEl.value !== "reject") {
+      if (prevModeEl) prevModeEl.value = currentModeEl.value;
+    }
+    if (currentModeEl) currentModeEl.value = mode;
+
+    const titleEl = document.getElementById("gov-modal-title");
+    const subEl = document.getElementById("gov-modal-subtitle");
+    const iconEl = document.getElementById("gov-modal-icon");
+
+    const step1Badge = document.getElementById("gov-step-1-badge");
+    const step1Title = document.getElementById("gov-step-1-title");
+    const step1Container = document.getElementById("gov-step-1");
+    const step2Badge = document.getElementById("gov-step-2-badge");
+    const step2Title = document.getElementById("gov-step-2-title");
+    const step2Container = document.getElementById("gov-step-2");
+
+    const reviewFields = document.getElementById("gov-review-form-fields");
+    const authFields = document.getElementById("gov-auth-form-fields");
+    const rejectFields = document.getElementById("gov-reject-form-fields");
+
+    const switchRejectBtn = document.getElementById("gov-switch-reject-btn");
+    const backBtn = document.getElementById("gov-back-btn");
+    const submitReviewBtn = document.getElementById("gov-submit-review-btn");
+    const submitAuthBtn = document.getElementById("gov-submit-auth-btn");
+    const submitRejectBtn = document.getElementById("gov-submit-reject-btn");
+
+    if (mode === "review") {
+      if (titleEl) titleEl.textContent = "Step 1 • Chairperson Loan Endorsement";
+      if (subEl) subEl.textContent = "Verify member eligibility, terms, and guarantor allocations";
+      if (iconEl) {
+        iconEl.className = "h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 flex items-center justify-center text-sm shrink-0";
+        iconEl.innerHTML = '<i class="fas fa-clipboard-check"></i>';
+      }
+
+      if (step1Container) step1Container.className = "flex items-center gap-2";
+      if (step1Badge) {
+        step1Badge.className = "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shrink-0";
+        step1Badge.textContent = "1";
+      }
+      if (step1Title) step1Title.className = "font-bold text-slate-900 dark:text-white text-xs";
+
+      if (step2Container) step2Container.className = "flex items-center gap-2 opacity-50";
+      if (step2Badge) {
+        step2Badge.className = "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0";
+        step2Badge.textContent = "2";
+      }
+      if (step2Title) step2Title.className = "font-semibold text-slate-600 dark:text-slate-400 text-xs";
+
+      if (reviewFields) reviewFields.classList.remove("hidden");
+      if (authFields) authFields.classList.add("hidden");
+      if (rejectFields) rejectFields.classList.add("hidden");
+
+      if (switchRejectBtn) switchRejectBtn.classList.remove("hidden");
+      if (backBtn) backBtn.classList.add("hidden");
+      if (submitReviewBtn) submitReviewBtn.classList.remove("hidden");
+      if (submitAuthBtn) submitAuthBtn.classList.add("hidden");
+      if (submitRejectBtn) submitRejectBtn.classList.add("hidden");
+
+    } else if (mode === "authorize") {
+      if (titleEl) titleEl.textContent = "Step 2 • Treasurer Disbursement Authorization";
+      if (subEl) subEl.textContent = "Dual-officer final sign-off, disbursement channel, and guarantor lien activation";
+      if (iconEl) {
+        iconEl.className = "h-10 w-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center text-sm shrink-0";
+        iconEl.innerHTML = '<i class="fas fa-check-double"></i>';
+      }
+
+      if (step1Container) step1Container.className = "flex items-center gap-2";
+      if (step1Badge) {
+        step1Badge.className = "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold bg-emerald-600 text-white shrink-0";
+        step1Badge.innerHTML = '<i class="fas fa-check text-[9px]"></i>';
+      }
+      if (step1Title) step1Title.className = "font-medium text-slate-700 dark:text-slate-300 text-xs";
+
+      if (step2Container) step2Container.className = "flex items-center gap-2";
+      if (step2Badge) {
+        step2Badge.className = "w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold bg-emerald-700 text-white dark:bg-emerald-500 dark:text-slate-950 ring-2 ring-emerald-500/30 shrink-0";
+        step2Badge.textContent = "2";
+      }
+      if (step2Title) step2Title.className = "font-bold text-emerald-800 dark:text-emerald-300 text-xs";
+
+      if (reviewFields) reviewFields.classList.add("hidden");
+      if (authFields) authFields.classList.remove("hidden");
+      if (rejectFields) rejectFields.classList.add("hidden");
+
+      if (switchRejectBtn) switchRejectBtn.classList.remove("hidden");
+      if (backBtn) backBtn.classList.add("hidden");
+      if (submitReviewBtn) submitReviewBtn.classList.add("hidden");
+      if (submitAuthBtn) submitAuthBtn.classList.remove("hidden");
+      if (submitRejectBtn) submitRejectBtn.classList.add("hidden");
+
+    } else if (mode === "reject") {
+      if (titleEl) titleEl.textContent = "Reject Loan Application";
+      if (subEl) subEl.textContent = "Decline application and immediately release guarantor commitments";
+      if (iconEl) {
+        iconEl.className = "h-10 w-10 rounded-xl bg-rose-50 dark:bg-rose-950/70 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 flex items-center justify-center text-sm shrink-0";
+        iconEl.innerHTML = '<i class="fas fa-ban"></i>';
+      }
+
+      if (reviewFields) reviewFields.classList.add("hidden");
+      if (authFields) authFields.classList.add("hidden");
+      if (rejectFields) rejectFields.classList.remove("hidden");
+
+      if (switchRejectBtn) switchRejectBtn.classList.add("hidden");
+      if (backBtn) backBtn.classList.remove("hidden");
+      if (submitReviewBtn) submitReviewBtn.classList.add("hidden");
+      if (submitAuthBtn) submitAuthBtn.classList.add("hidden");
+      if (submitRejectBtn) submitRejectBtn.classList.remove("hidden");
+    }
+  }
+
+  function closeGovReviewModal() {
+    const modal = document.getElementById("govReviewModal");
+    if (modal) modal.classList.add("hidden");
+    window._activeGovLoan = null;
+  }
+
+  function renderGovGuarantorTable(loan) {
+    const body = document.getElementById("gov-guarantors-body");
+    const badge = document.getElementById("gov-guarantor-summary");
+    if (!body) return;
+
+    const bSavings = Number(loan.savings) || 0;
+    const gTotal = Number(loan.guaranteed) || 0;
+
+    if (badge) {
+      badge.textContent = "Savings: " + formatMoney(bSavings) + " | Pledged: " + formatMoney(gTotal);
+    }
+
+    body.innerHTML = '<tr><td colspan="4" class="px-3 py-3 text-center text-slate-400"><i class="fas fa-spinner fa-spin mr-1.5"></i> Loading guarantor pledges...</td></tr>';
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!body) return;
+        const guarantors = (res && res.guarantors) || [];
+
+        let rowsHtml =
+          '<tr class="bg-slate-50/40 dark:bg-slate-900/40">' +
+          '<td class="px-3 py-2 font-medium text-slate-900 dark:text-white">' +
+          '<div class="flex items-center gap-1.5"><i class="fas fa-user text-[10px] text-slate-400"></i> ' + escapeHtmlAttr(loan.borrower || "Borrower") + ' <span class="text-[10px] text-slate-400 font-mono">(Self)</span></div>' +
+          '</td>' +
+          '<td class="px-3 py-2 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300">' + formatMoney(bSavings) + '</td>' +
+          '<td class="px-3 py-2 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-medium">' + formatMoney(bSavings) + '</td>' +
+          '<td class="px-3 py-2 text-center"><span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">Self-Backed</span></td>' +
+          '</tr>';
+
+        if (guarantors.length > 0) {
+          guarantors.forEach(function (g) {
+            const amt = Number(g.amount) || 0;
+            const unenc = Number(g.unencumbered) || 0;
+            const isCovered = unenc >= amt;
+            const unencClass = isCovered ? "text-emerald-700 dark:text-emerald-400 font-medium" : "text-amber-700 dark:text-amber-400 font-medium";
+            const statusHtml = typeof renderStatusPill === "function"
+              ? renderStatusPill(g.status || "Pending")
+              : '<span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-700">' + (g.status || "Pending") + '</span>';
+
+            rowsHtml +=
+              '<tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">' +
+              '<td class="px-3 py-2 font-medium text-slate-900 dark:text-white">' +
+              '<div class="truncate max-w-[180px]" title="' + escapeHtmlAttr(g.fullName) + '">' + escapeHtmlAttr(g.fullName) + '</div>' +
+              (g.memberId ? '<div class="text-[10px] font-mono text-slate-400 dark:text-slate-500">' + escapeHtmlAttr(g.memberId) + '</div>' : '') +
+              '</td>' +
+              '<td class="px-3 py-2 text-right font-mono tabular-nums text-slate-800 dark:text-slate-200 font-semibold">' + formatMoney(amt) + '</td>' +
+              '<td class="px-3 py-2 text-right font-mono tabular-nums ' + unencClass + '">' + formatMoney(unenc) + '</td>' +
+              '<td class="px-3 py-2 text-center">' + statusHtml + '</td>' +
+              '</tr>';
+          });
+        } else if (gTotal > 0) {
+          rowsHtml +=
+            '<tr>' +
+            '<td class="px-3 py-2 font-medium text-slate-700 dark:text-slate-300">Total External Pledges</td>' +
+            '<td class="px-3 py-2 text-right font-mono tabular-nums font-semibold text-slate-800 dark:text-slate-200">' + formatMoney(gTotal) + '</td>' +
+            '<td class="px-3 py-2 text-right font-mono tabular-nums text-slate-500">—</td>' +
+            '<td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">Pledged</span></td>' +
+            '</tr>';
+        }
+
+        body.innerHTML = rowsHtml;
+      })
+      .withFailureHandler(function (err) {
+        if (!body) return;
+        body.innerHTML =
+          '<tr>' +
+          '<td class="px-3 py-2 font-medium text-slate-900 dark:text-white">' + escapeHtmlAttr(loan.borrower || "Borrower") + ' (Self)</td>' +
+          '<td class="px-3 py-2 text-right font-mono tabular-nums text-slate-700 dark:text-slate-300">' + formatMoney(bSavings) + '</td>' +
+          '<td class="px-3 py-2 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400">' + formatMoney(bSavings) + '</td>' +
+          '<td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">Self-Backed</span></td>' +
+          '</tr>' +
+          (gTotal > 0 ? '<tr><td class="px-3 py-2 font-medium text-slate-700 dark:text-slate-300">Guarantor Pledges</td><td class="px-3 py-2 text-right font-mono tabular-nums font-semibold">' + formatMoney(gTotal) + '</td><td class="px-3 py-2 text-right font-mono tabular-nums text-slate-400">—</td><td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700">Pledged</span></td></tr>' : '');
+      })
+      .getLoanGuarantors(loan.id);
+  }
+
+  function submitGovReview() {
+    const loanId = (document.getElementById("gov-loan-id") || {}).value;
+    const notes = ((document.getElementById("gov-review-notes") || {}).value || "").trim();
+    const btn = document.getElementById("gov-submit-review-btn");
+
+    if (!loanId) {
+      showNotification("Loan ID missing.", "danger");
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Endorsing...</span>';
+    }
+
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-clipboard-check text-xs"></i> <span>Endorse Application</span>';
+        }
+        if (!res || res.ok === false || res.success === false) {
+          const err = (res && res.error) ? res.error : "Failed to review loan application.";
+          handleErr({ message: err });
+          return;
+        }
+
+        closeGovReviewModal();
+        if (typeof cacheClear === "function") {
+          cacheClear("loans_");
+          cacheClear("loan_repayments_");
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+        }
+        loadLoans(loanPage, true);
+        if (typeof refreshDashboard === "function") refreshDashboard(true);
+        showNotification("Loan #" + loanId + " successfully reviewed & endorsed. Forwarded to Treasurer for disbursement authorization.", "success");
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-clipboard-check text-xs"></i> <span>Endorse Application</span>';
+        }
+        handleErr(err);
+      })
+      .reviewLoanApplication({ loanId: loanId, notes: notes });
+  }
+
+  function submitGovAuthorize() {
+    const loanId = (document.getElementById("gov-loan-id") || {}).value;
+    const channel = ((document.getElementById("gov-auth-channel") || {}).value || "").trim();
+    const ref = ((document.getElementById("gov-auth-reference") || {}).value || "").trim();
+    const notes = ((document.getElementById("gov-auth-notes") || {}).value || "").trim();
+    const btn = document.getElementById("gov-submit-auth-btn");
+
+    if (!loanId) {
+      showNotification("Loan ID missing.", "danger");
+      return;
+    }
+    if (!channel) {
+      showNotification("Please select a disbursement payment channel.", "warning");
+      return;
+    }
+    if (!ref) {
+      showNotification("Please enter a payment reference / receipt number.", "warning");
+      const refInput = document.getElementById("gov-auth-reference");
+      if (refInput) refInput.focus();
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Authorizing...</span>';
+    }
+
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check-double text-xs"></i> <span>Authorize &amp; Disburse</span>';
+        }
+        if (!res || res.ok === false || res.success === false) {
+          const err = (res && res.error) ? res.error : "Failed to authorize loan disbursement.";
+          handleErr({ message: err });
+          return;
+        }
+
+        closeGovReviewModal();
+        if (typeof cacheClear === "function") {
+          cacheClear("loans_");
+          cacheClear("loan_repayments_");
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+        }
+        loadLoans(loanPage, true);
+        if (typeof refreshDashboard === "function") refreshDashboard(true);
+        showNotification("Loan #" + loanId + " successfully authorized & disbursed via " + channel + ". Guarantor commitments activated.", "success");
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check-double text-xs"></i> <span>Authorize &amp; Disburse</span>';
+        }
+        handleErr(err);
+      })
+      .authorizeLoanDisbursement({ loanId: loanId, paymentChannel: channel, reference: ref, notes: notes });
+  }
+
+  function submitGovReject() {
+    const loanId = (document.getElementById("gov-loan-id") || {}).value;
+    const reason = ((document.getElementById("gov-reject-reason") || {}).value || "").trim();
+    const btn = document.getElementById("gov-submit-reject-btn");
+
+    if (!loanId) {
+      showNotification("Loan ID missing.", "danger");
+      return;
+    }
+    if (!reason) {
+      showNotification("Please provide a rejection reason (required by governance policy).", "warning");
+      const rInput = document.getElementById("gov-reject-reason");
+      if (rInput) rInput.focus();
+      return;
+    }
+
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Rejecting...</span>';
+    }
+
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(function (res) {
+        stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-ban text-xs"></i> <span>Confirm Rejection</span>';
+        }
+        if (!res || res.ok === false || res.success === false) {
+          const err = (res && res.error) ? res.error : "Failed to reject loan application.";
+          handleErr({ message: err });
+          return;
+        }
+
+        closeGovReviewModal();
+        if (typeof cacheClear === "function") {
+          cacheClear("loans_");
+          cacheClear("loan_repayments_");
+          cacheClear("home_analytics");
+          cacheClear("personal_financials");
+        }
+        loadLoans(loanPage, true);
+        if (typeof refreshDashboard === "function") refreshDashboard(true);
+        showNotification("Loan #" + loanId + " rejected. Guarantor commitments released.", "warning");
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-ban text-xs"></i> <span>Confirm Rejection</span>';
+        }
+        handleErr(err);
+      })
+      .rejectLoanApplication({ loanId: loanId, reason: reason });
+  }
+
+  window.openGovReviewModal = openGovReviewModal;
+  window.closeGovReviewModal = closeGovReviewModal;
+  window.switchGovModalMode = switchGovModalMode;
+  window.renderGovGuarantorTable = renderGovGuarantorTable;
+  window.submitGovReview = submitGovReview;
+  window.submitGovAuthorize = submitGovAuthorize;
+  window.submitGovReject = submitGovReject;
 </script>

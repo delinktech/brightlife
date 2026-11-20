@@ -32,6 +32,9 @@
           <div class="column-view-item" onclick="toggleTableColumn('loans-table', 'col-l-breakdown', this)">
             <span class="col-check"><i class="fas fa-check"></i></span> <span>Principal / Interest</span>
           </div>
+          <div class="column-view-item" onclick="toggleTableColumn('loans-table', 'col-l-actions', this)">
+            <span class="col-check"><i class="fas fa-check"></i></span> <span>Actions</span>
+          </div>
         </div>
       </div>
 
@@ -62,8 +65,10 @@
           class="w-full sm:w-44 pl-3 py-2 text-xs font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 min-h-[44px] sm:min-h-[38px] focus:outline-none focus:ring-2 focus:ring-sky-500/25 focus:border-sky-500 cursor-pointer">
           <option value="all">All</option>
           <option value="active">Active</option>
+          <option value="pending review">Pending Review</option>
+          <option value="reviewed">Reviewed</option>
           <option value="settled">Settled</option>
-          <option value="pending">Pending</option>
+          <option value="pending">Pending (All)</option>
         </select>
       </div>
     </div>
@@ -81,6 +86,7 @@
             <th class="col-l-breakdown text-right">Principal / Interest</th>
             <th class="col-l-balance text-right">Balance</th>
             <th class="col-l-status text-center">Status</th>
+            <th class="col-l-actions text-center">Actions</th>
           </tr>
         </thead>
         <tbody id="loan-table-body" class="divide-y divide-slate-100 dark:divide-slate-800/70">
@@ -471,6 +477,225 @@
           class="min-h-[38px] px-5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5">
           <i class="fas fa-paper-plane text-xs"></i> <span>Submit Loan Application</span>
         </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Loan Governance Modal (GOV-1: Multi-Signature Dual-Officer Approval) -->
+<div id="govReviewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
+  <div class="bg-white dark:bg-[#0b1320] rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-700/80 overflow-hidden max-h-[90vh] overflow-y-auto my-auto">
+    <!-- Executive Header -->
+    <div class="bg-white dark:bg-[#090d16] px-6 py-4 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800">
+      <div class="flex items-center gap-3 min-w-0">
+        <div id="gov-modal-icon" class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center text-sm shrink-0">
+          <i class="fas fa-shield-halved"></i>
+        </div>
+        <div class="min-w-0">
+          <h3 id="gov-modal-title" class="text-sm font-bold text-slate-900 dark:text-white leading-snug truncate">Loan Governance Review</h3>
+          <p id="gov-modal-subtitle" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Dual-Officer Institutional Approval Workflow</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeGovReviewModal()" aria-label="Close Loan Governance Dialog"
+        class="min-w-[38px] min-h-[38px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-white dark:hover:bg-slate-800 rounded-lg transition-colors shrink-0">
+        <i class="fas fa-times text-sm"></i>
+      </button>
+    </div>
+
+    <form id="govReviewForm" onsubmit="event.preventDefault();" class="p-6 space-y-4 text-xs">
+      <input type="hidden" id="gov-loan-id" />
+      <input type="hidden" id="gov-current-mode" value="review" />
+      <input type="hidden" id="gov-previous-mode" value="review" />
+
+      <!-- Step Tracker: [1. Chairperson Review] -> [2. Treasurer Authorization] -->
+      <div class="p-3 bg-slate-50/80 dark:bg-slate-900/60 rounded-xl border border-slate-200/80 dark:border-slate-800">
+        <div class="flex items-center justify-between text-xs">
+          <!-- Step 1: Chairperson Review -->
+          <div id="gov-step-1" class="flex items-center gap-2">
+            <span id="gov-step-1-badge" class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shrink-0">1</span>
+            <div class="leading-tight">
+              <div id="gov-step-1-title" class="font-bold text-slate-900 dark:text-white text-xs">Chairperson Review</div>
+              <div id="gov-step-1-desc" class="text-[10px] text-slate-500 dark:text-slate-400">Application Endorsement</div>
+            </div>
+          </div>
+
+          <!-- Step Connector Bar -->
+          <div id="gov-step-connector" class="flex-1 h-0.5 bg-slate-200 dark:bg-slate-700 mx-3"></div>
+
+          <!-- Step 2: Treasurer Authorization -->
+          <div id="gov-step-2" class="flex items-center gap-2 opacity-60">
+            <span id="gov-step-2-badge" class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">2</span>
+            <div class="leading-tight">
+              <div id="gov-step-2-title" class="font-semibold text-slate-600 dark:text-slate-400 text-xs">Treasurer Authorization</div>
+              <div id="gov-step-2-desc" class="text-[10px] text-slate-400 dark:text-slate-500">Disbursement &amp; Lien Lock</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loan Summary -->
+      <div class="space-y-2">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Loan Application Summary</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="p-2.5 rounded-lg bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">Borrower</div>
+            <div id="gov-loan-borrower" class="text-xs font-bold text-slate-900 dark:text-white truncate mt-0.5">—</div>
+            <div id="gov-loan-mid" class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">—</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">Principal</div>
+            <div id="gov-loan-principal" class="text-xs font-bold font-mono tabular-nums text-slate-900 dark:text-white mt-0.5">KES 0.00</div>
+            <div id="gov-loan-id-display" class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">—</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200/70 dark:border-slate-800">
+            <div class="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">Interest (<span id="gov-loan-tenor-badge">12m</span>)</div>
+            <div id="gov-loan-interest" class="text-xs font-bold font-mono tabular-nums text-amber-700 dark:text-amber-400 mt-0.5">KES 0.00</div>
+            <div id="gov-loan-purpose" class="text-[10px] text-slate-500 dark:text-slate-400 truncate">—</div>
+          </div>
+          <div class="p-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/60">
+            <div class="text-[10px] uppercase font-semibold text-emerald-700 dark:text-emerald-400">Total Repayment</div>
+            <div id="gov-loan-total" class="text-xs font-bold font-mono tabular-nums text-emerald-800 dark:text-emerald-300 mt-0.5">KES 0.00</div>
+            <div id="gov-loan-monthly" class="text-[10px] font-mono tabular-nums text-emerald-700 dark:text-emerald-400 truncate">KES 0.00 / mo</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guarantor Table (Pledged amounts and unencumbered backing) -->
+      <div id="gov-guarantors-container" class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Guarantor Backing &amp; Capacity</span>
+          <span id="gov-guarantor-summary" class="text-[10px] font-mono font-medium text-slate-600 dark:text-slate-300"></span>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 max-h-44 overflow-y-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50/80 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider sticky top-0">
+              <tr>
+                <th class="px-3 py-2">Guarantor</th>
+                <th class="px-3 py-2 text-right">Pledged Amount</th>
+                <th class="px-3 py-2 text-right">Unencumbered Backing</th>
+                <th class="px-3 py-2 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody id="gov-guarantors-body" class="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
+              <tr><td colspan="4" class="px-3 py-3 text-center text-slate-400">Loading guarantor pledges...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Review History (Shown if status is "Reviewed") -->
+      <div id="gov-review-history-section" class="hidden p-3.5 rounded-xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-200/70 dark:border-sky-800/60 space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-sky-900 dark:text-sky-300">
+          <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-sky-600 dark:text-sky-400"></i> Step 1: Chairperson Endorsement</span>
+          <span id="gov-history-date" class="font-mono text-[11px] text-sky-700 dark:text-sky-400"></span>
+        </div>
+        <div class="text-[11px] text-slate-700 dark:text-slate-300">
+          <span class="font-semibold">Reviewing Officer:</span> <span id="gov-history-reviewer" class="font-mono"></span>
+        </div>
+        <div class="text-[11px] text-slate-600 dark:text-slate-400 bg-white/70 dark:bg-slate-900/60 p-2.5 rounded-lg border border-sky-100 dark:border-sky-900/50">
+          <span class="font-semibold text-slate-700 dark:text-slate-300">Endorsement Notes:</span>
+          <p id="gov-history-notes" class="mt-0.5 italic whitespace-pre-wrap font-sans"></p>
+        </div>
+      </div>
+
+      <!-- Contextual Action Forms -->
+
+      <!-- 1. Review Mode Form Fields -->
+      <div id="gov-review-form-fields" class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div>
+          <label for="gov-review-notes" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Endorsement Notes <span class="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <textarea id="gov-review-notes" rows="2" placeholder="Record verification checks, interview notes, or recommendations for Treasurer disbursement..."
+            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"></textarea>
+        </div>
+      </div>
+
+      <!-- 2. Authorize Mode Form Fields -->
+      <div id="gov-auth-form-fields" class="hidden space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="gov-auth-channel" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Payment Channel <span class="text-rose-500">*</span>
+            </label>
+            <select id="gov-auth-channel"
+              class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none cursor-pointer">
+              <option value="Equity Bank">Equity Bank</option>
+              <option value="M-Pesa">M-Pesa</option>
+              <option value="Co-op Bank">Co-op Bank</option>
+              <option value="Cash">Cash</option>
+            </select>
+          </div>
+          <div>
+            <label for="gov-auth-reference" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Payment Reference No. <span class="text-rose-500">*</span>
+            </label>
+            <input type="text" id="gov-auth-reference" placeholder="e.g. QX938472 or Bank Tx Ref"
+              class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-medium text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none" />
+          </div>
+        </div>
+        <div>
+          <label for="gov-auth-notes" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Disbursement Notes <span class="text-slate-400 font-normal">(Optional)</span>
+          </label>
+          <textarea id="gov-auth-notes" rows="2" placeholder="Disbursement reference, batch slip details, or account confirmation..."
+            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"></textarea>
+        </div>
+      </div>
+
+      <!-- 3. Reject Mode Form Fields -->
+      <div id="gov-reject-form-fields" class="hidden space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <div class="p-2.5 rounded-lg bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2">
+          <i class="fas fa-triangle-exclamation text-rose-600 dark:text-rose-400 mt-0.5 shrink-0"></i>
+          <span>Rejecting this loan application will immediately terminate the application and release all guarantor commitments in the system.</span>
+        </div>
+        <div>
+          <label for="gov-reject-reason" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Rejection Reason <span class="text-rose-500">*</span>
+          </label>
+          <textarea id="gov-reject-reason" rows="3" placeholder="Provide governance or credit justification for rejecting this application (required)..."
+            class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-rose-200 dark:border-rose-700/80 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none"></textarea>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="flex items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <!-- Left: Secondary action (Reject button when in review/auth mode, Back button when in reject mode) -->
+        <div>
+          <button type="button" id="gov-switch-reject-btn" onclick="switchGovModalMode('reject')"
+            class="min-h-[38px] px-3.5 py-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-1.5">
+            <i class="fas fa-xmark text-xs"></i> <span>Reject Application</span>
+          </button>
+          <button type="button" id="gov-back-btn" onclick="switchGovModalMode('back')" class="hidden min-h-[38px] px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors inline-flex items-center gap-1.5">
+            <i class="fas fa-arrow-left text-xs"></i> <span>Back</span>
+          </button>
+        </div>
+
+        <!-- Right: Cancel & Primary Submit Actions -->
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="closeGovReviewModal()"
+            class="min-h-[38px] px-4 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+            Cancel
+          </button>
+
+          <!-- Review Mode Submit -->
+          <button type="button" id="gov-submit-review-btn" onclick="submitGovReview()"
+            class="min-h-[38px] px-4 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5">
+            <i class="fas fa-clipboard-check text-xs"></i> <span>Endorse Application</span>
+          </button>
+
+          <!-- Authorize Mode Submit -->
+          <button type="button" id="gov-submit-auth-btn" onclick="submitGovAuthorize()"
+            class="hidden min-h-[38px] px-4 py-1.5 bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5">
+            <i class="fas fa-check-double text-xs"></i> <span>Authorize &amp; Disburse</span>
+          </button>
+
+          <!-- Reject Mode Submit -->
+          <button type="button" id="gov-submit-reject-btn" onclick="submitGovReject()"
+            class="hidden min-h-[38px] px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5">
+            <i class="fas fa-ban text-xs"></i> <span>Confirm Rejection</span>
+          </button>
+        </div>
       </div>
     </form>
   </div>
