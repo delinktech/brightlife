@@ -11,9 +11,9 @@
 | **Current Live Release** | **`v136`** (Google Apps Script Build `@137`) |
 | **Total Tracked Tasks** | **34 Tasks** (Expanded with `ARC-1`–`ARC-5`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
 | **Completed & Shipped (`[DONE]`)** | **27 Tasks (79.4%)** |
-| **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for `GOV-1`) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **7 Tasks (20.6%)** |
-| **Current Sprint Focus** | `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` |
+| **Active In-Flight (`[IN PROGRESS]`)** | **1 Task (`GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **6 Tasks (17.6%)** |
+| **Current Sprint Focus** | `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` `[IN PROGRESS]` |
 
 ---
 
@@ -53,19 +53,29 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 7 tasks are categorized below in strict execution priority:
+The remaining 7 tasks (1 `[IN PROGRESS]`, 6 `[BACKLOG]`) are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Core Loan Workflows & Data Reconciliation (`P1`)
 
-#### 1. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow`
-* **Priority:** `P1 (High)`
+#### 1. `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` `[IN PROGRESS]`
+* **Priority:** `P1 (High - Current Sprint Focus)`
 * **Domain:** Governance & Internal Controls (`@ledger` $\to$ `@fixer` $\to$ `@designer` $\to$ `@sentinel`)
-* **Location:** `Loans.html` & `server/loans.service.js`
-* **Objective:** Prevent single-user loan disbursement fraud via a dual-officer approval pipeline:
-  - Chairperson initial review $\to$ Treasurer disbursement authorization before loan moves to `Approved` and triggers disbursement.
-  - Guarantor liability locking in `Guarantors` sub-ledger.
-  - Automated WhatsApp + Email notification dispatch and audit trail logging in `SHEETS.AUDIT_LOG`.
-* **Dependencies:** `UI-2`.
+* **Location:** `Loans.html`, `loans.ui.js.html`, `server/loans.service.js`, `server/auth.service.js`
+* **Objective:** Prevent single-user loan disbursement fraud via a strict dual-officer approval pipeline:
+  - Chairperson initial review (`Status = "Pending Review"` $\to$ `"Reviewed"`) with Chairperson identity, timestamp & notes.
+  - Treasurer final authorization (`Status = "Reviewed"` $\to$ `"Approved"`) with Treasurer identity, timestamp & notes.
+  - Strict Anti-Fraud Guard: A single individual cannot self-authorize both stages for the same loan (Chairperson reviewer != Treasurer authorizer).
+  - Guarantor liability locking in `Guarantors` sub-ledger (`Status = "Locked"` / encumbered).
+  - Automated WhatsApp + Email notification dispatch to borrower and guarantors upon endorsement and final approval.
+  - Full immutable audit trail logging in `SHEETS.AUDIT_LOG`.
+* **Dependencies:** `UI-2` (Shipped in v130–v135), `SET-1` (Shipped in v129).
+* **Active Sprint Checklist:**
+  - [ ] **Role & RBAC Provisioning (`@fixer`):** Support `CHAIRPERSON` and `TREASURER` roles in `ROLE_KEY` / `auth.service.js` and role checking.
+  - [ ] **Data Schema & State Machine (`@fixer`):** Support transition states: `Pending Review` $\to$ `Reviewed` $\to$ `Approved` (or `Rejected`). Track `Reviewed By`, `Reviewed Date`, `Approved By`, `Approved Date`.
+  - [ ] **Server Validation & Anti-Fraud Guard (`@fixer`):** Prevent reviewer from also being authorizer; verify solvency and guarantor integrity before final transition to `Approved`.
+  - [ ] **Guarantor Liability Locking (`@fixer`):** Transition guarantor commitments from pending to locked/encumbered.
+  - [ ] **Comms & Audit Dispatch (`@fixer`):** Dispatch branded WhatsApp/email alerts on each stage; log `loan.reviewed` and `loan.approved` to `SHEETS.AUDIT_LOG`.
+  - [ ] **Loans Management UI & Modals (`@designer`):** Add Actions column with role-sensitive action buttons (`[Review]` for Chairperson, `[Authorize]` for Treasurer, `[Reject]`), review/authorization modal with loan & guarantor summary, adhering to `DESIGN.md` tokens (`bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, `tabular-nums`).
 * **Acceptance Criteria:**
   - Single officer cannot self-approve both stages; Chairperson review and Treasurer authorization are enforced server-side.
   - Guarantor liabilities lock atomically in `Guarantors` sub-ledger upon approval; WhatsApp/Email notifications and `SHEETS.AUDIT_LOG` entries are recorded.
