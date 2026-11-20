@@ -8,11 +8,11 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v135`** (Google Apps Script Build `@136`) |
-| **Total Tracked Tasks** | **33 Tasks** (Expanded with `ARC-1`–`ARC-4`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
-| **Completed & Shipped (`[DONE]`)** | **26 Tasks (78.8%)** |
+| **Current Live Release** | **`v136`** (Google Apps Script Build `@137`) |
+| **Total Tracked Tasks** | **34 Tasks** (Expanded with `ARC-1`–`ARC-5`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
+| **Completed & Shipped (`[DONE]`)** | **27 Tasks (79.4%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for `GOV-1`) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **7 Tasks (21.2%)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **7 Tasks (20.6%)** |
 | **Current Sprint Focus** | `GOV-1: Multi-Signature Dual-Officer Loan Approval Workflow` |
 
 ---
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`ARC-5`** | Architecture | **Standardized 'BL' Entity ID Architecture**: Standardized institutional 'BL' prefix across all system entity identifiers: loans (`BLLN-YYYYMMDD-001`), members (`BLM-01`), investments (`BLINV-YYYY-01`), capital projects (`BLPRJ-01`), and investment cashflows (`BLICF-YYYYMMDD-XXXXXX`), with backward compatibility and normalization for legacy identifiers (`LN-*`, `MEM-*`, `INV-*`, `PRJ-*`, `CF-*`). | `@sentinel`, `@fixer` | **`v136`** (`@137`) | 2026-11-20 |
 | **`UI-2`** | UI/UX & Operations | **Native Dashboard Loan Application Workflow**: Implemented 100% dashboard-native `Apply for Loan` modal in `Loans.html` dynamically reading `SET-1` policy limits (multiplier, interest rate, tenor tiers, min guarantors), live borrower savings & max limit lookup, real-time guarantor unencumbered savings & shortfall tracker, interactive amortization calculator, and atomic submission to `Loans` (`Status = "Pending Review"`) and `Guarantors` with `SHEETS.AUDIT_LOG` entry, `v131`–`v135` polish improvements (incl. `v135` guarantor eligibility fix: unencumbered savings = savings minus pledges), and full `DESIGN.md` Light/Dark parity. | `@designer`, `@fixer`, `@sentinel` | **`v130`–`v135`** (`@131`–`@136`) | 2026-11-19 |
 | **`SET-1`** | Configuration & Policy | **Admin Loan Policy & Group Settings Management**: Provisioned dynamic loan policy & tenor-tier tables in `Constants` (`Borrower Savings Multiplier` 2x/3x, `Loan Interest Rate Pct`, `Loan Tenor Tiers`, `Minimum Guarantor Count`), built `Settings.html` with `DESIGN.md` Light/Dark parity (`bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, `tabular-nums`), and exposed RBAC-guarded `getLoanPolicySettings` / `saveLoanPolicySettings` RPCs with `SHEETS.AUDIT_LOG` tracking. | `@ledger`, `@fixer`, `@designer`, `@sentinel` | **`v129`** (`@130`) | 2026-11-19 |
 | **`RPT-4`** | Financial | **Official AGM & Bank Audit Export Pack**: One-click generation of the combined institutional Brightlife SHG Annual Financial Pack (Executive PDF combining Balance Sheet `RPT-1`, Income Statement `RPT-2`, and Capital Projects summary with BLG letterhead, verification reference hash, watermark, and confidentiality audit stamps, plus multi-statement RFC-4180 CSV / Excel audit package export), adhering to `bg-slate-900` / `dark:bg-slate-100`, `min-h-[38px]`, and `tabular-nums` design tokens. | `@designer`, `@fixer`, `@sentinel` | **`v128`** (`@129`) | 2026-11-19 |
@@ -125,7 +126,7 @@ The remaining 7 tasks are categorized below in strict execution priority:
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v112)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v136)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -136,6 +137,7 @@ graph TD
         R1["RPT-1: Statement of Financial Position"]
         R2["RPT-2: Statement of Comprehensive Income"]
         A1["ARC-1: Schema Standard & Reference Constants"]
+        A5["ARC-5: 'BL' Entity ID Standardization"]
     end
 
     subgraph Architectural_Modernization ["Architectural Modernization Sprint (Active Focus)"]
