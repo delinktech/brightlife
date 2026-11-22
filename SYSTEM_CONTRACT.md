@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v137` (Google Apps Script Build `@138`)
+- **Current Live Version:** `v138` (Google Apps Script Build `@139`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -32,7 +32,7 @@ All agents (`@ledger`, `@fixer`, `@migrator`, `@analyst`, `@shipper`) MUST enfor
 4. **Single Source of Truth — Zero Duplicate Columns or Redundant Tabs:**
    - **Reuse `Deposit Channel` in `Constants`:** Never add duplicate `Payment Channels` columns to `Constants`; all payment/deposit channel validations point to `Constants!Deposit Channel`.
    - **Consolidated MMF & Investment Ledgers:**
-     - `Fund Statements` is the single canonical MMF statement tab (`CIC Transactions` is retired and deleted).
+     - `CIC Statement` is the single canonical MMF statement tab (`CIC Transactions` and legacy `Fund Statements` are retired and consolidated to `CIC Statement`).
      - `Investment Cashflows` is the single unified investment transaction ledger (all legacy `InvestmentLedger` rows are migrated to `Investment Cashflows`, all `Investments` / `Investment Projects` formulas reference `Cashflows_*` Named Ranges, and `InvestmentLedger` is retired and deleted).
 
 ### Approved Deposit Channels
@@ -55,7 +55,7 @@ Any deposit, payment, or reconciliation record must strictly match one of the 5 
 * **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows [CALC] | Outflows [CALC] | System Balance [CALC] | Statement Balance | Balance Date | Variance [CALC] | Reconciliation Status [CALC] | Notes`
 * **`Summary KPIs`** *(Materialized O(1) Cache)*: `Metric Key | Value | Formula Basis & Description`
 * **`Constants`** *(Single Unified Native Table — Title Case with Single Spaces)*: `Gender | Membership Status | Deposit Channel | Transaction Type | Contribution Status | Loans Statuses | Investment Statuses | Ledger Types | Ledger Categories | Roles | Member Selector | Asset Classes | Project Categories | Statutory Thresholds | Threshold Value`
-* **`Fund Statements`** *(Single Canonical MMF Statement Table — replaces `CIC Transactions`)*: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
+* **`CIC Statement`** *(Single Canonical MMF Statement Table — replaces `CIC Transactions` and legacy `Fund Statements`)*: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
 * **`Roles`**: `Email | Role | Permissions | Status`
 * **`Audit Log`**: `Timestamp | Actor Email | Action | Entity | Entity ID | Summary | Details`
 
@@ -86,7 +86,7 @@ Client-server contracts called via `google.script.run`:
 * **Batch 1 — CIC MMF Historical Statement Backfill (Completed)**:
   - **Statement Period:** 20 May 2021 to 31 July 2026 (Connected to Oct 2026)
   - **Ingested Itemized Records:** 138 individual transactions into `CIC Transactions`.
-  - **Aggregated Statements:** 66 monthly historical statements in `Fund Statements`.
+  - **Aggregated Statements:** 66 monthly historical statements in `CIC Statement`.
   - **Statement Reconciled Closing Balance:** `KES 899,551.62` (as of 31 Jul 2026) / `KES 976,564.16` (as of 31 Oct 2026).
   - **Reconciliation Audit:** 100% matched to official CIC statement summary down to the exact cent (Total Purchases: `1,615,130.00`, Gross Interest: `228,731.35`, Withdrawals: `910,000.00`, WHT: `34,309.69`).
   - **Reconciliation Status:** `Balanced`.
