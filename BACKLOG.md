@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v138`** (Google Apps Script Build `@139`) |
+| **Current Live Release** | **`v139`** (Google Apps Script Build `@140`) |
 | **Total Tracked Tasks** | **35 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
-| **Completed & Shipped (`[DONE]`)** | **29 Tasks (82.9%)** |
+| **Completed & Shipped (`[DONE]`)** | **30 Tasks (85.7%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **6 Tasks (17.1%)** |
-| **Current Sprint Focus** | `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (P1 - High) |
+| **Prioritized Backlog (`[BACKLOG]`)** | **5 Tasks (14.3%)** (plus MIG-2 full historical backfill pending statements) |
+| **Current Sprint Focus** | `MIG-3: One-Time 'Form Loan Requests' Backfill & Google Form Deprecation` (P2) / `MIG-2: Historical Statements Backfill (Awaiting Statements)` |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`MIG-2`** | Migration & Audit | **Equity Statement Monthly Summary Schema & Dec 2021 Baseline**: Provisioned canonical 'Equity Statement' tab (`SHEETS.EQUITY_STATEMENT`) with Equity maroon branding, number formatting, and idempotent monthly summary schema. Ingested baseline Dec 2021 statement (Acc 0020164001424, KES 583,423.85 opening, KES 33,750.00 in, KES 40,060.00 out, KES 577,113.85 closing), registered named range EquityStatement_ClosingBalance, and synced Accounts sheet. | `@fixer`, `@sentinel` | **`v139`** (`@140`) | 2026-11-22 |
 | **`ARC-6`** | Architecture | **Canonical 'CIC Statement' Tab Standardization**: Unified `SHEETS.CIC_STATEMENT` across all services, retired legacy 'Fund Statements' and 'CIC Transactions' with automated safe in-place migration, updated named ranges and verified zero variance. | `@fixer`, `@sentinel` | **`v138`** (`@139`) | 2026-11-22 |
 | **`GOV-1`** | Governance | **Multi-Signature Dual-Officer Loan Approval Workflow**: Implemented institutional maker-checker governance for loan disbursements preventing single-user fraud: Stage 1 Chairperson review (`Pending Review` $\to$ `Reviewed` / `Awaiting 2nd Approval`) with endorsement remarks $\to$ Stage 2 Treasurer authorization (`Reviewed` $\to$ `Approved`) with fund release confirmation, strict anti-fraud server-side separation asserting `reviewerEmail !== authorizerEmail`, atomic guarantor liability locking in `Guarantors` sub-ledger, full rejection workflow with pledge release, dual-officer UI action buttons, and complete audit trail logging in `SHEETS.AUDIT_LOG`. | `@fixer`, `@designer`, `@sentinel` | **`v137`** (`@138`) | 2026-11-20 |
 | **`ARC-5`** | Architecture | **Standardized 'BL' Entity ID Architecture**: Standardized institutional 'BL' prefix across all system entity identifiers: loans (`BLLN-YYYYMMDD-001`), members (`BLM-01`), investments (`BLINV-YYYY-01`), capital projects (`BLPRJ-01`), and investment cashflows (`BLICF-YYYYMMDD-XXXXXX`), with backward compatibility and normalization for legacy identifiers (`LN-*`, `MEM-*`, `INV-*`, `PRJ-*`, `CF-*`). | `@sentinel`, `@fixer` | **`v136`** (`@137`) | 2026-11-20 |
@@ -55,15 +56,19 @@
 
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
-The remaining 6 tasks are categorized below in strict execution priority:
+The remaining prioritized tasks and deferred backfills are categorized below in strict execution priority:
 
 ### Tier 2: Governance, Core Loan Workflows & Data Reconciliation (`P1`)
 
 #### 1. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
-* **Priority:** `P1 (High - Current Sprint Focus)`
-* **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
-* **Location:** `SHEETS.ACCOUNTS` & `SHEETS.CIC_STATEMENT`
+* **Status:** `[BASELINE DONE - WAITING ON HISTORICAL STATEMENTS]`
+* **Priority:** `P1 (High)`
+* **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger` $\to$ `@fixer` $\to$ `@sentinel`)
+* **Location:** `SHEETS.ACCOUNTS` & `SHEETS.EQUITY_STATEMENT`
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
+* **Progress / Notes:**
+  - **Baseline Complete (`v139` / `@140`):** Canonical 'Equity Statement' tab provisioned with maroon branding, idempotent monthly summary schema, named range `EquityStatement_ClosingBalance`, and baseline Dec 2021 statement ingested and verified.
+  - **Pending Full Backfill:** Awaiting delivery of remaining historical monthly bank statements (2022–present) from group leadership to complete historical backfill and reconciliation.
 * **Dependencies:** `ARC-1` (Shipped in v112).
 
 ---
@@ -114,7 +119,7 @@ The remaining 6 tasks are categorized below in strict execution priority:
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v138)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v139)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -127,6 +132,7 @@ graph TD
         A1["ARC-1: Schema Standard & Reference Constants"]
         A5["ARC-5: 'BL' Entity ID Standardization"]
         A6["ARC-6: Canonical CIC Statement Standardization"]
+        M2B["MIG-2: Equity Statement Schema & Dec 2021 Baseline"]
         G1["GOV-1: Multi-Signature Dual-Officer Loan Approval"]
     end
 
@@ -141,7 +147,7 @@ graph TD
     end
 
     subgraph Sprint_Follow_Up ["Follow-up Sprint (P1 Priorities)"]
-        M2["MIG-2: Equity Bank Statement Ingestion<br>(Current Sprint Focus)"]
+        M2["MIG-2: Equity Historical Statements Backfill<br>(Awaiting Remaining Statements)"]
         C1["COM-1: Automated WhatsApp/Email Receipts"]
     end
 
@@ -158,9 +164,10 @@ graph TD
     A1 --> A3
     A1 & A3 --> A4
     A1 --> A6
+    A1 --> M2B
+    M2B -.-> M2
     R1 & R2 & A1 & A2 --> R4
     U2 -.-> G1
-    A1 --> M2
     R2 --> C2
     C1 --> C2
 ```
