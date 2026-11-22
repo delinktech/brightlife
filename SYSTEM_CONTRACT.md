@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v138` (Google Apps Script Build `@139`)
+- **Current Live Version:** `v139` (Google Apps Script Build `@140`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -31,7 +31,8 @@ All agents (`@ledger`, `@fixer`, `@migrator`, `@analyst`, `@shipper`) MUST enfor
    - **Row 2** is the anchor cell for all column-wide `=MAP(A2:A, LAMBDA(...))` array spill formulas. Row-level writers must leave spill-governed cells empty (`""`) on rows `2..N` (and preserve Row 2's `=MAP(...)` formula when updating Row 2).
 4. **Single Source of Truth — Zero Duplicate Columns or Redundant Tabs:**
    - **Reuse `Deposit Channel` in `Constants`:** Never add duplicate `Payment Channels` columns to `Constants`; all payment/deposit channel validations point to `Constants!Deposit Channel`.
-   - **Consolidated MMF & Investment Ledgers:**
+   - **Consolidated Bank, MMF & Investment Ledgers:**
+     - `Equity Statement` is the single canonical Equity Bank statement tab (`SHEETS.EQUITY_STATEMENT`) for account `0020164001424`. Linked to Named Range `EquityStatement_ClosingBalance`.
      - `CIC Statement` is the single canonical MMF statement tab (`CIC Transactions` and legacy `Fund Statements` are retired and consolidated to `CIC Statement`).
      - `Investment Cashflows` is the single unified investment transaction ledger (all legacy `InvestmentLedger` rows are migrated to `Investment Cashflows`, all `Investments` / `Investment Projects` formulas reference `Cashflows_*` Named Ranges, and `InvestmentLedger` is retired and deleted).
 
@@ -52,9 +53,10 @@ Any deposit, payment, or reconciliation record must strictly match one of the 5 
 * **`Investments`** *(Tier 1 Master Catalog - Instruments & Shares)*: `Investment ID | Name | Start Date | Money Invested [CALC] | Revenue [CALC] | ROI Amount [CALC] | ROI % [CALC] | Status | Asset Class | Institution | Ticker | Units Held | Unit Cost | Current Price | Last Valued | Carrying Value [CALC]`
 * **`Investment Projects`** *(Tier 2 Master Catalog - Tangible & Agribusiness)*: `Project ID | Project Name | Category | Linked Investment ID | Start Date | Operating Capacity | Capacity Unit | Lead Member | Approved Budget | Status | Notes | Created At | Capital Deployed [CALC] | Cumulative Revenue [CALC] | Cumulative OpEx [CALC] | Carrying Value [CALC]`
 * **`Investment Cashflows`** *(Tier 3 Unified Transactional Ledger — replaces `InvestmentLedger`)*: `Transaction ID | Date | Entity Type | Entity ID | Flow Type | Category | Description | Amount | Transaction Fee | Payment Channel | Reference | Recorded By | Recorded At`
-* **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows [CALC] | Outflows [CALC] | System Balance [CALC] | Statement Balance | Balance Date | Variance [CALC] | Reconciliation Status [CALC] | Notes`
+* **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows [CALC] | Outflows [CALC] | System Balance [CALC] | Statement Balance | Balance Date | Variance [CALC] | Reconciliation Status [CALC] | Notes` *(Equity Bank Acc. Number: `0020164001424`)*
 * **`Summary KPIs`** *(Materialized O(1) Cache)*: `Metric Key | Value | Formula Basis & Description`
 * **`Constants`** *(Single Unified Native Table — Title Case with Single Spaces)*: `Gender | Membership Status | Deposit Channel | Transaction Type | Contribution Status | Loans Statuses | Investment Statuses | Ledger Types | Ledger Categories | Roles | Member Selector | Asset Classes | Project Categories | Statutory Thresholds | Threshold Value`
+* **`Equity Statement`** *(Single Canonical Equity Bank Statement Table — `SHEETS.EQUITY_STATEMENT`)*: `Statement Date | Account Name | Account Number | Opening Balance | Money In (Deposits) | Money Out (Withdrawals) | Net Change | Closing Balance | Statement Ref | Notes / Breakdown` *(Named Range: `EquityStatement_ClosingBalance`)*
 * **`CIC Statement`** *(Single Canonical MMF Statement Table — replaces `CIC Transactions` and legacy `Fund Statements`)*: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
 * **`Roles`**: `Email | Role | Permissions | Status`
 * **`Audit Log`**: `Timestamp | Actor Email | Action | Entity | Entity ID | Summary | Details`
@@ -89,6 +91,12 @@ Client-server contracts called via `google.script.run`:
   - **Aggregated Statements:** 66 monthly historical statements in `CIC Statement`.
   - **Statement Reconciled Closing Balance:** `KES 899,551.62` (as of 31 Jul 2026) / `KES 976,564.16` (as of 31 Oct 2026).
   - **Reconciliation Audit:** 100% matched to official CIC statement summary down to the exact cent (Total Purchases: `1,615,130.00`, Gross Interest: `228,731.35`, Withdrawals: `910,000.00`, WHT: `34,309.69`).
+  - **Reconciliation Status:** `Balanced`.
+* **Batch 2 — Equity Bank Historical Statement Backfill (Task MIG-2 - Baseline Active)**:
+  - **Account Number:** `0020164001424` (`SHEETS.EQUITY_STATEMENT` / `Equity Statement`)
+  - **Baseline Ingested:** Dec 2021 statement (Acc `0020164001424`, `KES 583,423.85` opening, `KES 33,750.00` in, `KES 40,060.00` out, `KES -6,310.00` net change, `KES 577,113.85` closing).
+  - **Named Range:** `EquityStatement_ClosingBalance` registered and linked to `Accounts` statement balance.
+  - **Statement Ref:** `EQ-STMT-DEC-2021` (Dec 2021: 8 M-Pesa deposits `33,750.00`, 1 Cheque #000016 `40,000.00`, 1 Inward clearing fee `60.00`).
   - **Reconciliation Status:** `Balanced`.
 
 ---
