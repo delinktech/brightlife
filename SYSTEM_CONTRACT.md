@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v139` (Google Apps Script Build `@140`)
+- **Current Live Version:** `v140` (Google Apps Script Build `@141`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -107,3 +107,12 @@ Client-server contracts called via `google.script.run`:
 * **RBAC Enforcement:** All state-modifying RPC methods must enforce `requirePermission_()` server-side.
 * **Input Sanitization:** Client-side DOM insertions must use `escapeHtml()` / `escapeHtmlAttr()`; inputs saved to sheets must be stripped of formula injection prefixes (`=`, `+`, `-`, `@`).
 * **OAuth Scope Minimization:** `src/appsscript.json` must request only explicit, least-privilege scopes.
+
+---
+
+## 6. Statements Dispatch Hub & Document Printing (`@designer`, `@sentinel`)
+* **Task COM-4 Deliverables (Statements Preview PDF Export & Print CSS Hardening)**:
+  - **Statements Preview PDF Export:** Implemented 1-click `[Print / Save PDF]` button inside the certified monthly statement preview modal (`Statements.html`, `statements.ui.js.html`), enabling immediate export to paper or PDF directly from the active preview state without re-fetching.
+  - **Global Print CSS Hardening (`Index.html`):** Configured `@page { size: A4 portrait; margin: 12mm 15mm 15mm 15mm; }` with `print-color-adjust: exact !important`, isolated `.blg-avoid-break` / `table { page-break-inside: avoid; }`, enabled `thead { display: table-header-group; }` repeating headers across pages, and enforced high-contrast print typography preserving status badge fidelity.
+  - **AGM Pack Wiring (`Home.html`):** Rewired the primary print button in Group Overview header to launch the official AGM & Bank Audit Pack modal (`openReportModal('agm-pack')`).
+  - **Official Letterhead Credentials:** Synchronized verified organization contact details, postal address, email, and registration credentials across `PrintReportModal.html` and statement export layouts.
