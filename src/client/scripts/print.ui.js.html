@@ -29,7 +29,8 @@
     if (refEl) refEl.textContent = opts.refText || ("Ref: BLG-RPT-" + Date.now().toString(36).toUpperCase());
     const kpiEl = document.getElementById("print-kpi-row");
     if (kpiEl) {
-      kpiEl.className = opts.kpiGridClass || "grid grid-cols-3 gap-4 mb-6";
+      const baseGrid = opts.kpiGridClass || "grid grid-cols-3 gap-4 mb-6";
+      kpiEl.className = baseGrid.indexOf("blg-avoid-break") !== -1 ? baseGrid : (baseGrid + " blg-avoid-break");
     }
     const signoffEl = document.getElementById("print-signoff-block");
     if (signoffEl) {

@@ -791,7 +791,23 @@
     }
 
     /* Print Styles (Always Force Pure Light Mode) */
+    @page {
+      size: A4 portrait;
+      margin: 12mm 15mm 15mm 15mm;
+    }
+
     @media print {
+      *, *:before, *:after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      table { page-break-inside: auto; }
+      tr, td, th { page-break-inside: avoid !important; break-inside: avoid !important; }
+      thead { display: table-header-group !important; }
+      #print-signoff-block, #print-kpi-row, .blg-avoid-break {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
       html, html.dark, body {
         color-scheme: light !important;
         background: #ffffff !important;
@@ -809,9 +825,9 @@
         font-size: 11pt !important;
         color: #0f172a !important;
       }
+      html.dark #printReportModal,
       html.dark #printReportModal > div,
       html.dark #blg-printable-area,
-      html.dark #blg-printable-area *,
       html.dark .page-wrapper.active,
       html.dark .shadcn-table,
       html.dark .shadcn-table th,

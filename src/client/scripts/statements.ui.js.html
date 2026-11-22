@@ -467,17 +467,18 @@ function previewMemberStatement(memberId) {
 
   if (modal) modal.classList.remove("hidden");
   if (container) {
-    container.innerHTML = '<div class="p-8 text-center text-slate-500 dark:text-slate-400"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><br>Generating official statement...</div>';
+    container.innerHTML = '<div id="stmt-preview-content" class="p-8 text-center text-slate-500 dark:text-slate-400"><i class="fas fa-spinner fa-spin text-xl mb-2"></i><br>Generating official statement...</div>';
   }
 
   google.script.run
     .withSuccessHandler(function (res) {
       if (!res || !res.success) {
-        if (container) container.innerHTML = '<div class="p-6 text-center text-rose-700 dark:text-rose-400 font-semibold">' + escapeHtmlAttr((res && res.error) || 'Failed to generate statement.') + '</div>';
+        if (container) container.innerHTML = '<div id="stmt-preview-content" class="p-6 text-center text-rose-700 dark:text-rose-400 font-semibold">' + escapeHtmlAttr((res && res.error) || 'Failed to generate statement.') + '</div>';
         return;
       }
 
       statementsState.previewStatementData = res.statementData;
+      statementsState.previewHtmlBody = res.htmlBody || "";
       const stmt = res.statementData;
 
       if (title) title.innerText = stmt.memberName + " — " + stmt.monthLabel;
@@ -489,8 +490,9 @@ function previewMemberStatement(memberId) {
         iframe.style.height = "520px";
         iframe.style.border = "none";
         iframe.style.borderRadius = "8px";
-        container.innerHTML = "";
-        container.appendChild(iframe);
+        container.innerHTML = '<div id="stmt-preview-content" class="w-full"></div>';
+        const contentDiv = document.getElementById("stmt-preview-content") || container;
+        contentDiv.appendChild(iframe);
         const doc = iframe.contentWindow.document;
         doc.open();
         doc.write(res.htmlBody || buildClientSideStatementHtml_(stmt));
@@ -539,6 +541,150 @@ function previewMemberStatement(memberId) {
 function closeStatementPreviewModal() {
   const modal = document.getElementById("stmt-preview-modal");
   if (modal) modal.classList.add("hidden");
+}
+
+function printCertifiedMonthlyStatementPreview() {
+  const stmt = statementsState.previewStatementData;
+  const memberId = statementsState.previewMemberId;
+
+  if (!stmt && !memberId) {
+    if (typeof showNotification === "function") {
+      showNotification("Please select and preview a member statement first.", "warning");
+    }
+    return;
+  }
+
+  function escapeStmtText_(str) {
+    if (typeof escapePrintHtml === "function") return escapePrintHtml(str);
+    if (typeof escapeHtmlAttr === "function") return escapeHtmlAttr(str);
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  const memberName = (stmt && stmt.memberName) || "Member";
+  const mId = (stmt && stmt.memberId) || memberId || "—";
+  const monthLabel = (stmt && stmt.monthLabel) || statementsState.selectedPeriodLabel || statementsState.selectedMonthKey || "Monthly Statement";
+  const dateStr = (stmt && stmt.statementDate) || (typeof formatDateForLetterhead === "function" ? formatDateForLetterhead(new Date()) : new Date().toLocaleDateString("en-GB"));
+
+  const dateEl = document.getElementById("print-date-display");
+  if (dateEl) dateEl.textContent = dateStr;
+
+  const titleEl = document.getElementById("print-report-title");
+  if (titleEl) titleEl.textContent = "MEMBER MONTHLY FINANCIAL STATEMENT";
+
+  const badgeEl = document.getElementById("print-report-badge");
+  if (badgeEl) badgeEl.textContent = "Certified Statement";
+
+  const subEl = document.getElementById("print-report-subtitle");
+  if (subEl) {
+    subEl.textContent = "Official certified statement for " + memberName + " (" + mId + ") • Period: " + monthLabel;
+  }
+
+  const closingSavings = stmt ? (Number(stmt.closingSavings) || 0) : 0;
+  const loanBalance = stmt ? (Number(stmt.loanBalance) || 0) : 0;
+  const monthDeposits = stmt ? (Number(stmt.monthDeposits) || 0) : 0;
+
+  const kpiContainer = document.getElementById("print-kpi-row");
+  if (kpiContainer) {
+    kpiContainer.className = "grid grid-cols-3 gap-4 mb-6 blg-avoid-break";
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Savings</div>' +
+      '<div class="text-sm font-bold text-emerald-600 font-mono tabular-nums mt-0.5">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(closingSavings) : ("KES " + Math.round(closingSavings).toLocaleString())) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Current Loan Balance</div>' +
+      '<div class="text-sm font-bold text-rose-600 font-mono tabular-nums mt-0.5">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(loanBalance) : ("KES " + Math.round(loanBalance).toLocaleString())) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Period Deposits</div>' +
+      '<div class="text-sm font-bold text-sky-600 font-mono tabular-nums mt-0.5">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(monthDeposits) : ("KES " + Math.round(monthDeposits).toLocaleString())) + '</div>' +
+      '</div>';
+  }
+
+  const thead = document.getElementById("print-table-head");
+  if (thead) {
+    thead.innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Date / Code</th>' +
+      '<th class="px-4 py-3">Financial Item &amp; Description</th>' +
+      '<th class="px-4 py-3">Reference / Mode</th>' +
+      '<th class="px-4 py-3">Category</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      '</tr>';
+  }
+
+  const tbody = document.getElementById("print-table-body");
+  if (tbody) {
+    const opening = stmt ? (Number(stmt.openingSavings) || 0) : 0;
+    let bodyHtml =
+      '<tr>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapeStmtText_(stmt && stmt.startDate ? stmt.startDate : "Start") + '</td>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-wallet text-slate-500 mr-2"></i> Opening Accumulated Savings</td>' +
+      '<td class="px-4 py-3 text-slate-600 font-mono tabular-nums">' + escapeStmtText_(mId) + '-OPN</td>' +
+      '<td class="px-4 py-3 text-slate-600">Savings Brought Forward</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-800">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(opening) : ("KES " + Math.round(opening).toLocaleString())) + '</td>' +
+      '</tr>' +
+      '<tr>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapeStmtText_(stmt && stmt.endDate ? stmt.endDate : "Period") + '</td>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-piggy-bank text-emerald-600 mr-2"></i> Current Period Deposits &amp; Contributions</td>' +
+      '<td class="px-4 py-3 text-slate-600 font-mono tabular-nums">' + escapeStmtText_(mId) + '-DEP</td>' +
+      '<td class="px-4 py-3 text-slate-600">Monthly Contribution</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-emerald-700">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(monthDeposits) : ("KES " + Math.round(monthDeposits).toLocaleString())) + '</td>' +
+      '</tr>' +
+      '<tr>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapeStmtText_(stmt && stmt.endDate ? stmt.endDate : "End") + '</td>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-vault text-sky-600 mr-2"></i> Closing Total Member Savings</td>' +
+      '<td class="px-4 py-3 text-slate-600 font-mono tabular-nums">' + escapeStmtText_(mId) + '-SAV</td>' +
+      '<td class="px-4 py-3 text-slate-600">Cumulative Savings</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-slate-900">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(closingSavings) : ("KES " + Math.round(closingSavings).toLocaleString())) + '</td>' +
+      '</tr>' +
+      '<tr>' +
+      '<td class="px-4 py-3 font-mono tabular-nums text-slate-500">' + escapeStmtText_(stmt && stmt.endDate ? stmt.endDate : "End") + '</td>' +
+      '<td class="px-4 py-3 font-semibold text-slate-800"><i class="fas fa-hand-holding-dollar text-rose-600 mr-2"></i> Active Loan Balance Outstanding</td>' +
+      '<td class="px-4 py-3 text-slate-600 font-mono tabular-nums">' + escapeStmtText_(mId) + '-LN</td>' +
+      '<td class="px-4 py-3 text-slate-600">Outstanding Liability</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums font-bold text-rose-600">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(loanBalance) : ("KES " + Math.round(loanBalance).toLocaleString())) + '</td>' +
+      '</tr>';
+
+    if (stmt && Array.isArray(stmt.transactions) && stmt.transactions.length > 0) {
+      stmt.transactions.forEach(function (tx) {
+        bodyHtml +=
+          '<tr>' +
+          '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500">' + escapeStmtText_(tx.date || "—") + '</td>' +
+          '<td class="px-4 py-2.5 font-semibold text-slate-800">' + escapeStmtText_(tx.notes || tx.description || tx.type || "Contribution") + '</td>' +
+          '<td class="px-4 py-2.5 text-slate-600">' + escapeStmtText_(tx.mode || tx.reference || "—") + '</td>' +
+          '<td class="px-4 py-2.5 text-slate-600">' + escapeStmtText_(tx.type || "Deposit") + '</td>' +
+          '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-800">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(tx.amount) : ("KES " + tx.amount)) + '</td>' +
+          '</tr>';
+      });
+    }
+
+    if (stmt && Array.isArray(stmt.activeLoans) && stmt.activeLoans.length > 0) {
+      stmt.activeLoans.forEach(function (ln) {
+        bodyHtml +=
+          '<tr>' +
+          '<td class="px-4 py-2.5 font-mono tabular-nums text-slate-500">' + escapeStmtText_(ln.loanId || "LN") + '</td>' +
+          '<td class="px-4 py-2.5 font-semibold text-slate-800"><i class="fas fa-file-invoice-dollar text-amber-600 mr-2"></i> Loan Facility (' + escapeStmtText_(ln.status || "Active") + ')</td>' +
+          '<td class="px-4 py-2.5 text-slate-600">Total Paid: ' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(ln.totalPaid) : ("KES " + ln.totalPaid)) + '</td>' +
+          '<td class="px-4 py-2.5 text-slate-600">Loan Facility</td>' +
+          '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-rose-700">' + (typeof formatKshStmtExact_ === "function" ? formatKshStmtExact_(ln.balance) : ("KES " + ln.balance)) + '</td>' +
+          '</tr>';
+      });
+    }
+
+    tbody.innerHTML = bodyHtml;
+  }
+
+  if (typeof showPrintModal_ === "function") {
+    showPrintModal_({
+      showSignoff: true,
+      refText: "Ref: BLG-STMT-" + String(mId).replace(/[^a-zA-Z0-9]/g, "") + "-" + Date.now().toString(36).toUpperCase()
+    });
+  }
 }
 
 async function sendSingleMemberStatement(memberId) {
