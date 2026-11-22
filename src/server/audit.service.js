@@ -469,6 +469,13 @@ function runSchemaMigrationAddMemberIds_() {
     console.error("setupCicStatementSchema_ error: " + errFund.message);
   }
 
+  // Setup Equity Statement schema and baseline Dec 2021 monthly summary
+  try {
+    setupEquityStatementSchema_(ss);
+  } catch (errEq) {
+    console.error("setupEquityStatementSchema_ error: " + errEq.message);
+  }
+
   // Normalize historical deposit channels across operational sheets to approved channels
   try {
     normalizeHistoricalDepositChannels_(ss);
@@ -477,6 +484,20 @@ function runSchemaMigrationAddMemberIds_() {
   }
 
   return { success: true, savError: savError };
+}
+
+/**
+ * Diagnostic & integrity runner for Audit Log and Sheet Formula Integrity.
+ * Ensures schemas, named ranges, and statement baselines (CIC & Equity) are in place.
+ */
+function runAuditLogAndFormulaIntegrityCheck(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  try {
+    setupEquityStatementSchema_(spreadsheet);
+  } catch (eEq) {
+    console.error("runAuditLogAndFormulaIntegrityCheck: setupEquityStatementSchema_ failed: " + eEq.message);
+  }
+  return runSchemaMigrationAddMemberIds_(spreadsheet);
 }
 
 /**
@@ -607,6 +628,15 @@ function setupAccountsReconciliationSchema_(ss) {
       const curChan = String(freshVals[r - 1][channelColIdx] || "").trim();
       if (!curChan || curChan.toLowerCase() === "m-pesa") {
         accSheet.getRange(r, channelColIdx + 1).setValue(targetChannel);
+      }
+    }
+
+    // Ensure Equity Bank account number is populated and current
+    if (orgCell.toLowerCase().indexOf("equity") !== -1 && freshCol["Acc. Number"] !== undefined) {
+      const curAcc = String(freshVals[r - 1][freshCol["Acc. Number"]] || "").trim();
+      const targetAcc = typeof EQUITY_BANK_ACCOUNT_NUMBER !== "undefined" ? EQUITY_BANK_ACCOUNT_NUMBER : "0020164001424";
+      if (!curAcc || curAcc !== targetAcc) {
+        accSheet.getRange(r, freshCol["Acc. Number"] + 1).setNumberFormat("@").setValue(targetAcc);
       }
     }
 
@@ -758,6 +788,85 @@ function setupCicStatementSchema_(ss) {
 /** Legacy alias for setupCicStatementSchema_ */
 function setupFundStatementsSchema_(ss) {
   return setupCicStatementSchema_(ss);
+}
+
+/**
+ * Ensures 'Equity Statement' sheet exists and contains verified monthly statement summaries.
+ * Initialized with official Dec 2021 baseline statement row and Equity maroon (#800020) styling.
+ */
+function setupEquityStatementSchema_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  let eqSheet = getSheetByNameInsensitive_(ss, SHEETS.EQUITY_STATEMENT);
+  if (!eqSheet) {
+    eqSheet = ss.insertSheet(SHEETS.EQUITY_STATEMENT);
+  }
+
+  const requiredHeaders = [
+    "Statement Date",
+    "Account Name",
+    "Account Number",
+    "Opening Balance",
+    "Money In (Deposits)",
+    "Money Out (Withdrawals)",
+    "Net Change",
+    "Closing Balance",
+    "Statement Ref",
+    "Notes / Breakdown"
+  ];
+
+  if (eqSheet.getLastRow() < 1) {
+    eqSheet.appendRow(requiredHeaders);
+    eqSheet.setFrozenRows(1);
+  } else {
+    const vals = eqSheet.getDataRange().getValues();
+    const col = getHeaderMap_(vals[0]);
+    let lastCol = eqSheet.getLastColumn();
+    requiredHeaders.forEach(function(h) {
+      if (col[h] === undefined) {
+        lastCol++;
+        eqSheet.getRange(1, lastCol).setValue(h);
+      }
+    });
+  }
+
+  // Style header row: font weight bold, background "#800020" (Equity maroon), font color "#ffffff"
+  try {
+    eqSheet.getRange(1, 1, 1, requiredHeaders.length)
+      .setFontWeight("bold")
+      .setBackground("#800020")
+      .setFontColor("#ffffff");
+    eqSheet.setFrozenRows(1);
+  } catch (eStyle) {
+    console.warn("Could not style Equity Statement headers: " + eStyle.message);
+  }
+
+  // If the sheet only has headers (getLastRow() <= 1), insert the baseline Dec 2021 monthly summary
+  if (eqSheet.getLastRow() <= 1) {
+    const baselineRow = [
+      "2021-12-31",
+      "Equity Bank",
+      typeof EQUITY_BANK_ACCOUNT_NUMBER !== "undefined" ? EQUITY_BANK_ACCOUNT_NUMBER : "0020164001424",
+      583423.85,
+      33750.00,
+      40060.00,
+      -6310.00,
+      577113.85,
+      "EQ-STMT-DEC-2021",
+      "Dec 2021: 8 M-Pesa deposits (33,750.00), 1 Cheque #000016 (40,000.00), 1 Inward clearing fee (60.00)"
+    ];
+    eqSheet.appendRow(baselineRow);
+  }
+
+  // Format account number column (col 3) as text '@' and currency columns (cols 4, 5, 6, 7, 8) as '#,##0.00'
+  try {
+    const dataRows = Math.max(eqSheet.getLastRow() - 1, 1);
+    eqSheet.getRange(2, 3, dataRows, 1).setNumberFormat("@");
+    eqSheet.getRange(2, 4, dataRows, 5).setNumberFormat("#,##0.00");
+  } catch (eFmt) {
+    console.warn("Could not set number formats on Equity Statement: " + eFmt.message);
+  }
+
+  return eqSheet;
 }
 
 /**
@@ -1042,6 +1151,16 @@ function setupAllNamedRanges_(ss) {
       const l = getColLetter_(fCol["Closing Balance"] + 1);
       setOrUpdateNamedRange_(ss, "CICStatement_ClosingBalance", getNamedColumnRange_(ss, fundSheet.getName(), l));
       setOrUpdateNamedRange_(ss, "FundStatements_ClosingBalance", getNamedColumnRange_(ss, fundSheet.getName(), l));
+    }
+  }
+
+  const eqSheet = getSheetByNameInsensitive_(ss, SHEETS.EQUITY_STATEMENT);
+  if (eqSheet && eqSheet.getLastRow() >= 1) {
+    const eqH = eqSheet.getDataRange().getValues()[0];
+    const eqCol = getHeaderMap_(eqH);
+    if (eqCol["Closing Balance"] !== undefined) {
+      const l = getColLetter_(eqCol["Closing Balance"] + 1);
+      setOrUpdateNamedRange_(ss, "EquityStatement_ClosingBalance", getNamedColumnRange_(ss, eqSheet.getName(), l));
     }
   }
 

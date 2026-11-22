@@ -19,6 +19,7 @@ const SHEETS = Object.freeze({
   AUDIT_LOG: "Audit Log",
   CONSTANTS: "Constants",
   CIC_STATEMENT: "CIC Statement",
+  EQUITY_STATEMENT: "Equity Statement",
   SUMMARY_KPIS: "Summary KPIs",
 });
 
@@ -132,6 +133,8 @@ const DEPOSIT_CHANNELS = Object.freeze({
   REFUND_OFFSET: "Refund / Expense Offset",
 });
 
+const EQUITY_BANK_ACCOUNT_NUMBER = "0020164001424";
+
 /**
  * Normalizes deposit channels strictly to the 5 approved channels
  */
@@ -212,6 +215,8 @@ const SHEET_NAME_ALIASES = Object.freeze({
   "fund_statements": ["CIC Statement", "Fund Statements", "Fund_Statements"],
   "cic transactions": ["CIC Statement", "CIC Transactions", "CIC_Transactions"],
   "cic_transactions": ["CIC Statement", "CIC Transactions", "CIC_Transactions"],
+  "equity statement": ["Equity Statement", "Equity_Statement", "Equity Bank Statement"],
+  "equity_statement": ["Equity Statement", "Equity_Statement", "Equity Bank Statement"],
   "investments_register": ["Investments", "Investments_Register"],
   "investments": ["Investments", "Investments_Register"],
   "investment_projects": ["Investment Projects", "Investment_Projects"],
