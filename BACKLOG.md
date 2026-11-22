@@ -8,11 +8,11 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v137`** (Google Apps Script Build `@138`) |
-| **Total Tracked Tasks** | **34 Tasks** (Expanded with `ARC-1`–`ARC-5`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
-| **Completed & Shipped (`[DONE]`)** | **28 Tasks (82.4%)** |
+| **Current Live Release** | **`v138`** (Google Apps Script Build `@139`) |
+| **Total Tracked Tasks** | **35 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-4`–`UI-7`, `COM-3` & `SET-1`) |
+| **Completed & Shipped (`[DONE]`)** | **29 Tasks (82.9%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **6 Tasks (17.6%)** |
+| **Prioritized Backlog (`[BACKLOG]`)** | **6 Tasks (17.1%)** |
 | **Current Sprint Focus** | `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (P1 - High) |
 
 ---
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`ARC-6`** | Architecture | **Canonical 'CIC Statement' Tab Standardization**: Unified `SHEETS.CIC_STATEMENT` across all services, retired legacy 'Fund Statements' and 'CIC Transactions' with automated safe in-place migration, updated named ranges and verified zero variance. | `@fixer`, `@sentinel` | **`v138`** (`@139`) | 2026-11-22 |
 | **`GOV-1`** | Governance | **Multi-Signature Dual-Officer Loan Approval Workflow**: Implemented institutional maker-checker governance for loan disbursements preventing single-user fraud: Stage 1 Chairperson review (`Pending Review` $\to$ `Reviewed` / `Awaiting 2nd Approval`) with endorsement remarks $\to$ Stage 2 Treasurer authorization (`Reviewed` $\to$ `Approved`) with fund release confirmation, strict anti-fraud server-side separation asserting `reviewerEmail !== authorizerEmail`, atomic guarantor liability locking in `Guarantors` sub-ledger, full rejection workflow with pledge release, dual-officer UI action buttons, and complete audit trail logging in `SHEETS.AUDIT_LOG`. | `@fixer`, `@designer`, `@sentinel` | **`v137`** (`@138`) | 2026-11-20 |
 | **`ARC-5`** | Architecture | **Standardized 'BL' Entity ID Architecture**: Standardized institutional 'BL' prefix across all system entity identifiers: loans (`BLLN-YYYYMMDD-001`), members (`BLM-01`), investments (`BLINV-YYYY-01`), capital projects (`BLPRJ-01`), and investment cashflows (`BLICF-YYYYMMDD-XXXXXX`), with backward compatibility and normalization for legacy identifiers (`LN-*`, `MEM-*`, `INV-*`, `PRJ-*`, `CF-*`). | `@sentinel`, `@fixer` | **`v136`** (`@137`) | 2026-11-20 |
 | **`UI-2`** | UI/UX & Operations | **Native Dashboard Loan Application Workflow**: Implemented 100% dashboard-native `Apply for Loan` modal in `Loans.html` dynamically reading `SET-1` policy limits (multiplier, interest rate, tenor tiers, min guarantors), live borrower savings & max limit lookup, real-time guarantor unencumbered savings & shortfall tracker, interactive amortization calculator, and atomic submission to `Loans` (`Status = "Pending Review"`) and `Guarantors` with `SHEETS.AUDIT_LOG` entry, `v131`–`v135` polish improvements (incl. `v135` guarantor eligibility fix: unencumbered savings = savings minus pledges), and full `DESIGN.md` Light/Dark parity. | `@designer`, `@fixer`, `@sentinel` | **`v130`–`v135`** (`@131`–`@136`) | 2026-11-19 |
@@ -61,7 +62,7 @@ The remaining 6 tasks are categorized below in strict execution priority:
 #### 1. `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation`
 * **Priority:** `P1 (High - Current Sprint Focus)`
 * **Domain:** Migration & Audit (`@migrator` $\to$ `@ledger`)
-* **Location:** `SHEETS.ACCOUNTS` & `SHEETS.FUND_STATEMENTS`
+* **Location:** `SHEETS.ACCOUNTS` & `SHEETS.CIC_STATEMENT`
 * **Objective:** Ingest historical Equity Bank statements into itemized transaction records, reconciling physical bank credits against recorded member contribution dates.
 * **Dependencies:** `ARC-1` (Shipped in v112).
 
@@ -113,7 +114,7 @@ The remaining 6 tasks are categorized below in strict execution priority:
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v137)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v138)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -125,6 +126,7 @@ graph TD
         R2["RPT-2: Statement of Comprehensive Income"]
         A1["ARC-1: Schema Standard & Reference Constants"]
         A5["ARC-5: 'BL' Entity ID Standardization"]
+        A6["ARC-6: Canonical CIC Statement Standardization"]
         G1["GOV-1: Multi-Signature Dual-Officer Loan Approval"]
     end
 
@@ -155,6 +157,7 @@ graph TD
     A1 --> A2
     A1 --> A3
     A1 & A3 --> A4
+    A1 --> A6
     R1 & R2 & A1 & A2 --> R4
     U2 -.-> G1
     A1 --> M2
