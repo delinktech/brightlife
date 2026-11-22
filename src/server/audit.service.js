@@ -462,11 +462,11 @@ function runSchemaMigrationAddMemberIds_() {
     console.error("setupAccountsReconciliationSchema_ error: " + errAcc.message);
   }
 
-  // Setup Fund Statements schema and initial CIC MMF statement records
+  // Setup CIC Statement schema and initial CIC MMF statement records
   try {
-    setupFundStatementsSchema_(ss);
+    setupCicStatementSchema_(ss);
   } catch (errFund) {
-    console.error("setupFundStatementsSchema_ error: " + errFund.message);
+    console.error("setupCicStatementSchema_ error: " + errFund.message);
   }
 
   // Normalize historical deposit channels across operational sheets to approved channels
@@ -643,13 +643,14 @@ function setupAccountsReconciliationSchema_(ss) {
 }
 
 /**
- * Ensures 'Fund Statements' sheet exists and contains verified monthly statement summaries.
+ * Ensures 'CIC Statement' sheet exists and contains verified monthly statement summaries.
  */
-function setupFundStatementsSchema_(ss) {
+function setupCicStatementSchema_(ss) {
   if (!ss) ss = getSpreadsheet_();
-  let fundSheet = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
+  let fundSheet = (typeof ensureCicStatementTabRenamed_ === "function" ? ensureCicStatementTabRenamed_(ss) : null) ||
+                  getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
   if (!fundSheet) {
-    fundSheet = ss.insertSheet(SHEETS.FUND_STATEMENTS);
+    fundSheet = ss.insertSheet(SHEETS.CIC_STATEMENT);
   }
 
   const requiredHeaders = [
@@ -752,6 +753,11 @@ function setupFundStatementsSchema_(ss) {
   } catch (eAcc) {
     console.error("Failed to sync CIC MMF balance to Accounts: " + eAcc.message);
   }
+}
+
+/** Legacy alias for setupCicStatementSchema_ */
+function setupFundStatementsSchema_(ss) {
+  return setupCicStatementSchema_(ss);
 }
 
 /**
@@ -1028,12 +1034,13 @@ function setupAllNamedRanges_(ss) {
     }
   }
 
-  const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+  const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
   if (fundSheet && fundSheet.getLastRow() >= 1) {
     const fH = fundSheet.getDataRange().getValues()[0];
     const fCol = getHeaderMap_(fH);
     if (fCol["Closing Balance"] !== undefined) {
       const l = getColLetter_(fCol["Closing Balance"] + 1);
+      setOrUpdateNamedRange_(ss, "CICStatement_ClosingBalance", getNamedColumnRange_(ss, fundSheet.getName(), l));
       setOrUpdateNamedRange_(ss, "FundStatements_ClosingBalance", getNamedColumnRange_(ss, fundSheet.getName(), l));
     }
   }
@@ -1635,7 +1642,7 @@ function testDiagnoseSheetHeaders_() {
     SHEETS.INVESTMENT_CASHFLOWS,
     SHEETS.SUMMARY_KPIS,
     SHEETS.CONSTANTS,
-    SHEETS.FUND_STATEMENTS,
+    SHEETS.CIC_STATEMENT,
   ].forEach(function(sName) {
     const s = getSheetByNameInsensitive_(ss, sName);
     if (!s) {

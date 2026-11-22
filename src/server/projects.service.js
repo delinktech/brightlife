@@ -127,15 +127,22 @@ function runInstitutionalWorkbookSetup_() {
     report.warnings.push("migratedLedger: " + e.message);
   }
 
-  // Retire redundant CIC Transactions tab when Fund Statements exists
+  // Unify and standardize CIC Statement tab and retire redundant legacy tabs
   try {
-    const cicSheet = ss.getSheetByName(SHEETS.CIC_TRANSACTIONS);
-    const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
-    if (cicSheet && (!fundSheet || fundSheet.getName() !== cicSheet.getName())) {
-      if (typeof ss.deleteSheet === "function") {
-        ss.deleteSheet(cicSheet);
+    if (typeof ensureCicStatementTabRenamed_ === "function") {
+      const unifiedCic = ensureCicStatementTabRenamed_(ss);
+      if (unifiedCic) {
+        report.retiredSheets.push("Legacy CIC Transactions / Fund Statements unified to " + SHEETS.CIC_STATEMENT);
       }
-      report.retiredSheets.push(SHEETS.CIC_TRANSACTIONS);
+    } else {
+      const cicSheet = ss.getSheetByName("CIC Transactions");
+      const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
+      if (cicSheet && (!fundSheet || fundSheet.getName() !== cicSheet.getName())) {
+        if (typeof ss.deleteSheet === "function") {
+          ss.deleteSheet(cicSheet);
+        }
+        report.retiredSheets.push("CIC Transactions");
+      }
     }
     SpreadsheetApp.flush();
   } catch (eCic) {

@@ -100,16 +100,16 @@ function getDividendOverviewData() {
         console.warn("Could not calculate loan interest: " + eR.message);
       }
 
-      // 3. Gather investment returns from Fund Statements (CIC MMF & Mansa X) and Investments
+      // 3. Gather investment returns from CIC Statement (CIC MMF & Mansa X) and Investments
       let totalInvestmentGains = 0;
       const fundStatementList = [];
       const tz = ss.getSpreadsheetTimeZone();
 
       try {
         const fVals = typeof getSheetValuesCached_ === "function"
-          ? getSheetValuesCached_(ss, SHEETS.FUND_STATEMENTS)
+          ? getSheetValuesCached_(ss, SHEETS.CIC_STATEMENT)
           : (function () {
-              const s = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
+              const s = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
               return s && s.getLastRow() > 1 ? s.getDataRange().getValues() : [];
             })();
         if (fVals && fVals.length > 1) {
@@ -392,16 +392,20 @@ function executeDividendDistribution(data) {
 }
 
 /**
- * Saves a new monthly statement summary entry into Fund Statements
+ * Saves a new monthly statement summary entry into CIC Statement
  */
 function saveFundStatement(data) {
   try {
     requirePermission_("accountsWrite");
     const ss = getSpreadsheet_();
-    let fundSheet = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
+    let fundSheet = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
     if (!fundSheet) {
-      setupFundStatementsSchema_(ss);
-      fundSheet = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
+      if (typeof setupCicStatementSchema_ === "function") {
+        setupCicStatementSchema_(ss);
+      } else if (typeof setupFundStatementsSchema_ === "function") {
+        setupFundStatementsSchema_(ss);
+      }
+      fundSheet = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
     }
 
     const date = data.date ? parseDateInput_(data.date, ss.getSpreadsheetTimeZone()) : new Date();
@@ -455,8 +459,8 @@ function saveFundStatement(data) {
     } catch (eAcc) {}
 
     appendAuditLog_(
-      "fund.statement_log",
-      "Fund Statements",
+      "cic.statement_log",
+      "CIC Statement",
       fund,
       "Logged monthly statement for " + fund + " as of " + (data.date || "") + ": Net Yield KES " + net,
       JSON.stringify(data)
@@ -467,6 +471,11 @@ function saveFundStatement(data) {
   } catch (err) {
     return { success: false, error: err.message };
   }
+}
+
+/** Standard alias for saveFundStatement targeting CIC Statement */
+function saveCicStatement(data) {
+  return saveFundStatement(data);
 }
 
 /**

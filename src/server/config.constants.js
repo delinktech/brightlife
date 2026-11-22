@@ -18,8 +18,7 @@ const SHEETS = Object.freeze({
   ROLES: "Roles",
   AUDIT_LOG: "Audit Log",
   CONSTANTS: "Constants",
-  FUND_STATEMENTS: "Fund Statements",
-  CIC_TRANSACTIONS: "CIC Transactions",
+  CIC_STATEMENT: "CIC Statement",
   SUMMARY_KPIS: "Summary KPIs",
 });
 
@@ -207,8 +206,12 @@ const SHEET_NAME_ALIASES = Object.freeze({
   "investmentledger": ["InvestmentLedger", "Investment Ledger"],
   "investment cashflows": ["Investment Cashflows", "Investment_Cashflows"],
   "investment_cashflows": ["Investment Cashflows", "Investment_Cashflows"],
-  "cic transactions": ["CIC Transactions", "CIC_Transactions"],
-  "cic_transactions": ["CIC Transactions", "CIC_Transactions"],
+  "cic statement": ["CIC Statement", "Fund Statements", "Fund_Statements", "CIC Transactions", "CIC_Transactions"],
+  "cic_statement": ["CIC Statement", "Fund Statements", "Fund_Statements", "CIC Transactions", "CIC_Transactions"],
+  "fund statements": ["CIC Statement", "Fund Statements", "Fund_Statements"],
+  "fund_statements": ["CIC Statement", "Fund Statements", "Fund_Statements"],
+  "cic transactions": ["CIC Statement", "CIC Transactions", "CIC_Transactions"],
+  "cic_transactions": ["CIC Statement", "CIC Transactions", "CIC_Transactions"],
   "investments_register": ["Investments", "Investments_Register"],
   "investments": ["Investments", "Investments_Register"],
   "investment_projects": ["Investment Projects", "Investment_Projects"],
@@ -243,6 +246,66 @@ function getSheetByNameInsensitive_(ss, targetName) {
       const candKey = candidates[c].trim().toLowerCase();
       if (byLowerName[candKey]) return byLowerName[candKey];
     }
+  }
+
+  return null;
+}
+
+/**
+ * Idempotently unifies and standardizes the CIC Statement sheet name.
+ * Checks if a sheet named 'Fund Statements' or 'CIC Transactions' exists,
+ * and renames it to 'CIC Statement' (or deletes duplicate 'CIC Transactions'
+ * if 'CIC Statement' already exists).
+ * Returns the standardized 'CIC Statement' Sheet object (or null if none exist yet).
+ */
+function ensureCicStatementTabRenamed_(ss) {
+  const spreadsheet = ss || getSpreadsheet_();
+  if (!spreadsheet) return null;
+
+  let cicStatementSheet = spreadsheet.getSheetByName(SHEETS.CIC_STATEMENT);
+  const fundSheet = spreadsheet.getSheetByName("Fund Statements") || spreadsheet.getSheetByName("Fund_Statements");
+  const cicTxSheet = spreadsheet.getSheetByName("CIC Transactions") || spreadsheet.getSheetByName("CIC_Transactions");
+
+  if (cicStatementSheet) {
+    if (cicTxSheet && cicTxSheet.getName() !== SHEETS.CIC_STATEMENT) {
+      try {
+        if (typeof spreadsheet.deleteSheet === "function") {
+          spreadsheet.deleteSheet(cicTxSheet);
+        }
+      } catch (e) {
+        console.warn("Could not delete legacy CIC Transactions sheet: " + e.message);
+      }
+    }
+    if (fundSheet && fundSheet.getName() !== SHEETS.CIC_STATEMENT) {
+      try {
+        if (typeof spreadsheet.deleteSheet === "function") {
+          spreadsheet.deleteSheet(fundSheet);
+        }
+      } catch (e) {
+        console.warn("Could not delete legacy Fund Statements sheet: " + e.message);
+      }
+    }
+    return cicStatementSheet;
+  }
+
+  if (fundSheet) {
+    fundSheet.setName(SHEETS.CIC_STATEMENT);
+    cicStatementSheet = fundSheet;
+    if (cicTxSheet && cicTxSheet !== fundSheet) {
+      try {
+        if (typeof spreadsheet.deleteSheet === "function") {
+          spreadsheet.deleteSheet(cicTxSheet);
+        }
+      } catch (e) {
+        console.warn("Could not delete legacy CIC Transactions sheet: " + e.message);
+      }
+    }
+    return cicStatementSheet;
+  }
+
+  if (cicTxSheet) {
+    cicTxSheet.setName(SHEETS.CIC_STATEMENT);
+    return cicTxSheet;
   }
 
   return null;

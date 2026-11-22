@@ -658,10 +658,10 @@ function computeLiquiditySummary_(ss, totalSavings, totalLoans) {
     console.error("Accounts liquidity read error: " + accErr.message);
   }
 
-  // Fallback Tier 2: Latest Fund Statements closing balance per channel if Accounts yielded no balance
+  // Fallback Tier 2: Latest CIC Statement closing balance per channel if Accounts yielded no balance
   if (totalStatementCash === 0) {
     try {
-      const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+      const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
       if (fundSheet && fundSheet.getLastRow() > 1) {
         const fRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, fundSheet) : fundSheet.getDataRange().getValues();
         if (fRows.length > 1) {
@@ -856,7 +856,7 @@ function buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds) {
 
   let fundYieldInflow = 0;
   try {
-    const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.FUND_STATEMENTS);
+    const fundSheet = getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
     if (fundSheet && fundSheet.getLastRow() > 1) {
       const fv = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(ss, fundSheet) : fundSheet.getDataRange().getValues();
       if (fv.length > 1) {
@@ -1445,9 +1445,9 @@ function buildIncomeStatement_(ss, tz, now, effectiveRange, rangeBounds, portfol
     console.error("Income statement loan fees error: " + eLoanFees.message);
   }
 
-  // 2a. CIC MMF & Fund Statements Net Yield in range
+  // 2a. CIC MMF & CIC Statement Net Yield in range
   try {
-    const fundSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.FUND_STATEMENTS);
+    const fundSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CIC_STATEMENT);
     if (fundSheet && fundSheet.getLastRow() > 1) {
       const fRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, fundSheet) : fundSheet.getDataRange().getValues();
       if (fRows.length > 1) {

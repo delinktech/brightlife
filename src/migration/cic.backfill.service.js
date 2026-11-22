@@ -162,56 +162,26 @@ const CIC_RAW_TRANSACTIONS = [
 
 /**
  * Executes full backfill for CIC MMF:
- * 1. Populates 'CIC Transactions' sheet with all 138 itemized transactions.
- * 2. Aggregates monthly statements into 'Fund Statements' (May 2021 to July 2026).
+ * 1. Standardizes 'CIC Statement' sheet (renaming or retiring legacy 'CIC Transactions' / 'Fund Statements').
+ * 2. Populates verified monthly statements into 'CIC Statement' (May 2021 to October 2026).
  * 3. Updates 'Accounts' sheet row for CIC MMF.
  */
 function backfillCicStatement_() {
   const ss = getSpreadsheet_();
   const results = {
-    cicTransactionsCreated: 0,
+    cicStatementsAdded: 0,
     fundStatementsAdded: 0,
     accountsUpdated: false
   };
 
-  // 1. Populate 'CIC Transactions' sheet
-  let cicSheet = ss.getSheetByName(SHEETS.CIC_TRANSACTIONS);
-  if (!cicSheet) {
-    cicSheet = ss.insertSheet(SHEETS.CIC_TRANSACTIONS);
-  }
-
-  const txHeaders = [
-    "Transaction ID",
-    "Date",
-    "Description",
-    "Purchase",
-    "Interest",
-    "Withdrawal",
-    "Withholding Tax",
-    "Balance"
-  ];
-
-  cicSheet.clear();
-  cicSheet.getRange(1, 1, 1, txHeaders.length).setValues([txHeaders]);
-  cicSheet.getRange(1, 1, 1, txHeaders.length).setFontWeight("bold").setBackground("#1b4332").setFontColor("#ffffff");
-  cicSheet.setFrozenRows(1);
-
-  const txRows = CIC_RAW_TRANSACTIONS.map(function(t) {
-    return [
-      t.tid,
-      t.date,
-      t.desc,
-      t.purchase || 0,
-      t.interest || 0,
-      t.withdrawal || 0,
-      t.wht || 0,
-      t.balance
-    ];
-  });
-
-  if (txRows.length > 0) {
-    cicSheet.getRange(2, 1, txRows.length, txHeaders.length).setValues(txRows);
-    results.cicTransactionsCreated = txRows.length;
+  // 1. Unify and retire legacy redundant CIC Transactions sheet if present
+  if (typeof ensureCicStatementTabRenamed_ === "function") {
+    ensureCicStatementTabRenamed_(ss);
+  } else {
+    const legacyCic = ss.getSheetByName("CIC Transactions");
+    if (legacyCic) {
+      try { ss.deleteSheet(legacyCic); } catch (e) {}
+    }
   }
 
   // 2. Aggregate monthly statements (May 2021 to July 2026)
@@ -269,10 +239,11 @@ function backfillCicStatement_() {
     });
   });
 
-  // Ensure Fund Statements sheet exists
-  let fundSheet = ss.getSheetByName(SHEETS.FUND_STATEMENTS);
+  // Ensure CIC Statement sheet exists
+  let fundSheet = (typeof ensureCicStatementTabRenamed_ === "function" ? ensureCicStatementTabRenamed_(ss) : null) ||
+                  getSheetByNameInsensitive_(ss, SHEETS.CIC_STATEMENT);
   if (!fundSheet) {
-    fundSheet = ss.insertSheet(SHEETS.FUND_STATEMENTS);
+    fundSheet = ss.insertSheet(SHEETS.CIC_STATEMENT);
   }
 
   const fundHeaders = [
@@ -353,6 +324,7 @@ function backfillCicStatement_() {
   if (matrix.length > 0) {
     fundSheet.getRange(2, 1, matrix.length, fundHeaders.length).setValues(matrix);
     results.fundStatementsAdded = matrix.length;
+    results.cicStatementsAdded = matrix.length;
   }
 
   // 3. Update 'Accounts' sheet for CIC MMF
