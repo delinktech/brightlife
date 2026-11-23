@@ -506,6 +506,9 @@ function triggerTransactionReceipt(txData) {
       recipientPhone: member ? member.phone : (txData.phone || ""),
       whatsAppUrl: whatsAppUrl,
       whatsAppText: whatsAppText,
+      receiptData: Object.assign({}, dataForReceipt, {
+        date: dataForReceipt.date instanceof Date ? dataForReceipt.date.toISOString() : dataForReceipt.date
+      }),
     };
   } catch (err) {
     console.error("triggerTransactionReceipt error: " + err.message);

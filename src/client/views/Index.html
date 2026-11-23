@@ -790,6 +790,15 @@
       background: #475569;
     }
 
+    .blg-receipt-slip {
+      border: 1.5px solid #0f172a !important;
+      border-radius: 8px !important;
+      padding: 14px 18px !important;
+    }
+    .blg-receipt-slip .blg-vertical-line {
+      display: none !important;
+    }
+
     /* Print Styles (Always Force Pure Light Mode) */
     @page {
       size: A4 portrait;
@@ -807,6 +816,17 @@
       #print-signoff-block, #print-kpi-row, .blg-avoid-break {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+      }
+      .blg-receipt-slip {
+        max-width: 100% !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1.5px solid #0f172a !important;
+        border-radius: 8px !important;
+        padding: 12px 16px !important;
+      }
+      .blg-receipt-slip .blg-vertical-line {
+        display: none !important;
       }
       html, html.dark, body {
         color-scheme: light !important;

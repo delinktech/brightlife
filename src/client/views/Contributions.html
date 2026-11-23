@@ -289,7 +289,11 @@
         <span class="font-mono font-bold text-slate-800 dark:text-slate-200" id="receipt-phone-val">—</span>
       </div>
 
-      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800 flex-wrap">
+        <button type="button" onclick="printCurrentContributionReceipt()" id="btn-print-receipt-slip"
+          class="min-h-[38px] px-3.5 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+          <i class="fas fa-print text-xs"></i> <span>Print Receipt Slip</span>
+        </button>
         <button type="button" onclick="copyReceiptText()" id="btn-copy-receipt"
           class="min-h-[38px] px-3.5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5">
           <i class="fas fa-copy text-xs"></i> <span>Copy Text</span>

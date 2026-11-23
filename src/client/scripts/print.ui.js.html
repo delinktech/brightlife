@@ -50,6 +50,11 @@
     if (modal) modal.classList.add("hidden");
     document.body.classList.remove("print-modal-open");
 
+    const printArea = document.getElementById("blg-printable-area");
+    if (printArea) {
+      printArea.classList.remove("blg-receipt-slip");
+    }
+
     // Clean up dynamic statement schedules and footers
     const footEl = document.getElementById("print-table-foot");
     if (footEl) footEl.innerHTML = "";
@@ -65,6 +70,11 @@
     }
     const signoffEl = document.getElementById("print-signoff-block");
     if (signoffEl) signoffEl.classList.add("hidden");
+
+    const badgeEl = document.getElementById("print-report-badge");
+    if (badgeEl) {
+      badgeEl.className = "px-3 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 uppercase tracking-wider";
+    }
   }
 
   function formatPrintStatementMoney_(val) {
@@ -580,6 +590,278 @@
       })
       .getContributionsData(1, 100);
   }
+
+  function numberToWordsKES(amount) {
+    const num = Math.round(Number(amount) * 100) / 100;
+    if (isNaN(num) || num <= 0) return "Kenya Shillings Zero Only";
+
+    const ones = [
+      "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+      "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
+      "Seventeen", "Eighteen", "Nineteen"
+    ];
+    const tens = [
+      "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
+    ];
+
+    function convertGroup(n) {
+      let out = "";
+      if (n >= 100) {
+        out += ones[Math.floor(n / 100)] + " Hundred ";
+        n %= 100;
+        if (n > 0) out += "and ";
+      }
+      if (n >= 20) {
+        out += tens[Math.floor(n / 10)];
+        n %= 10;
+        if (n > 0) out += "-" + ones[n];
+        out += " ";
+      } else if (n > 0) {
+        out += ones[n] + " ";
+      }
+      return out.trim();
+    }
+
+    const intPart = Math.floor(num);
+    const cents = Math.round((num - intPart) * 100);
+
+    if (intPart === 0 && cents > 0) {
+      return "Kenya Shillings " + convertGroup(cents) + " Cents Only";
+    }
+
+    const billions = Math.floor(intPart / 1000000000);
+    const millions = Math.floor((intPart % 1000000000) / 1000000);
+    const thousands = Math.floor((intPart % 1000000) / 1000);
+    const remainder = intPart % 1000;
+
+    let words = "";
+    if (billions > 0) words += convertGroup(billions) + " Billion ";
+    if (millions > 0) words += convertGroup(millions) + " Million ";
+    if (thousands > 0) words += convertGroup(thousands) + " Thousand ";
+    if (remainder > 0) words += convertGroup(remainder) + " ";
+
+    words = words.trim();
+    let result = "Kenya Shillings " + words;
+    if (cents > 0) {
+      result += " and " + convertGroup(cents) + " Cents";
+    }
+    result += " Only";
+    return result;
+  }
+
+  function openPrintReceiptSlip(receiptData) {
+    const raw = receiptData || {};
+    const r = raw.receiptData ? raw.receiptData : raw;
+    const c = raw.contribution ? raw.contribution : {};
+
+    const memberName = r.memberName || c.name || raw.memberName || "Member";
+    const memberId = r.memberId || c.memberId || raw.memberId || "";
+    let phone = r.phone || r.recipientPhone || raw.recipientPhone || "";
+    const channel = r.channel || r.mode || c.mode || raw.channel || "Equity Bank";
+    const tid = r.tid || c.tid || raw.tid || "—";
+    const rawDate = r.date || c.date || raw.date || new Date();
+    const paymentDate = typeof formatDateForLetterhead === "function" ? formatDateForLetterhead(rawDate) : String(rawDate);
+    const amount = Number(r.amount !== undefined ? r.amount : (c.amountRaw !== undefined ? c.amountRaw : (raw.amount || 0))) || 0;
+    const type = r.type || c.type || raw.type || "Monthly Contribution";
+    const isLoanRepayment = Boolean(r.isLoanRepayment || c.type === "Loan Repayment" || type === "Loan Repayment");
+
+    // Match member for contact & standing if not in payload
+    let memberObj = null;
+    if (typeof currentMembers !== "undefined" && Array.isArray(currentMembers)) {
+      memberObj = currentMembers.find(function (m) {
+        return (memberId && m.id === memberId) || (memberName && m.name === memberName);
+      });
+    }
+    if (!phone && memberObj) {
+      phone = memberObj.phone || memberObj.cleanPhone || "";
+    }
+    if (!phone) phone = "On File";
+
+    let totalSavings = 0;
+    if (r.totalSavings !== undefined && r.totalSavings !== null) totalSavings = Number(r.totalSavings) || 0;
+    else if (memberObj && memberObj.savings !== undefined) totalSavings = Number(memberObj.savings) || 0;
+
+    let loanBalance = 0;
+    if (r.loanBalance !== undefined && r.loanBalance !== null) loanBalance = Number(r.loanBalance) || 0;
+    else if (memberObj && memberObj.loanBalance !== undefined) loanBalance = Number(memberObj.loanBalance) || 0;
+
+    const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const cleanTid = String(tid || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    const receiptNo = r.receiptNo || raw.receiptNo || ("BL-RCP-" + yyyymmdd + "-" + (cleanTid ? cleanTid.slice(-6) : Math.random().toString(36).substring(2, 6).toUpperCase()));
+
+    // 1. Container & Letterhead Setup
+    const printableArea = document.getElementById("blg-printable-area");
+    if (printableArea) {
+      printableArea.classList.add("blg-receipt-slip");
+    }
+
+    const titleEl = document.getElementById("print-report-title");
+    if (titleEl) titleEl.textContent = "OFFICIAL PAYMENT RECEIPT";
+
+    const badgeEl = document.getElementById("print-report-badge");
+    if (badgeEl) {
+      badgeEl.textContent = "APPROVED & CREDITED";
+      badgeEl.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 uppercase tracking-wider";
+    }
+
+    const subtitleEl = document.getElementById("print-report-subtitle");
+    if (subtitleEl) subtitleEl.textContent = "Official certified proof of payment & banking credit issued by Brightlife SHG Treasury.";
+
+    const dateDisplay = document.getElementById("print-date-display");
+    if (dateDisplay) dateDisplay.textContent = paymentDate;
+
+    // 2. Member & Transaction Detail Card
+    const kpiEl = document.getElementById("print-kpi-row");
+    if (kpiEl) {
+      kpiEl.className = "mb-3 blg-avoid-break";
+      kpiEl.innerHTML =
+        '<div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-2">' +
+        '  <div class="space-y-0.5">' +
+        '    <div><span class="text-slate-500 font-medium text-[11px]">Member Name:</span> <strong class="text-slate-900">' + escapePrintHtml(memberName) + '</strong> ' + (memberId ? '<span class="font-mono text-[11px] text-slate-600">(' + escapePrintHtml(memberId) + ')</span>' : '') + '</div>' +
+        '    <div><span class="text-slate-500 font-medium text-[11px]">Phone Number:</span> <span class="font-mono text-slate-800 text-[11px]">' + escapePrintHtml(phone) + '</span></div>' +
+        '    <div><span class="text-slate-500 font-medium text-[11px]">Payment Date:</span> <span class="font-semibold text-slate-800 text-[11px]">' + escapePrintHtml(paymentDate) + '</span></div>' +
+        '  </div>' +
+        '  <div class="space-y-0.5">' +
+        '    <div><span class="text-slate-500 font-medium text-[11px]">Deposit Channel:</span> <span class="font-semibold text-slate-900 text-[11px]">' + escapePrintHtml(channel) + '</span></div>' +
+        '    <div><span class="text-slate-500 font-medium text-[11px]">Transaction Ref:</span> <span class="font-mono font-bold text-slate-900 text-[11px]">' + escapePrintHtml(tid) + '</span></div>' +
+        '    <div><span class="text-slate-500 font-medium text-[11px]">Receipt Serial:</span> <span class="font-mono font-bold text-sky-800 text-[11px]">' + escapePrintHtml(receiptNo) + '</span></div>' +
+        '  </div>' +
+        '</div>';
+    }
+
+    // 3. Particulars Table Head
+    const thead = document.getElementById("print-table-head");
+    if (thead) {
+      thead.innerHTML =
+        '<tr class="text-[11px]">' +
+        '  <th class="py-1.5 px-3 text-left font-bold text-slate-700">Payment Particulars / Purpose</th>' +
+        '  <th class="py-1.5 px-3 text-left font-bold text-slate-700">Channel &amp; Ref</th>' +
+        '  <th class="py-1.5 px-3 text-right font-bold text-slate-700">Amount (KES)</th>' +
+        '</tr>';
+    }
+
+    // 4. Particulars Table Body
+    let particularsText = escapePrintHtml(type);
+    if (isLoanRepayment) {
+      particularsText = "Loan Repayment - Principal &amp; Interest";
+    } else if (type.toLowerCase().indexOf("contribution") !== -1 || type.toLowerCase().indexOf("savings") !== -1) {
+      particularsText = "Monthly Savings Contribution";
+    } else if (type.toLowerCase().indexOf("welfare") !== -1 || type.toLowerCase().indexOf("registration") !== -1) {
+      particularsText = "Registration / Welfare Contribution";
+    }
+
+    let rowsHtml = "";
+    if (isLoanRepayment && (Number(r.principalPaid) > 0 || Number(r.interestPaid) > 0)) {
+      if (Number(r.principalPaid) > 0) {
+        rowsHtml +=
+          '<tr>' +
+          '  <td class="py-1.5 px-3 text-slate-900 font-medium">Loan Repayment - Principal</td>' +
+          '  <td class="py-1.5 px-3 text-slate-600 font-mono text-[11px]">' + escapePrintHtml(channel) + ' • ' + escapePrintHtml(tid) + '</td>' +
+          '  <td class="py-1.5 px-3 text-right font-mono font-semibold text-slate-900">' + formatPrintStatementMoney_(r.principalPaid) + '</td>' +
+          '</tr>';
+      }
+      if (Number(r.interestPaid) > 0) {
+        rowsHtml +=
+          '<tr>' +
+          '  <td class="py-1.5 px-3 text-slate-900 font-medium">Loan Repayment - Interest</td>' +
+          '  <td class="py-1.5 px-3 text-slate-600 font-mono text-[11px]">' + escapePrintHtml(channel) + ' • ' + escapePrintHtml(tid) + '</td>' +
+          '  <td class="py-1.5 px-3 text-right font-mono font-semibold text-slate-900">' + formatPrintStatementMoney_(r.interestPaid) + '</td>' +
+          '</tr>';
+      }
+      if (Number(r.feePaid) > 0) {
+        rowsHtml +=
+          '<tr>' +
+          '  <td class="py-1.5 px-3 text-slate-900 font-medium">Loan Processing Fee</td>' +
+          '  <td class="py-1.5 px-3 text-slate-600 font-mono text-[11px]">' + escapePrintHtml(channel) + ' • ' + escapePrintHtml(tid) + '</td>' +
+          '  <td class="py-1.5 px-3 text-right font-mono font-semibold text-slate-900">' + formatPrintStatementMoney_(r.feePaid) + '</td>' +
+          '</tr>';
+      }
+    } else {
+      rowsHtml =
+        '<tr>' +
+        '  <td class="py-1.5 px-3 text-slate-900 font-medium">' + particularsText + '</td>' +
+        '  <td class="py-1.5 px-3 text-slate-600 font-mono text-[11px]">' + escapePrintHtml(channel) + ' • ' + escapePrintHtml(tid) + '</td>' +
+        '  <td class="py-1.5 px-3 text-right font-mono font-semibold text-slate-900">' + formatPrintStatementMoney_(amount) + '</td>' +
+        '</tr>';
+    }
+
+    const tbody = document.getElementById("print-table-body");
+    if (tbody) tbody.innerHTML = rowsHtml;
+
+    // 5. Particulars Table Foot (Total & Words)
+    const tfoot = document.getElementById("print-table-foot");
+    if (tfoot) {
+      tfoot.innerHTML =
+        '<tr class="border-t-2 border-slate-300 bg-slate-50/70 font-bold">' +
+        '  <td colspan="2" class="py-1.5 px-3 text-left text-slate-900 uppercase text-[11px] tracking-wide">Total Amount Credited</td>' +
+        '  <td class="py-1.5 px-3 text-right font-mono text-slate-900 text-xs">' + formatPrintStatementMoney_(amount) + '</td>' +
+        '</tr>' +
+        '<tr>' +
+        '  <td colspan="3" class="py-1.5 px-3 bg-slate-50 text-[10px] text-slate-700 italic border-t border-slate-200">' +
+        '    <span class="font-bold text-slate-800 not-italic uppercase tracking-wider text-[9px] mr-1">Amount in words:</span>' +
+        '    ' + numberToWordsKES(amount) +
+        '  </td>' +
+        '</tr>';
+    }
+
+    // 6. Post-Payment Updated Member Standing Box
+    const extraSchedules = document.getElementById("print-extra-schedules");
+    if (extraSchedules) {
+      extraSchedules.className = "mb-3 blg-avoid-break";
+      extraSchedules.innerHTML =
+        '<div class="p-2 bg-sky-50/60 rounded-lg border border-sky-200/80 text-[11px]">' +
+        '  <div class="text-[9px] font-bold uppercase tracking-wider text-sky-900 mb-1 flex items-center gap-1.5">' +
+        '    <i class="fas fa-wallet text-sky-600"></i> Post-Payment Updated Member Standing' +
+        '  </div>' +
+        '  <div class="grid grid-cols-2 gap-3 text-slate-800">' +
+        '    <div class="flex items-center justify-between border-r border-sky-200/60 pr-3">' +
+        '      <span class="text-slate-600 text-[10px]">Cumulative Savings Balance:</span>' +
+        '      <span class="font-mono font-bold text-slate-900 text-[11px]">' + formatPrintStatementMoney_(totalSavings) + '</span>' +
+        '    </div>' +
+        '    <div class="flex items-center justify-between pl-1">' +
+        '      <span class="text-slate-600 text-[10px]">Outstanding Loan Debt:</span>' +
+        '      <span class="font-mono font-bold ' + (loanBalance > 0 ? 'text-rose-700' : 'text-emerald-700') + ' text-[11px]">' + formatPrintStatementMoney_(loanBalance) + '</span>' +
+        '    </div>' +
+        '  </div>' +
+        '</div>';
+      extraSchedules.classList.remove("hidden");
+    }
+
+    // 7. Single-Officer Certification Block
+    const tSignoff = document.getElementById("print-treasurer-signoff-block");
+    if (tSignoff) {
+      tSignoff.className = "mt-2 pt-2 border-t border-slate-200 grid grid-cols-2 gap-6 text-[10px] text-slate-700 blg-avoid-break";
+      tSignoff.innerHTML =
+        '<div class="space-y-1">' +
+        '  <div class="text-[9px] uppercase font-bold text-slate-500 tracking-wider">Issued by Treasury Office</div>' +
+        '  <div class="h-5 border-b border-slate-400"></div>' +
+        '  <div class="text-[9px] text-slate-500 flex justify-between">' +
+        '    <span>Authorized Signature</span>' +
+        '    <span>Date: ' + escapePrintHtml(paymentDate) + '</span>' +
+        '  </div>' +
+        '</div>' +
+        '<div class="flex items-center justify-center gap-2 border border-dashed border-slate-300 rounded-lg p-1.5 text-[9px] text-slate-500 bg-slate-50/50">' +
+        '  <i class="fas fa-certificate text-sky-600 text-sm"></i>' +
+        '  <div>' +
+        '    <div class="font-bold text-slate-800 uppercase tracking-wider text-[9px]">Official BLG Treasury Stamp</div>' +
+        '    <div class="text-[8px] text-slate-400">Certified &amp; Credited to Core Ledger</div>' +
+        '  </div>' +
+        '</div>';
+      tSignoff.classList.remove("hidden");
+    }
+
+    const signoffEl = document.getElementById("print-signoff-block");
+    if (signoffEl) signoffEl.classList.add("hidden");
+
+    showPrintModal_({
+      refText: receiptNo,
+      signoffType: "treasurer",
+      kpiGridClass: "mb-3"
+    });
+  }
+
+  window.numberToWordsKES = numberToWordsKES;
+  window.openPrintReceiptSlip = openPrintReceiptSlip;
 
   function renderLoansPrintModal_(list) {
     const rows = Array.isArray(list) ? list : [];

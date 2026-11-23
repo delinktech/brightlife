@@ -44,6 +44,9 @@
     if (s === "approved") {
       return (
         '<div class="flex items-center justify-center gap-1.5">' +
+        '<button type="button" onclick="printContributionRowReceipt(' + c.rowNumber + ')" title="Print Official Receipt Slip" class="min-h-[38px] px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold transition-colors inline-flex items-center gap-1">' +
+        '<i class="fas fa-print text-slate-700 dark:text-slate-300"></i>' +
+        '</button>' +
         '<button type="button" onclick="shareContributionWhatsApp(' + c.rowNumber + ')" title="Open WhatsApp Receipt" class="min-h-[38px] px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[11px] font-medium transition-colors inline-flex items-center gap-1.5">' +
         '<i class="fab fa-whatsapp text-emerald-700 dark:text-emerald-400"></i> Receipt' +
         '</button>' +
@@ -111,7 +114,8 @@
       .withSuccessHandler(function (res) {
         stopAppLoader();
         if (res && res.success) {
-          openReceiptWhatsAppModal(res);
+          res.contribution = c;
+          openReceiptShareModal(res);
         } else {
           showNotification("Could not generate receipt: " + ((res && res.error) || "Check member phone number."), "warning", 5000);
         }
@@ -133,8 +137,10 @@
       });
   }
 
-  function openReceiptWhatsAppModal(receiptData) {
-    currentReceiptData = receiptData;
+  function openReceiptShareModal(receiptData) {
+    const data = receiptData || {};
+    window.currentReceiptPayload = data;
+    currentReceiptData = data;
     const modal = document.getElementById("receiptShareModal");
     const preview = document.getElementById("receipt-text-preview");
     const phoneVal = document.getElementById("receipt-phone-val");
@@ -142,17 +148,17 @@
     const emailText = document.getElementById("receipt-email-status-text");
     const openWaBtn = document.getElementById("btn-open-wa");
 
-    if (preview) preview.innerText = receiptData.whatsAppText || "";
-    if (phoneVal) phoneVal.innerText = receiptData.recipientPhone || "No phone recorded";
+    if (preview) preview.innerText = data.whatsAppText || "";
+    if (phoneVal) phoneVal.innerText = data.recipientPhone || "No phone recorded";
 
     if (emailBanner && emailText) {
-      if (receiptData.emailSent) {
+      if (data.emailSent) {
         emailBanner.className = "p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs flex items-center gap-2";
-        emailText.innerText = "Receipt emailed to " + receiptData.recipientEmail;
+        emailText.innerText = "Receipt emailed to " + data.recipientEmail;
         emailBanner.classList.remove("hidden");
-      } else if (receiptData.emailError) {
+      } else if (data.emailError) {
         emailBanner.className = "p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-800 text-xs flex items-center gap-2";
-        emailText.innerText = "Email delivery note: " + receiptData.emailError;
+        emailText.innerText = "Email delivery note: " + data.emailError;
         emailBanner.classList.remove("hidden");
       } else {
         emailBanner.classList.add("hidden");
@@ -160,8 +166,8 @@
     }
 
     if (openWaBtn) {
-      if (receiptData.whatsAppUrl) {
-        openWaBtn.href = receiptData.whatsAppUrl;
+      if (data.whatsAppUrl) {
+        openWaBtn.href = data.whatsAppUrl;
         openWaBtn.classList.remove("opacity-50", "pointer-events-none");
       } else {
         openWaBtn.href = "#";
@@ -171,6 +177,58 @@
 
     if (modal) modal.classList.remove("hidden");
   }
+
+  function openReceiptWhatsAppModal(receiptData) {
+    openReceiptShareModal(receiptData);
+  }
+
+  function printCurrentContributionReceipt() {
+    const payload = window.currentReceiptPayload || currentReceiptData;
+    if (!payload) {
+      if (typeof showNotification === "function") {
+        showNotification("No receipt data available to print.", "warning");
+      }
+      return;
+    }
+    if (typeof openPrintReceiptSlip === "function") {
+      openPrintReceiptSlip(payload);
+    }
+  }
+
+  function printContributionRowReceipt(rowNumber) {
+    const c = (loadedContributions || []).find(function (item) { return item.rowNumber === rowNumber; });
+    if (!c) return;
+
+    const memberInfo = (typeof currentMembers !== "undefined" && Array.isArray(currentMembers))
+      ? currentMembers.find(function (m) { return m.id === c.memberId || m.name === c.name; })
+      : null;
+
+    const directPayload = {
+      receiptNo: "BL-RCP-" + (c.tid || ("ROW" + c.rowNumber)),
+      date: c.date,
+      memberId: c.memberId || (memberInfo ? memberInfo.id : ""),
+      memberName: c.name || (memberInfo ? memberInfo.name : "Member"),
+      recipientPhone: memberInfo ? (memberInfo.phone || memberInfo.cleanPhone) : "",
+      amount: c.amountRaw !== undefined ? c.amountRaw : c.amount,
+      type: c.type || "Monthly Contribution",
+      channel: c.mode || "Equity Bank",
+      tid: c.tid || "—",
+      isLoanRepayment: c.type === "Loan Repayment" || c.type === "Loan Payment",
+      totalSavings: memberInfo ? memberInfo.savings : 0,
+      loanBalance: memberInfo ? memberInfo.loanBalance : 0,
+      contribution: c
+    };
+
+    window.currentReceiptPayload = directPayload;
+
+    if (typeof openPrintReceiptSlip === "function") {
+      openPrintReceiptSlip(directPayload);
+    }
+  }
+
+  window.openReceiptShareModal = openReceiptShareModal;
+  window.printCurrentContributionReceipt = printCurrentContributionReceipt;
+  window.printContributionRowReceipt = printContributionRowReceipt;
 
   function closeReceiptShareModal() {
     const modal = document.getElementById("receiptShareModal");
