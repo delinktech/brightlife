@@ -2308,3 +2308,252 @@ function notifyLoanRejected_(loanId, borrowerName, borrowerMemberId, borrowerEma
     console.error("notifyLoanRejected_ error: " + err.message);
   }
 }
+
+/**
+ * Retrieve complete Individual Loan Schedule & Amortization Statement data for a specific loan.
+ * Supports borrower self-service (RBAC enforced) and administrative audit review.
+ *
+ * @param {string} loanId - Target Loan ID (e.g. "LN0001", "LN-2026-001")
+ * @return {Object} Formatted loan details, sorted repayments, guarantors, and verification ref.
+ */
+function getLoanStatementData(loanId) {
+  const session = requireAccess_();
+  const isMemberOnly = session.permissions && session.permissions.isMemberOnly;
+  const callerMemberId = String(session.memberId || "").trim().toLowerCase();
+  const callerMemberName = String(session.memberName || "").trim().toLowerCase();
+
+  const targetLoanId = String(loanId || "").trim();
+  if (!targetLoanId) {
+    throw new Error("Loan ID is required.");
+  }
+  const cleanLoanId = targetLoanId.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
+  const ss = getSpreadsheet_();
+  const tz = ss.getSpreadsheetTimeZone() || "Africa/Nairobi";
+  const loanSheet = getRequiredSheet_(SHEETS.LOANS);
+  const loanValues = loanSheet.getDataRange().getValues();
+  if (loanValues.length <= 1) {
+    throw new Error("Loan record not found: " + targetLoanId);
+  }
+
+  const loanHeaders = loanValues[0];
+  const loanCol = getHeaderMap_(loanHeaders);
+  requireHeaders_(loanCol, ["Loan ID", "Borrower Name", "Requested Amount", "Status"], SHEETS.LOANS);
+
+  const memberIdCol = loanCol["Member ID"] !== undefined ? loanCol["Member ID"] : loanCol["Member id"];
+
+  let targetRow = null;
+  for (let i = 1; i < loanValues.length; i++) {
+    const row = loanValues[i];
+    const rLoanId = String(row[loanCol["Loan ID"]] || "").trim();
+    if (rLoanId.toLowerCase() === targetLoanId.toLowerCase()) {
+      targetRow = row;
+      break;
+    }
+  }
+
+  if (!targetRow) {
+    throw new Error("Loan record not found: " + targetLoanId);
+  }
+
+  const borrowerName = String(targetRow[loanCol["Borrower Name"]] || "").trim();
+  const borrowerMemberId = memberIdCol !== undefined ? String(targetRow[memberIdCol] || "").trim() : "";
+
+  // Enforce RBAC: If member-only, borrower must match caller
+  if (isMemberOnly) {
+    const matchMemberId = callerMemberId && borrowerMemberId.toLowerCase() === callerMemberId;
+    const matchMemberName = callerMemberName && (
+      borrowerName.toLowerCase() === callerMemberName ||
+      callerMemberName.indexOf(borrowerName.toLowerCase()) !== -1 ||
+      borrowerName.toLowerCase().indexOf(callerMemberName) !== -1
+    );
+
+    if (!matchMemberId && !matchMemberName) {
+      throw new Error("Access denied: You can only view your own loan statement.");
+    }
+  }
+
+  const requested = Number(targetRow[loanCol["Requested Amount"]]) || 0;
+  const interestColVal = loanCol["Interest"] !== undefined ? Number(targetRow[loanCol["Interest"]]) : NaN;
+  const trsFeeColVal = loanCol["Transaction Fee"] !== undefined ? (Number(targetRow[loanCol["Transaction Fee"]]) || 0) : 0;
+  const repaymentColVal = loanCol["Repayment Amount"] !== undefined ? Number(targetRow[loanCol["Repayment Amount"]]) : NaN;
+
+  // Calculate repayment and interest: standard 10% flat interest if not explicit
+  const calculatedInterest = !isNaN(interestColVal) ? interestColVal : Math.round(requested * 0.10);
+  const repayment = !isNaN(repaymentColVal) && repaymentColVal > 0 ? repaymentColVal : (requested + calculatedInterest + trsFeeColVal);
+  const interest = !isNaN(interestColVal) ? interestColVal : (repayment - requested);
+
+  const paid = loanCol["Total Paid"] !== undefined ? (Number(targetRow[loanCol["Total Paid"]]) || 0) : 0;
+  const balance = loanCol["Balance"] !== undefined ? (Number(targetRow[loanCol["Balance"]]) || 0) : (repayment - paid);
+
+  const requestDate = loanCol["Request Date"] !== undefined ? (formatDateValue_(targetRow[loanCol["Request Date"]], tz) || (targetRow[loanCol["Request Date"]] ? String(targetRow[loanCol["Request Date"]]) : "")) : "";
+  const approvedDate = loanCol["Approved Date"] !== undefined ? (formatDateValue_(targetRow[loanCol["Approved Date"]], tz) || (targetRow[loanCol["Approved Date"]] ? String(targetRow[loanCol["Approved Date"]]) : "")) : "";
+  const disbursedDateCol = loanCol["Disbursed Date"] !== undefined ? loanCol["Disbursed Date"] : loanCol["Approved Date"];
+  const disbursedDate = disbursedDateCol !== undefined ? (formatDateValue_(targetRow[disbursedDateCol], tz) || (targetRow[disbursedDateCol] ? String(targetRow[disbursedDateCol]) : "")) : approvedDate;
+
+  const reviewedBy = loanCol["Reviewed By"] !== undefined ? String(targetRow[loanCol["Reviewed By"]] || "").trim() : "";
+  const authorizedBy = loanCol["Approved By"] !== undefined
+    ? String(targetRow[loanCol["Approved By"]] || "").trim()
+    : (loanCol["Authorized By"] !== undefined ? String(targetRow[loanCol["Authorized By"]] || "").trim() : "");
+  const disbursementRef = loanCol["Disbursement Reference"] !== undefined
+    ? String(targetRow[loanCol["Disbursement Reference"]] || "").trim()
+    : (loanCol["Disbursement Ref"] !== undefined ? String(targetRow[loanCol["Disbursement Ref"]] || "").trim() : "");
+  const disbursementChannel = loanCol["Disbursement Channel"] !== undefined ? String(targetRow[loanCol["Disbursement Channel"]] || "").trim() : "";
+  const status = loanCol["Status"] !== undefined ? String(targetRow[loanCol["Status"]] || LOAN_STATUS.PENDING).trim() : LOAN_STATUS.PENDING;
+
+  const loanDetails = {
+    loanId: String(targetRow[loanCol["Loan ID"]] || targetLoanId),
+    memberId: borrowerMemberId,
+    borrower: borrowerName,
+    requested: requested,
+    repayment: repayment,
+    interest: interest,
+    interestRate: "10%",
+    paid: paid,
+    balance: balance,
+    requestDate: requestDate,
+    approvedDate: approvedDate,
+    disbursedDate: disbursedDate,
+    status: status,
+    reviewedBy: reviewedBy,
+    authorizedBy: authorizedBy,
+    disbursementRef: disbursementRef,
+    disbursementChannel: disbursementChannel,
+  };
+
+  // Retrieve Repayments from SHEETS.LOAN_REPAYMENTS
+  const repaymentsList = [];
+  try {
+    const repSheet = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
+    if (repSheet && repSheet.getLastRow() > 1) {
+      const repValues = repSheet.getDataRange().getValues();
+      const repHeaders = repValues[0];
+      const repCol = getHeaderMap_(repHeaders);
+      const rLoanIdCol = repCol["Loan ID"];
+      const pDateCol = repCol["Payment Date"];
+      const pIdCol = repCol["Payment ID"];
+      const tidCol = repCol["Transaction ID"];
+      const prinCol = repCol["Principal Paid"];
+      const intCol = repCol["Interest Paid"];
+      const feeCol = repCol["Fee Paid"];
+      const totCol = repCol["Total Paid"];
+      const modeCol = repCol["Payment Mode"];
+      const balRemCol = repCol["Balance Remaining"];
+      const repStatusCol = repCol["Status"];
+
+      if (rLoanIdCol !== undefined) {
+        for (let r = 1; r < repValues.length; r++) {
+          const rRow = repValues[r];
+          const rLoanId = String(rRow[rLoanIdCol] || "").trim();
+          if (rLoanId.toLowerCase() === targetLoanId.toLowerCase()) {
+            const rawDate = pDateCol !== undefined ? rRow[pDateCol] : "";
+            const parsedDate = rawDate instanceof Date ? rawDate : new Date(rawDate);
+            const dateStr = formatDateValue_(rawDate, tz) || (rawDate ? String(rawDate) : "");
+
+            repaymentsList.push({
+              _time: (parsedDate instanceof Date && !isNaN(parsedDate.getTime())) ? parsedDate.getTime() : 0,
+              paymentId: pIdCol !== undefined ? String(rRow[pIdCol] || "") : "",
+              date: dateStr,
+              tid: tidCol !== undefined ? String(rRow[tidCol] || "") : "",
+              principalPaid: prinCol !== undefined ? (Number(rRow[prinCol]) || 0) : 0,
+              interestPaid: intCol !== undefined ? (Number(rRow[intCol]) || 0) : 0,
+              feePaid: feeCol !== undefined ? (Number(rRow[feeCol]) || 0) : 0,
+              totalPaid: totCol !== undefined ? (Number(rRow[totCol]) || 0) : 0,
+              mode: modeCol !== undefined ? String(rRow[modeCol] || "") : "",
+              balanceRemaining: balRemCol !== undefined ? (Number(rRow[balRemCol]) || 0) : 0,
+              status: repStatusCol !== undefined ? String(rRow[repStatusCol] || "Approved").trim() : "Approved",
+            });
+          }
+        }
+      }
+
+      // Sort chronologically by payment date
+      repaymentsList.sort(function(a, b) {
+        return a._time - b._time;
+      });
+
+      // Clean up internal sort key
+      repaymentsList.forEach(function(item) {
+        delete item._time;
+      });
+    }
+  } catch (repErr) {
+    console.error("Error retrieving loan repayments for statement: " + repErr.message);
+  }
+
+  // Retrieve Guarantors from SHEETS.GUARANTORS
+  const guarantorsList = [];
+  try {
+    const gSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+    if (gSheet && gSheet.getLastRow() > 1) {
+      const gValues = gSheet.getDataRange().getValues();
+      const gHeaders = gValues[0];
+      const gCol = getHeaderMap_(gHeaders);
+      const gLidCol = gCol["Loan ID"];
+      const gMidCol = gCol["Member ID"] !== undefined ? gCol["Member ID"] : gCol["Member id"];
+      const gNameCol = gCol["Guarantor Name"] !== undefined
+        ? gCol["Guarantor Name"]
+        : (gCol["Member Name"] !== undefined ? gCol["Member Name"] : gCol["Name"]);
+      const gAmtCol = gCol["Guaranteed Amount"] !== undefined
+        ? gCol["Guaranteed Amount"]
+        : (gCol["Amount Pledged"] !== undefined ? gCol["Amount Pledged"] : gCol["Amount"]);
+      const gStatCol = gCol["Status"] !== undefined
+        ? gCol["Status"]
+        : (gCol["Loan Status"] !== undefined ? gCol["Loan Status"] : gCol["Guarantor Status"]);
+
+      let memberNameById = null;
+
+      if (gLidCol !== undefined) {
+        for (let gr = 1; gr < gValues.length; gr++) {
+          const gRow = gValues[gr];
+          const gLoanId = String(gRow[gLidCol] || "").trim();
+          if (gLoanId.toLowerCase() === targetLoanId.toLowerCase()) {
+            const gMid = gMidCol !== undefined ? String(gRow[gMidCol] || "").trim() : "";
+            let gName = gNameCol !== undefined ? String(gRow[gNameCol] || "").trim() : "";
+            if (!gName && gMid) {
+              if (!memberNameById) {
+                memberNameById = {};
+                try {
+                  const mSheet = ss.getSheetByName(SHEETS.MEMBERS);
+                  if (mSheet && mSheet.getLastRow() > 1) {
+                    const mVals = mSheet.getDataRange().getValues();
+                    const mCol = getHeaderMap_(mVals[0]);
+                    const mMIdCol = mCol["Member ID"] !== undefined ? mCol["Member ID"] : mCol["Member id"];
+                    const mNameCol = mCol["Full Name"] !== undefined ? mCol["Full Name"] : (mCol["Member Name"] !== undefined ? mCol["Member Name"] : mCol["Name"]);
+                    if (mMIdCol !== undefined && mNameCol !== undefined) {
+                      for (let mi = 1; mi < mVals.length; mi++) {
+                        const mIdVal = String(mVals[mi][mMIdCol] || "").trim();
+                        if (mIdVal) memberNameById[mIdVal.toLowerCase()] = String(mVals[mi][mNameCol] || "").trim();
+                      }
+                    }
+                  }
+                } catch (_) {}
+              }
+              gName = memberNameById[gMid.toLowerCase()] || gMid;
+            }
+            const gAmt = gAmtCol !== undefined ? (Number(gRow[gAmtCol]) || 0) : 0;
+            const gStatus = gStatCol !== undefined ? String(gRow[gStatCol] || "Active").trim() : "Active";
+            guarantorsList.push({
+              memberId: gMid,
+              guarantorName: gName,
+              amountPledged: gAmt,
+              status: gStatus,
+            });
+          }
+        }
+      }
+    }
+  } catch (gErr) {
+    console.error("Error retrieving guarantors for statement: " + gErr.message);
+  }
+
+  const verificationRef = "BLG-LN-STMT-" + cleanLoanId + "-" + Utilities.formatDate(new Date(), "Africa/Nairobi", "yyyyMMdd");
+
+  return {
+    success: true,
+    loan: loanDetails,
+    repayments: repaymentsList,
+    guarantors: guarantorsList,
+    verificationRef: verificationRef,
+  };
+}

@@ -949,6 +949,372 @@
       .getLoansData(1, 100);
   }
 
+  /**
+   * Renders the certified Individual Loan Account Statement & Amortization Schedule
+   * into the official PrintReportModal layout.
+   */
+  function renderPrintLoanStatementFromData_(data) {
+    const res = data || {};
+    const loan = res.loan || {};
+    const repayments = Array.isArray(res.repayments) ? res.repayments : [];
+    const guarantors = Array.isArray(res.guarantors) ? res.guarantors : [];
+
+    const dateFormatted = formatDateForLetterhead(new Date());
+    const verificationRef = res.verificationRef || ("BLG-LN-STMT-" + String(loan.loanId || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase() + "-" + new Date().toISOString().slice(0, 10).replace(/-/g, ""));
+
+    document.getElementById("print-date-display").textContent = dateFormatted;
+    document.getElementById("print-report-title").textContent = "LOAN ACCOUNT STATEMENT & AMORTIZATION SCHEDULE";
+
+    // Header Status Badge with semantic colors
+    const statusLower = String(loan.status || "").toLowerCase().trim();
+    let badgeClass = "px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ";
+    if (statusLower === "settled" || statusLower === "cleared") {
+      badgeClass += "bg-emerald-100 text-emerald-800";
+    } else if (statusLower === "active" || statusLower === "disbursed" || statusLower === "approved") {
+      badgeClass += "bg-sky-100 text-sky-800";
+    } else if (statusLower.indexOf("pending") !== -1 || statusLower === "reviewed") {
+      badgeClass += "bg-amber-100 text-amber-800";
+    } else if (statusLower === "rejected") {
+      badgeClass += "bg-rose-100 text-rose-800";
+    } else {
+      badgeClass += "bg-slate-100 text-slate-800";
+    }
+    const badgeEl = document.getElementById("print-report-badge");
+    if (badgeEl) {
+      badgeEl.className = badgeClass;
+      badgeEl.textContent = loan.status || "Active";
+    }
+
+    const disbDate = loan.disbursedDate || loan.approvedDate || "—";
+    const memberPart = loan.memberId ? " (" + escapePrintHtml(loan.memberId) + ")" : "";
+    document.getElementById("print-report-subtitle").textContent =
+      "Facility " + escapePrintHtml(loan.loanId || "—") + " • Borrower: " + escapePrintHtml(loan.borrower || "Borrower") + memberPart + " • Disbursed: " + escapePrintHtml(disbDate);
+
+    const isSettled = statusLower === "settled" || statusLower === "cleared" || Number(loan.balance) <= 0;
+    const balColor = isSettled ? "text-emerald-600" : "text-rose-600";
+
+    // 4-Up KPI Cards & Loan Terms & Parameters Matrix
+    const kpiContainer = document.getElementById("print-kpi-row");
+    if (kpiContainer) {
+      kpiContainer.className = "mb-6 blg-avoid-break";
+      kpiContainer.innerHTML =
+        '<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">' +
+        '  <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Principal Facility</div>' +
+        '    <div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatPrintStatementMoney_(loan.requested) + '</div>' +
+        '  </div>' +
+        '  <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Total Repayment Due</div>' +
+        '    <div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatPrintStatementMoney_(loan.repayment) + '</div>' +
+        '  </div>' +
+        '  <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Amount Repaid to Date</div>' +
+        '    <div class="text-sm font-bold text-emerald-700 font-mono tabular-nums mt-0.5">' + formatPrintStatementMoney_(loan.paid) + '</div>' +
+        '  </div>' +
+        '  <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Outstanding Payoff Balance</div>' +
+        '    <div class="text-sm font-bold ' + balColor + ' font-mono tabular-nums mt-0.5">' + formatPrintStatementMoney_(loan.balance) + '</div>' +
+        '  </div>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200 text-xs">' +
+        '  <div>' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Borrower &amp; Member ID</div>' +
+        '    <div class="font-semibold text-slate-900 truncate">' + escapePrintHtml(loan.borrower) + '</div>' +
+        '    <div class="text-[10px] text-slate-500 font-mono">' + escapePrintHtml(loan.memberId || "—") + '</div>' +
+        '  </div>' +
+        '  <div>' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Disbursement Date</div>' +
+        '    <div class="font-medium text-slate-800 font-mono">' + escapePrintHtml(disbDate) + '</div>' +
+        '    <div class="text-[10px] text-slate-500 truncate">' + escapePrintHtml(loan.disbursementChannel || "Approved") + '</div>' +
+        '  </div>' +
+        '  <div>' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Interest Rate</div>' +
+        '    <div class="font-bold text-slate-900 font-mono">' + escapePrintHtml(loan.interestRate || "10.0% Flat") + '</div>' +
+        '    <div class="text-[10px] text-slate-500">10% Flat Rate</div>' +
+        '  </div>' +
+        '  <div>' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Total Interest Charge</div>' +
+        '    <div class="font-mono font-semibold text-sky-800">' + formatPrintStatementMoney_(loan.interest) + '</div>' +
+        '    <div class="text-[10px] text-slate-500">Amortized Interest</div>' +
+        '  </div>' +
+        '  <div>' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Total Paid</div>' +
+        '    <div class="font-mono font-semibold text-emerald-700">' + formatPrintStatementMoney_(loan.paid) + '</div>' +
+        '    <div class="text-[10px] text-slate-500">Cumulative Repaid</div>' +
+        '  </div>' +
+        '  <div>' +
+        '    <div class="text-[10px] uppercase font-bold text-slate-400">Remaining Balance</div>' +
+        '    <div class="font-mono font-bold ' + balColor + '">' + formatPrintStatementMoney_(loan.balance) + '</div>' +
+        '    <div class="text-[10px] text-slate-500">' + (isSettled ? "Settled Facility" : "Payoff Due") + '</div>' +
+        '  </div>' +
+        '</div>';
+    }
+
+    // Itemized Repayment Ledger Table Head:
+    // Columns: Payment Date | Ref / TID | Channel | Principal Paid (KES) | Interest Paid (KES) | Total Paid (KES) | Balance Remaining (KES)
+    const thead = document.getElementById("print-table-head");
+    if (thead) {
+      thead.innerHTML =
+        '<tr>' +
+        '  <th class="px-3 py-2.5">Payment Date</th>' +
+        '  <th class="px-3 py-2.5">Ref / TID</th>' +
+        '  <th class="px-3 py-2.5">Channel</th>' +
+        '  <th class="px-3 py-2.5 text-right">Principal Paid (KES)</th>' +
+        '  <th class="px-3 py-2.5 text-right">Interest Paid (KES)</th>' +
+        '  <th class="px-3 py-2.5 text-right">Total Paid (KES)</th>' +
+        '  <th class="px-3 py-2.5 text-right">Balance Remaining (KES)</th>' +
+        '</tr>';
+    }
+
+    // Row 1: Disbursed Facility (Opening Balance = Total Repayment Due)
+    let bodyHtml =
+      '<tr class="bg-slate-50/70 font-semibold text-slate-800 border-b border-slate-200">' +
+      '  <td class="px-3 py-2.5 font-mono tabular-nums text-slate-500">' + escapePrintHtml(disbDate) + '</td>' +
+      '  <td class="px-3 py-2.5 font-mono tabular-nums text-slate-500">' + escapePrintHtml(loan.disbursementRef || (loan.loanId + "-DISB")) + '</td>' +
+      '  <td class="px-3 py-2.5 text-slate-800"><i class="fas fa-hand-holding-dollar text-slate-400 mr-1.5"></i> Disbursed Facility (' + escapePrintHtml(loan.disbursementChannel || "Approved") + ')</td>' +
+      '  <td class="px-3 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>' +
+      '  <td class="px-3 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>' +
+      '  <td class="px-3 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>' +
+      '  <td class="px-3 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900">' + formatPrintStatementMoney_(loan.repayment) + '</td>' +
+      '</tr>';
+
+    let sumPrin = 0;
+    let sumInt = 0;
+    let sumTot = 0;
+    let runningBal = Number(loan.repayment) || 0;
+
+    if (repayments.length > 0) {
+      repayments.forEach(function (r) {
+        const prin = Number(r.principalPaid) || 0;
+        const intP = Number(r.interestPaid) || 0;
+        const tot = Number(r.totalPaid) || (prin + intP);
+        sumPrin += prin;
+        sumInt += intP;
+        sumTot += tot;
+
+        const balRem = (r.balanceRemaining !== undefined && r.balanceRemaining !== null && r.balanceRemaining !== "")
+          ? Number(r.balanceRemaining)
+          : Math.max(0, runningBal - tot);
+        runningBal = balRem;
+
+        bodyHtml +=
+          '<tr>' +
+          '  <td class="px-3 py-2 font-mono tabular-nums text-slate-500">' + escapePrintHtml(r.date || "—") + '</td>' +
+          '  <td class="px-3 py-2 font-mono tabular-nums text-slate-600">' + escapePrintHtml(r.tid || r.paymentId || "—") + '</td>' +
+          '  <td class="px-3 py-2 text-slate-700">' + escapePrintHtml(r.mode || "Loan Repayment") + '</td>' +
+          '  <td class="px-3 py-2 text-right font-mono tabular-nums text-emerald-700 font-medium">' + formatPrintStatementMoney_(prin) + '</td>' +
+          '  <td class="px-3 py-2 text-right font-mono tabular-nums text-sky-700 font-medium">' + formatPrintStatementMoney_(intP) + '</td>' +
+          '  <td class="px-3 py-2 text-right font-mono tabular-nums font-semibold text-slate-900">' + formatPrintStatementMoney_(tot) + '</td>' +
+          '  <td class="px-3 py-2 text-right font-mono tabular-nums font-bold text-slate-900">' + formatPrintStatementMoney_(balRem) + '</td>' +
+          '</tr>';
+      });
+    } else {
+      bodyHtml += '<tr><td colspan="7" class="text-center py-4 text-slate-400 italic">No repayments recorded to date.</td></tr>';
+    }
+
+    const tbody = document.getElementById("print-table-body");
+    if (tbody) tbody.innerHTML = bodyHtml;
+
+    // Footer: Total Principal Paid, Total Interest Paid, Total Amount Paid, and Certified Final Balance with double underline
+    const certifiedBalance = (repayments.length > 0) ? runningBal : Number(loan.balance !== undefined ? loan.balance : loan.repayment);
+    const tfoot = document.getElementById("print-table-foot");
+    if (tfoot) {
+      tfoot.innerHTML =
+        '<tr class="border-t-2 border-slate-300 font-bold bg-slate-50/80 text-slate-900 border-b-4 border-double border-b-slate-900">' +
+        '  <td colspan="3" class="px-3 py-3 font-extrabold uppercase tracking-wider text-slate-900">' +
+        '    Total Repayments &amp; Certified Final Balance' +
+        '  </td>' +
+        '  <td class="px-3 py-3 text-right font-mono tabular-nums font-extrabold text-emerald-800">' +
+        '    ' + formatPrintStatementMoney_(sumPrin) +
+        '  </td>' +
+        '  <td class="px-3 py-3 text-right font-mono tabular-nums font-extrabold text-sky-800">' +
+        '    ' + formatPrintStatementMoney_(sumInt) +
+        '  </td>' +
+        '  <td class="px-3 py-3 text-right font-mono tabular-nums font-extrabold text-slate-950">' +
+        '    ' + formatPrintStatementMoney_(sumTot) +
+        '  </td>' +
+        '  <td class="px-3 py-3 text-right font-mono tabular-nums font-extrabold text-slate-950 text-sm">' +
+        '    <span class="border-b-2 border-double border-slate-900 pb-0.5">' + formatPrintStatementMoney_(certifiedBalance) + '</span>' +
+        '  </td>' +
+        '</tr>';
+    }
+
+    // Guarantor Security Schedule (if guarantors exist)
+    const extraContainer = document.getElementById("print-extra-schedules");
+    if (extraContainer) {
+      if (guarantors.length > 0) {
+        let totalGuaranteedSum = 0;
+        let gRowsHtml = "";
+        guarantors.forEach(function (g) {
+          const amt = Number(g.amountPledged) || 0;
+          totalGuaranteedSum += amt;
+          const gStatLower = String(g.status || "").toLowerCase().trim();
+          const statPill = gStatLower === "released"
+            ? '<span class="inline-block px-2 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-700 font-semibold">Released</span>'
+            : '<span class="inline-block px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-semibold">Active</span>';
+
+          gRowsHtml +=
+            '<tr>' +
+            '  <td class="px-3 py-2 font-medium text-slate-900">' + escapePrintHtml(g.guarantorName || "Guarantor") + '</td>' +
+            '  <td class="px-3 py-2 font-mono tabular-nums text-slate-500">' + escapePrintHtml(g.memberId || "—") + '</td>' +
+            '  <td class="px-3 py-2 text-right font-mono tabular-nums text-purple-700 font-semibold">' + formatPrintStatementMoney_(amt) + '</td>' +
+            '  <td class="px-3 py-2 text-center">' + statPill + '</td>' +
+            '</tr>';
+        });
+
+        extraContainer.innerHTML =
+          '<div class="mb-6 blg-avoid-break">' +
+          '  <div class="flex items-center justify-between mb-2">' +
+          '    <div class="flex items-center gap-2">' +
+          '      <i class="fas fa-shield-halved text-purple-600 text-sm"></i>' +
+          '      <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Guarantor Security Schedule</h3>' +
+          '    </div>' +
+          '    <span class="text-[11px] font-mono text-slate-600">Total Security Pledged: <strong class="text-slate-900">' + formatPrintStatementMoney_(totalGuaranteedSum) + '</strong></span>' +
+          '  </div>' +
+          '  <div class="border border-slate-200 rounded-xl overflow-hidden">' +
+          '    <table class="w-full text-left border-collapse text-xs">' +
+          '      <thead class="bg-slate-50 border-b border-slate-200 font-bold text-slate-700">' +
+          '        <tr>' +
+          '          <th class="px-3 py-2">Guarantor Name</th>' +
+          '          <th class="px-3 py-2">Member ID</th>' +
+          '          <th class="px-3 py-2 text-right">Amount Pledged</th>' +
+          '          <th class="px-3 py-2 text-center">Status</th>' +
+          '        </tr>' +
+          '      </thead>' +
+          '      <tbody class="divide-y divide-slate-100 text-slate-700">' +
+          gRowsHtml +
+          '      </tbody>' +
+          '      <tfoot class="bg-slate-50/80 border-t border-slate-200 font-bold">' +
+          '        <tr>' +
+          '          <td colspan="2" class="px-3 py-2 font-bold text-slate-800">Total Guaranteed Sum</td>' +
+          '          <td class="px-3 py-2 text-right font-mono tabular-nums text-purple-800 font-bold">' + formatPrintStatementMoney_(totalGuaranteedSum) + '</td>' +
+          '          <td class="px-3 py-2 text-center text-slate-400">—</td>' +
+          '        </tr>' +
+          '      </tfoot>' +
+          '    </table>' +
+          '  </div>' +
+          '</div>';
+        extraContainer.classList.remove("hidden");
+      } else {
+        extraContainer.innerHTML = "";
+        extraContainer.classList.add("hidden");
+      }
+    }
+
+    // Credit Committee & Treasurer Sign-off Block
+    const tSignoff = document.getElementById("print-treasurer-signoff-block");
+    if (tSignoff) {
+      tSignoff.innerHTML =
+        '<div class="mt-6 mb-5 pt-4 border-t-2 border-slate-300 text-xs text-slate-700 blg-avoid-break">' +
+        '  <div class="flex items-center justify-between pb-3 border-b border-slate-200">' +
+        '    <div class="flex items-center gap-2">' +
+        '      <i class="fas fa-certificate text-emerald-600 text-base"></i>' +
+        '      <span class="font-bold uppercase tracking-wider text-slate-800 text-[11px]">Official Loan Ledger Certification</span>' +
+        '    </div>' +
+        '    <div class="text-[10px] font-mono text-slate-500">Verification Ref: <span class="font-bold text-slate-700">' + escapePrintHtml(verificationRef) + '</span></div>' +
+        '  </div>' +
+        '  <p class="mt-2 text-[11px] text-slate-600 italic">' +
+        '    Certified as a true and complete loan statement from the Bright Life Self Help Group Credit Ledger' +
+        '  </p>' +
+        '  <div class="mt-4 grid grid-cols-2 gap-8 text-[11px]">' +
+        '    <div class="space-y-1.5">' +
+        '      <div class="text-[10px] uppercase font-bold text-slate-500">Credit Committee Reviewer</div>' +
+        '      <div class="h-8 border-b border-slate-400 flex items-end pb-1 text-slate-800 font-medium">' +
+        '        ' + escapePrintHtml(loan.reviewedBy || "__________________________") +
+        '      </div>' +
+        '      <div class="flex justify-between text-[10px] text-slate-500 pt-0.5">' +
+        '        <span>Signature / Endorsement</span>' +
+        '        <span>Date: ' + escapePrintHtml(loan.requestDate || "__________") + '</span>' +
+        '      </div>' +
+        '    </div>' +
+        '    <div class="space-y-1.5">' +
+        '      <div class="text-[10px] uppercase font-bold text-slate-500">Group Treasurer (Disbursement &amp; Settlement)</div>' +
+        '      <div class="h-8 border-b border-slate-400 flex items-end pb-1 text-slate-800 font-medium">' +
+        '        ' + escapePrintHtml(loan.authorizedBy || "__________________________") +
+        '      </div>' +
+        '      <div class="flex justify-between text-[10px] text-slate-500 pt-0.5">' +
+        '        <span>Signature &amp; Stamp</span>' +
+        '        <span>Date: ' + escapePrintHtml(formatDateForLetterhead(new Date())) + '</span>' +
+        '      </div>' +
+        '    </div>' +
+        '  </div>' +
+        '</div>';
+      tSignoff.classList.remove("hidden");
+    }
+
+    showPrintModal_({
+      refText: "Ref: " + verificationRef,
+      showSignoff: false,
+      signoffType: "treasurer"
+    });
+  }
+
+  /**
+   * Opens the Printable Loan Statement & Amortization Schedule modal for a specific loan.
+   */
+  function openPrintLoanStatement(loanId) {
+    if (!loanId) {
+      if (typeof showNotification === "function") {
+        showNotification("Please select a valid loan record.", "warning");
+      }
+      return;
+    }
+
+    renderPrintStatementLoading_("Loading certified loan statement & amortization schedule...");
+    showPrintModal_({ refText: "Loading..." });
+
+    if (typeof google === "undefined" || !google.script || !google.script.run) {
+      const fallbackLoan = (typeof loadedLoans !== "undefined" ? loadedLoans : []).find(function (l) { return l.id === loanId; });
+      if (fallbackLoan) {
+        renderPrintLoanStatementFromData_({
+          success: true,
+          loan: {
+            loanId: fallbackLoan.id,
+            memberId: fallbackLoan.memberId || "",
+            borrower: fallbackLoan.borrower || "Borrower",
+            requested: fallbackLoan.requested || 0,
+            repayment: fallbackLoan.repayment || 0,
+            interest: fallbackLoan.interest || 0,
+            interestRate: "10%",
+            paid: fallbackLoan.paid || 0,
+            balance: fallbackLoan.balance || 0,
+            requestDate: fallbackLoan.date || "",
+            approvedDate: fallbackLoan.approveddate || "",
+            disbursedDate: fallbackLoan.approveddate || "",
+            status: fallbackLoan.status || "Active",
+            reviewedBy: fallbackLoan.reviewedBy || "",
+            authorizedBy: fallbackLoan.approvedBy || "",
+            disbursementRef: fallbackLoan.disbursementReference || "",
+            disbursementChannel: fallbackLoan.disbursementChannel || ""
+          },
+          repayments: [],
+          guarantors: [],
+          verificationRef: "BLG-LN-STMT-" + String(fallbackLoan.id).replace(/[^a-zA-Z0-9]/g, "").toUpperCase() + "-PREVIEW"
+        });
+      }
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function (res) {
+        if (!res || res.success === false) {
+          if (typeof showNotification === "function") {
+            showNotification(res && res.error ? res.error : "Failed to load loan statement data.", "error");
+          }
+          closePrintModal();
+          return;
+        }
+        renderPrintLoanStatementFromData_(res);
+      })
+      .withFailureHandler(function (err) {
+        if (typeof showNotification === "function") {
+          showNotification("Statement load error: " + (err ? err.message : "Network error"), "error");
+        }
+        closePrintModal();
+      })
+      .getLoanStatementData(loanId);
+  }
+
   function openPrintAccountsReport() {
     const list = (typeof accountsState !== "undefined" && accountsState && Array.isArray(accountsState.accounts))
       ? accountsState.accounts
@@ -1505,4 +1871,7 @@
     }
     return csvContent;
   }
+
+  window.openPrintLoanStatement = openPrintLoanStatement;
+  window.renderPrintLoanStatementFromData_ = renderPrintLoanStatementFromData_;
 </script>

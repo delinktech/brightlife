@@ -354,6 +354,13 @@
         const reviewerEmail = String(loan.reviewedBy || "").toLowerCase().trim();
         const isReviewedByMe = Boolean(curEmail && reviewerEmail && (reviewerEmail === curEmail || reviewerEmail.indexOf(curEmail) !== -1));
 
+        const printBtnHtml =
+          '<button type="button" onclick="openPrintLoanStatement(\'' +
+          escapeHtmlAttr(loan.id) +
+          '\')" class="min-w-[32px] min-h-[32px] p-1.5 text-xs rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors inline-flex items-center justify-center shrink-0" title="Print Loan Statement & Amortization Schedule">' +
+          '<i class="fas fa-print"></i>' +
+          '</button>';
+
         let actionsHtml = "";
         if (isPendingReview) {
           if (canReview) {
@@ -369,17 +376,19 @@
               'title="Reject Application">' +
               '<i class="fas fa-xmark text-[10px]"></i> <span>Reject</span>' +
               '</button>' +
+              printBtnHtml +
               '</div>';
           } else {
-            actionsHtml = '<span class="text-slate-400 dark:text-slate-500 text-xs">—</span>';
+            actionsHtml = '<div class="flex items-center justify-center gap-1.5">' + printBtnHtml + '</div>';
           }
         } else if (isReviewed) {
           if (isReviewedByMe) {
             actionsHtml =
-              '<div class="flex items-center justify-center">' +
+              '<div class="flex items-center justify-center gap-1.5">' +
               '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60" title="You reviewed this application. Dual-officer policy requires Treasurer authorization.">' +
               '<i class="fas fa-user-clock text-[10px]"></i> <span>Awaiting Treasurer Sign-off</span>' +
               '</span>' +
+              printBtnHtml +
               '</div>';
           } else if (canDisburse) {
             actionsHtml =
@@ -394,12 +403,13 @@
               'title="Reject Application">' +
               '<i class="fas fa-xmark text-[10px]"></i> <span>Reject</span>' +
               '</button>' +
+              printBtnHtml +
               '</div>';
           } else {
-            actionsHtml = '<span class="text-slate-400 dark:text-slate-500 text-xs">—</span>';
+            actionsHtml = '<div class="flex items-center justify-center gap-1.5">' + printBtnHtml + '</div>';
           }
         } else {
-          actionsHtml = '<span class="text-slate-400 dark:text-slate-500 text-xs">—</span>';
+          actionsHtml = '<div class="flex items-center justify-center gap-1.5">' + printBtnHtml + '</div>';
         }
 
         return (
@@ -445,6 +455,8 @@
       applySavedColumnPreferences("loans-table");
     }
   }
+  window.renderLoanTable = renderLoanTable;
+  window.renderLoansTable = renderLoanTable;
 
   function filterLoansTable(targetPage) {
     const searchEl = document.getElementById("loan-search-input");
