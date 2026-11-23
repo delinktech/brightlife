@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v142` (Google Apps Script Build `@143`)
+- **Current Live Version:** `v143` (Google Apps Script Build `@144`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -79,6 +79,9 @@ Client-server contracts called via `google.script.run`:
   - **Returns**: Contribution logs, annual member breakdown, pending approvals.
 * **`getLoansData()`**
   - **Returns**: Loan portfolio register, borrower limits, repayment schedules, guarantors map.
+* **`getLoanStatementData(loanId)`**
+  - **Payload**: `loanId: string`
+  - **Returns**: `{ success: boolean, data: { loan: {...}, repayments: [...], guarantors: [...], verificationRef: string, printedAt: string, printedBy: string }, error?: string }`
 * **`getDividendsData()`**
   - **Returns**: Net distributable pool, loan interest earnings, investment gains, proposed reserve ratio, member payout matrix.
 
@@ -128,3 +131,9 @@ Client-server contracts called via `google.script.run`:
   - **Post-Payment Financial Standing:** Displays member's updated cumulative savings balance and residual loan debt balance immediately reflecting the specific transaction.
   - **Receipt Dispatch & Row Integration:** Added 1-click `[Print Receipt Slip]` action inside `receiptShareModal` alongside WhatsApp dispatch, and direct print receipt row action in `Contributions.html` table.
   - **Official Letterhead Email Standardization:** Standardized official contact email to canonical `brightlyfe@gmail.com` across all letterhead headers, statements dispatch BCC placeholders, and print export layouts, eliminating deprecated legacy addresses.
+* **Task RPT-5 Deliverables (Individual Loan Account Statement & Amortization Schedule)**:
+  - **RPC Backend & IDOR Protection (`getLoanStatementData`):** Implemented server RPC retrieving comprehensive loan facility details, chronological repayments breakdown (principal, interest, fee), and guarantor security allocations with strict RBAC access controls (`LOANS_VIEW`) and borrower self-isolation (regular members can only fetch their own loan statements).
+  - **Official Loan Account Statement View (`openPrintLoanStatement`):** Engineered printable loan statement rendered on official Brightlife Group letterhead with 4-up loan KPI cards (Principal Approved, Total Repaid, Current Balance, Delinquency Status), comprehensive loan facility parameters matrix, and guarantor security schedule.
+  - **Amortization Ledger & Running Accounting Totals:** Formats all historical repayments with itemized transaction breakdown, date ordering, running balance calculations, and accounting-standard double-underlined closing balance totals.
+  - **Dual-Officer Certification Block:** Integrates official dual-officer credit compliance block featuring Credit Committee Chairperson and Group Treasurer verification signatures, date stamps, and deterministic audit verification codes (`BLG-LN-YYYYMMDD-LOANID`).
+  - **Direct UI Actions (`Loans.html`):** Embedded direct `[Print Statement]` action button in loan records across all lifecycle statuses (`col-l-actions`), allowing 1-click launch of the loan statement modal.
