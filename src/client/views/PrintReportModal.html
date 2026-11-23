@@ -88,8 +88,14 @@
           <tbody id="print-table-body" class="divide-y divide-slate-100 text-slate-700">
             <!-- Injected via JavaScript -->
           </tbody>
+          <tfoot id="print-table-foot">
+            <!-- Injected via JavaScript -->
+          </tfoot>
         </table>
       </div>
+
+      <!-- Extra Schedules Container (e.g. Active Loans Sub-schedule) -->
+      <div id="print-extra-schedules" class="hidden mb-6 blg-avoid-break"></div>
 
       <!-- Official Sign-Off Block (Shown for Formal Statutory Statements such as Balance Sheet) -->
       <div id="print-signoff-block" class="hidden mt-6 mb-5 pt-4 border-t border-slate-200 grid grid-cols-3 gap-6 text-[11px] text-slate-700 blg-avoid-break">
@@ -109,6 +115,9 @@
           <div class="text-[10px] text-slate-500">Name, Signature &amp; Date</div>
         </div>
       </div>
+
+      <!-- Single-Officer "Certified by Treasurer" Verification Block -->
+      <div id="print-treasurer-signoff-block" class="hidden blg-avoid-break"></div>
 
       <!-- Clean Footer (Confidentiality Notice only, Signatures removed) -->
       <div class="pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500">

@@ -188,6 +188,9 @@ function getMemberContactAndFinancials_(memberIdOrName) {
   const mEmail = col["Email"] !== undefined ? String(targetRow[col["Email"]] || "").trim() : "";
   const mSavings = col["Total Savings"] !== undefined ? (Number(targetRow[col["Total Savings"]]) || 0) : 0;
   let mLoanBalance = col["Current Loan Balance"] !== undefined ? (Number(targetRow[col["Current Loan Balance"]]) || 0) : 0;
+  const mNationalId = col["National Id"] !== undefined ? String(targetRow[col["National Id"]] || "").trim() : (col["National ID"] !== undefined ? String(targetRow[col["National ID"]] || "").trim() : (col["NationalID"] !== undefined ? String(targetRow[col["NationalID"]] || "").trim() : (col["NID"] !== undefined ? String(targetRow[col["NID"]] || "").trim() : "")));
+  const mStatus = col["Status"] !== undefined ? String(targetRow[col["Status"]] || "Active").trim() : "Active";
+  const mGuaranteed = col["Guaranteed Amount"] !== undefined ? (Number(targetRow[col["Guaranteed Amount"]]) || 0) : 0;
 
   // Real-time lookup of active loan balances from Loans sheet
   try {
@@ -213,6 +216,9 @@ function getMemberContactAndFinancials_(memberIdOrName) {
     email: mEmail,
     savings: mSavings,
     loanBalance: mLoanBalance,
+    nationalId: mNationalId,
+    status: mStatus,
+    guaranteed: mGuaranteed,
   };
 }
 
@@ -510,42 +516,54 @@ function triggerTransactionReceipt(txData) {
 /**
  * Builds Monthly Statement Data for a specific member and month (e.g. "2026-10")
  * or custom date range (startDate / endDate as "yyyy-MM-dd").
+ * Also supports all-time full history statement when monthKey is "all" or omitted.
  */
 function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, endDateArg) {
   const session = requireAccess_();
+  let targetMemberId = memberId;
+  if (!targetMemberId && session.memberId) {
+    targetMemberId = session.memberId;
+  }
   if (session.permissions && session.permissions.isMemberOnly) {
     const callerId = String(session.memberId || "").trim().toLowerCase();
-    const targetId = String(memberId || "").trim().toLowerCase();
+    const targetId = String(targetMemberId || "").trim().toLowerCase();
     if (!callerId || !targetId || callerId !== targetId) {
       throw new Error("Access denied: You can only view your own statement.");
     }
   }
 
-  let monthKey = monthKeyOrOpts;
+  let monthKey = "";
   let startDate = startDateArg;
   let endDate = endDateArg;
   if (monthKeyOrOpts && typeof monthKeyOrOpts === "object") {
     monthKey = monthKeyOrOpts.monthKey || "";
     startDate = monthKeyOrOpts.startDate || startDateArg;
     endDate = monthKeyOrOpts.endDate || endDateArg;
+  } else if (typeof monthKeyOrOpts === "string") {
+    monthKey = monthKeyOrOpts;
   }
 
-  const member = getMemberContactAndFinancials_(memberId);
+  const member = getMemberContactAndFinancials_(targetMemberId);
   if (!member) {
-    throw new Error("Member not found: " + memberId);
+    throw new Error("Member not found: " + targetMemberId);
   }
 
   const ss = getSpreadsheet_();
   const tz = ss.getSpreadsheetTimeZone() || "Africa/Nairobi";
 
-  // Determine filter range: custom [startDate, endDate] or monthKey ("yyyy-MM")
-  let monthStartDate, monthEndDate, monthLabel;
+  // Determine filter range: custom [startDate, endDate] or monthKey ("yyyy-MM") or all-time
   const isoPattern = /^\d{4}-\d{2}-\d{2}$/;
   const hasRange =
     startDate &&
     endDate &&
     isoPattern.test(String(startDate).trim()) &&
     isoPattern.test(String(endDate).trim());
+
+  const isAllHistory = !hasRange && (!monthKey || String(monthKey).trim().toLowerCase() === "all");
+
+  let monthStartDate = null;
+  let monthEndDate = null;
+  let monthLabel = "";
 
   if (hasRange) {
     const sp = String(startDate).trim().split("-");
@@ -571,7 +589,7 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
         " \u2013 " +
         Utilities.formatDate(monthEndDate, tz, "dd MMM yyyy");
     }
-  } else {
+  } else if (!isAllHistory) {
     const now = new Date();
     let targetYear = now.getFullYear();
     let targetMonth = now.getMonth();
@@ -588,18 +606,22 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
     monthStartDate = new Date(targetYear, targetMonth, 1, 0, 0, 0);
     monthEndDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
     monthLabel = Utilities.formatDate(monthStartDate, tz, "MMMM yyyy");
+  } else {
+    monthLabel = "All Time (Full Member History)";
   }
 
-  // 1. Gather all contributions for this member in this month
+  const mIdLower = member.id.toLowerCase();
+  const mNameLower = member.name.toLowerCase();
+
+  // 1. Gather all contributions & savings transactions
   const contribSheet = ss.getSheetByName(SHEETS.CONTRIBUTIONS);
-  const monthlyTransactions = [];
-  let monthDeposits = 0;
+  let openingSavings = 0;
+  const inRangeRawTransactions = [];
+  const recordedTids = {};
 
   if (contribSheet && contribSheet.getLastRow() > 1) {
     const cVals = contribSheet.getDataRange().getValues();
     const cCol = getHeaderMap_(cVals[0]);
-    const mIdLower = member.id.toLowerCase();
-    const mNameLower = member.name.toLowerCase();
 
     for (let r = 1; r < cVals.length; r++) {
       const row = cVals[r];
@@ -614,35 +636,43 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
       const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
       if (isNaN(d.getTime())) continue;
 
-      if (d >= monthStartDate && d <= monthEndDate) {
-        const amt = Number(row[cCol["Amount"]]) || 0;
-        const type = cCol["Transaction Type"] !== undefined ? String(row[cCol["Transaction Type"]] || "") : (cCol["Type"] !== undefined ? String(row[cCol["Type"]] || "") : "Contribution");
-        const channel = cCol["Deposit Channel"] !== undefined ? String(row[cCol["Deposit Channel"]] || "") : (cCol["Payment Mode"] !== undefined ? String(row[cCol["Payment Mode"]] || "") : "Bank");
-        const tid = cCol["Transaction ID"] !== undefined ? String(row[cCol["Transaction ID"]] || "") : "";
+      const amt = Number(row[cCol["Amount"]]) || 0;
+      const type = cCol["Transaction Type"] !== undefined ? String(row[cCol["Transaction Type"]] || "") : (cCol["Type"] !== undefined ? String(row[cCol["Type"]] || "") : "Contribution");
+      const channel = cCol["Deposit Channel"] !== undefined ? String(row[cCol["Deposit Channel"]] || "") : (cCol["Payment Mode"] !== undefined ? String(row[cCol["Payment Mode"]] || "") : "Equity Bank");
+      const tid = cCol["Transaction ID"] !== undefined ? String(row[cCol["Transaction ID"]] || "").trim() : "";
+      if (tid) recordedTids[tid] = true;
 
-        monthDeposits += amt;
-        monthlyTransactions.push({
+      const typeLower = type.toLowerCase();
+      const isWithdrawal = typeLower.indexOf("withdrawal") !== -1 || typeLower.indexOf("refund") !== -1 || typeLower.indexOf("offset") !== -1;
+      const moneyIn = isWithdrawal ? 0 : amt;
+      const moneyOut = isWithdrawal ? amt : 0;
+
+      if (!isAllHistory && monthStartDate && d < monthStartDate) {
+        openingSavings += (moneyIn - moneyOut);
+      } else if (isAllHistory || (d >= monthStartDate && d <= monthEndDate)) {
+        inRangeRawTransactions.push({
+          rawDate: d,
           date: Utilities.formatDate(d, tz, "dd MMM yyyy"),
-          type: type,
-          channel: channel,
-          amount: amt,
+          ref: tid || (member.id + "-TX" + r),
           tid: tid,
+          particulars: type || "Monthly Contribution",
+          type: type || "Contribution",
+          channel: normalizeDepositChannel_(channel),
+          moneyIn: moneyIn,
+          moneyOut: moneyOut,
           status: status,
+          category: isWithdrawal ? "withdrawal" : "contribution"
         });
       }
     }
   }
 
-  // 2. Gather loan repayments and active loan status
+  // 2. Gather active loans sub-schedule
   const loanSheet = ss.getSheetByName(SHEETS.LOANS);
   const activeLoans = [];
-  let monthLoanRepaid = 0;
-
   if (loanSheet && loanSheet.getLastRow() > 1) {
     const lVals = loanSheet.getDataRange().getValues();
     const lCol = getHeaderMap_(lVals[0]);
-    const mIdLower = member.id.toLowerCase();
-    const mNameLower = member.name.toLowerCase();
 
     for (let l = 1; l < lVals.length; l++) {
       const row = lVals[l];
@@ -652,12 +682,19 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
 
       if (lMid === mIdLower || lBorrower === mNameLower || lBorrower.indexOf(mNameLower) !== -1) {
         if (lStatus !== LOAN_STATUS.REJECTED) {
+          const reqAmt = Number(row[lCol["Requested Amount"]]) || 0;
+          const intAmt = Number(row[lCol["Interest"]]) || 0;
+          const feeAmt = Number(row[lCol["Transaction Fee"]]) || 0;
+          const repAmt = Number(row[lCol["Repayment Amount"]]) || (reqAmt + intAmt + feeAmt);
+          const paidAmt = Number(row[lCol["Total Paid"]]) || 0;
+          const balAmt = lCol["Balance"] !== undefined ? (Number(row[lCol["Balance"]]) || 0) : Math.max(0, repAmt - paidAmt);
+
           activeLoans.push({
-            loanId: String(row[lCol["Loan ID"]] || ""),
-            requestedAmount: Number(row[lCol["Requested Amount"]]) || 0,
-            repaymentAmount: Number(row[lCol["Repayment Amount"]]) || 0,
-            totalPaid: Number(row[lCol["Total Paid"]]) || 0,
-            balance: Number(row[lCol["Balance"]]) || 0,
+            loanId: String(row[lCol["Loan ID"]] || ("LN-" + l)),
+            requestedAmount: reqAmt,
+            repaymentAmount: repAmt,
+            totalPaid: paidAmt,
+            balance: balAmt,
             status: lStatus,
           });
         }
@@ -665,13 +702,12 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
     }
   }
 
-  // 2b. Sum approved loan repayments in the selected period
+  // 3. Gather approved loan repayments
   const repSheet = ss.getSheetByName(SHEETS.LOAN_REPAYMENTS);
+  let monthLoanRepaid = 0;
   if (repSheet && repSheet.getLastRow() > 1) {
     const rVals = repSheet.getDataRange().getValues();
     const rCol = getHeaderMap_(rVals[0]);
-    const mIdLower = member.id.toLowerCase();
-    const mNameLower = member.name.toLowerCase();
 
     for (let i = 1; i < rVals.length; i++) {
       const row = rVals[i];
@@ -685,37 +721,161 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
       const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
       if (isNaN(d.getTime())) continue;
 
-      if (d >= monthStartDate && d <= monthEndDate) {
-        monthLoanRepaid += Number(row[rCol["Total Paid"]]) || 0;
+      const totalPaid = Number(row[rCol["Total Paid"]]) || 0;
+      const loanId = String(row[rCol["Loan ID"]] || "").trim();
+      const pId = String(row[rCol["Payment ID"]] || "").trim();
+      const rTid = String(row[rCol["Transaction ID"]] || "").trim();
+      const channel = rCol["Payment Mode"] !== undefined ? String(row[rCol["Payment Mode"]] || "") : (rCol["Deposit Channel"] !== undefined ? String(row[rCol["Deposit Channel"]] || "") : "Equity Bank");
+
+      if (isAllHistory || (d >= monthStartDate && d <= monthEndDate)) {
+        monthLoanRepaid += totalPaid;
+        // If not already recorded in Contributions table, include in transactions ledger
+        const isAlreadyRecorded = (rTid && recordedTids[rTid]) || (pId && recordedTids[pId]);
+        if (!isAlreadyRecorded) {
+          if (rTid) recordedTids[rTid] = true;
+          if (pId) recordedTids[pId] = true;
+          inRangeRawTransactions.push({
+            rawDate: d,
+            date: Utilities.formatDate(d, tz, "dd MMM yyyy"),
+            ref: rTid || pId || (loanId + "-REP"),
+            tid: rTid || pId || "",
+            particulars: "Loan Repayment (" + (loanId || "Loan") + ")",
+            type: "Loan Repayment",
+            channel: normalizeDepositChannel_(channel),
+            moneyIn: totalPaid,
+            moneyOut: 0,
+            status: rStatus,
+            category: "loan_repayment"
+          });
+        }
       }
     }
   }
 
-  // 3. Compute opening & closing savings
-  const closingSavings = member.savings;
-  const openingSavings = Math.max(0, closingSavings - monthDeposits);
-  const activeLoanSum = activeLoans.reduce((sum, ln) => sum + (ln.status !== LOAN_STATUS.SETTLED ? ln.balance : 0), 0);
+  // 4. Gather Guarantor Pledges
+  const guarantorPledges = [];
+  let totalGuaranteed = 0;
+  try {
+    const guarSheet = ss.getSheetByName(SHEETS.GUARANTORS);
+    if (guarSheet && guarSheet.getLastRow() > 1) {
+      const gVals = guarSheet.getDataRange().getValues();
+      const gCol = getHeaderMap_(gVals[0]);
+      const midCol = gCol["Member ID"] !== undefined ? gCol["Member ID"] : gCol["Member id"];
+
+      for (let g = 1; g < gVals.length; g++) {
+        const row = gVals[g];
+        const gMid = midCol !== undefined ? String(row[midCol] || "").trim().toLowerCase() : "";
+        const gName = gCol["Guarantor Name"] !== undefined ? String(row[gCol["Guarantor Name"]] || "").trim().toLowerCase() : "";
+        const isMyPledge = (gMid && gMid === mIdLower) || (gName && (gName === mNameLower || gName.indexOf(mNameLower) !== -1));
+
+        if (isMyPledge) {
+          const pledgeAmt = Number(row[gCol["Guaranteed Amount"]]) || 0;
+          const loanStatus = gCol["Loan Status"] !== undefined ? String(row[gCol["Loan Status"]] || "Active").trim() : (gCol["Status"] !== undefined ? String(row[gCol["Status"]] || "Active").trim() : "Active");
+          const loanId = String(row[gCol["Loan ID"]] || "").trim();
+          const borrower = gCol["Borrower Name"] !== undefined ? String(row[gCol["Borrower Name"]] || "").trim() : "";
+
+          guarantorPledges.push({
+            loanId: loanId,
+            borrower: borrower,
+            amount: pledgeAmt,
+            status: loanStatus,
+          });
+
+          const statLower = loanStatus.toLowerCase();
+          if (statLower !== "settled" && statLower !== "rejected" && statLower !== "released" && statLower !== "cleared") {
+            totalGuaranteed += pledgeAmt;
+          }
+        }
+      }
+    }
+  } catch (errGuar) {
+    console.warn("guarantor lookup notice: " + errGuar.message);
+  }
+
+  if (totalGuaranteed === 0 && member.guaranteed > 0) {
+    totalGuaranteed = member.guaranteed;
+  }
+
+  // 5. Chronological Ledger Sorting & Running Savings Balance Calculation
+  inRangeRawTransactions.sort(function (a, b) {
+    const timeA = a.rawDate instanceof Date ? a.rawDate.getTime() : new Date(a.rawDate).getTime();
+    const timeB = b.rawDate instanceof Date ? b.rawDate.getTime() : new Date(b.rawDate).getTime();
+    return timeA - timeB;
+  });
+
+  if (isAllHistory) {
+    openingSavings = 0;
+  } else {
+    openingSavings = Math.max(0, openingSavings);
+  }
+
+  let runningSavings = openingSavings;
+  let totalMoneyIn = 0;
+  let totalMoneyOut = 0;
+
+  const itemizedTransactions = inRangeRawTransactions.map(function (tx) {
+    const mIn = Number(tx.moneyIn) || 0;
+    const mOut = Number(tx.moneyOut) || 0;
+    totalMoneyIn += mIn;
+    totalMoneyOut += mOut;
+    runningSavings = runningSavings + mIn - mOut;
+    return {
+      date: tx.date,
+      rawDate: tx.rawDate instanceof Date ? tx.rawDate.toISOString() : String(tx.rawDate),
+      ref: tx.ref,
+      tid: tx.tid,
+      particulars: tx.particulars,
+      type: tx.type,
+      channel: tx.channel,
+      moneyIn: mIn,
+      moneyOut: mOut,
+      amount: mIn > 0 ? mIn : mOut,
+      balance: runningSavings,
+      status: tx.status,
+      category: tx.category
+    };
+  });
+
+  const closingSavings = isAllHistory ? (runningSavings > 0 ? runningSavings : member.savings) : runningSavings;
+  const netFreeSavings = Math.max(0, closingSavings - totalGuaranteed);
+  const activeLoanSum = activeLoans.reduce((sum, ln) => sum + (String(ln.status).toLowerCase() !== "settled" ? ln.balance : 0), 0);
   const finalStmtLoanBalance = activeLoanSum > 0 ? activeLoanSum : member.loanBalance;
 
+  const serial = Math.random().toString(36).substring(2, 6).toUpperCase();
+  const yyyymmdd = Utilities.formatDate(new Date(), tz, "yyyyMMdd");
+  const cleanId = String(member.id || "BLM").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const verificationRef = "BLG-STMT-" + cleanId + "-" + yyyymmdd + "-" + serial;
+
   const stmt = {
+    success: true,
     memberId: member.id,
     memberName: member.name,
+    nationalId: member.nationalId || "",
+    status: member.status || "Active",
     phone: member.phone,
     cleanPhone: member.cleanPhone,
     email: member.email,
     monthKey: monthKey || "",
-    startDate: Utilities.formatDate(monthStartDate, tz, "yyyy-MM-dd"),
-    endDate: Utilities.formatDate(monthEndDate, tz, "yyyy-MM-dd"),
+    startDate: (isAllHistory || !monthStartDate) ? "" : Utilities.formatDate(monthStartDate, tz, "yyyy-MM-dd"),
+    endDate: (isAllHistory || !monthEndDate) ? "" : Utilities.formatDate(monthEndDate, tz, "yyyy-MM-dd"),
     monthLabel: monthLabel,
+    isAllHistory: isAllHistory,
     openingSavings: openingSavings,
-    monthDeposits: monthDeposits,
+    monthDeposits: totalMoneyIn,
+    totalMoneyIn: totalMoneyIn,
+    totalMoneyOut: totalMoneyOut,
     closingSavings: closingSavings,
     loanBalance: finalStmtLoanBalance,
     monthLoanRepaid: monthLoanRepaid,
-    transactions: monthlyTransactions,
+    totalGuaranteed: totalGuaranteed,
+    netFreeSavings: netFreeSavings,
+    transactions: itemizedTransactions,
     activeLoans: activeLoans,
+    guarantorPledges: guarantorPledges,
     statementDate: Utilities.formatDate(new Date(), tz, "dd MMMM yyyy"),
+    verificationRef: verificationRef,
   };
+
   const whatsAppText = buildMonthlyStatementWhatsAppMessage_(stmt);
   stmt.whatsAppText = whatsAppText;
   stmt.whatsAppUrl = stmt.cleanPhone ? ("https://wa.me/" + stmt.cleanPhone + "?text=" + encodeURIComponent(whatsAppText)) : "";
@@ -745,7 +905,7 @@ function buildMonthlyStatementWhatsAppMessage_(stmt) {
     const recentTx = totalTx > maxTx ? stmt.transactions.slice(-maxTx) : stmt.transactions;
     txListText = "\n📋 *TRANSACTIONS IN " + stmt.monthLabel.toUpperCase() + ":*\n";
     recentTx.forEach(function (tx) {
-      txListText += "• " + tx.date + ": " + formatCurrency_(tx.amount) + " (" + tx.type + " via " + tx.channel + ")\n";
+      txListText += "• " + tx.date + ": " + formatCurrency_(tx.amount) + " (" + (tx.particulars || tx.type) + " via " + tx.channel + ")\n";
     });
     if (totalTx > maxTx) {
       txListText += "...and " + (totalTx - maxTx) + " more (see email statement)\n";
@@ -761,12 +921,14 @@ function buildMonthlyStatementWhatsAppMessage_(stmt) {
     "────────────────────────────\n" +
     "💰 *SAVINGS OVERVIEW:*\n" +
     "• Opening Savings: " + formatCurrency_(stmt.openingSavings) + "\n" +
-    "• Deposits This Month: " + formatCurrency_(stmt.monthDeposits) + "\n" +
-    "• Closing Total Savings: " + formatCurrency_(stmt.closingSavings) + "\n\n" +
+    "• Total Inflows: " + formatCurrency_(stmt.totalMoneyIn !== undefined ? stmt.totalMoneyIn : stmt.monthDeposits) + "\n" +
+    "• Closing Total Savings: " + formatCurrency_(stmt.closingSavings) + "\n" +
+    "• Net Free Savings: " + formatCurrency_(stmt.netFreeSavings !== undefined ? stmt.netFreeSavings : stmt.closingSavings) + "\n\n" +
     "📋 *LOAN OVERVIEW:*\n" +
     loansText + "\n" +
     txListText +
     "────────────────────────────\n" +
+    "_Verification Ref: " + (stmt.verificationRef || "Certified") + "_\n" +
     "_For any balance questions, contact the Treasurer._\n" +
     "_Brightlife SHG Treasury • " + dateStr + "_";
 
