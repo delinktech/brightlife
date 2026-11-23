@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v141` (Google Apps Script Build `@142`)
+- **Current Live Version:** `v142` (Google Apps Script Build `@143`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -122,3 +122,9 @@ Client-server contracts called via `google.script.run`:
   - **Net Unencumbered Free Savings Calculation:** Accurately isolates unencumbered savings by deducting active guarantor pledges (`Math.max(0, closingSavings - totalGuaranteed)`), providing transparent visibility into borrowing capacity.
   - **Active Loan Amortization Sub-Schedules:** Embeds dedicated amortization schedules for active member borrowings, including principal, interest, fee breakdowns, and residual principal balance.
   - **Single-Officer Treasurer Certification:** Implemented official "Certified by Treasurer" compliance and audit verification block featuring the treasurer's signature, timestamp, and unique deterministic verification audit reference code (`BLG-TR-YYYYMMDD-MEMBERID`), while strictly preserving mandatory 3-officer statutory sign-off for institutional Balance Sheet and Income Statements.
+* **Task COM-6 Deliverables (Official 1/3-Page Member Contribution Receipt Slip & Letterhead Email Standardization)**:
+  - **Official 1/3-Page A4 Receipt Slip (`openPrintReceiptSlip`):** Implemented printable official payment vouchers engineered to fit cleanly into 1/3 of an A4 portrait page, bounded by `.blg-receipt-slip` with clean border styling and strict `page-break-inside: avoid` controls. Generates official receipt serial numbers (`BL-RCP-YYYYMMDD-XXXX`), records transaction references, and embeds a formal Treasury Office verification & stamp signature block.
+  - **Financial Currency-in-Words Engine (`numberToWordsKES`):** Installed Kenyan Shilling currency-in-words converter (`"Kenya Shillings ... Only"`) supporting large figures, integers, cents/decimals, and safe fallback handling for zero/edge values.
+  - **Post-Payment Financial Standing:** Displays member's updated cumulative savings balance and residual loan debt balance immediately reflecting the specific transaction.
+  - **Receipt Dispatch & Row Integration:** Added 1-click `[Print Receipt Slip]` action inside `receiptShareModal` alongside WhatsApp dispatch, and direct print receipt row action in `Contributions.html` table.
+  - **Official Letterhead Email Standardization:** Standardized official contact email to canonical `brightlyfe@gmail.com` across all letterhead headers, statements dispatch BCC placeholders, and print export layouts, eliminating deprecated legacy addresses.
