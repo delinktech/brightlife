@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v140` (Google Apps Script Build `@141`)
+- **Current Live Version:** `v141` (Google Apps Script Build `@142`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -116,3 +116,9 @@ Client-server contracts called via `google.script.run`:
   - **Global Print CSS Hardening (`Index.html`):** Configured `@page { size: A4 portrait; margin: 12mm 15mm 15mm 15mm; }` with `print-color-adjust: exact !important`, isolated `.blg-avoid-break` / `table { page-break-inside: avoid; }`, enabled `thead { display: table-header-group; }` repeating headers across pages, and enforced high-contrast print typography preserving status badge fidelity.
   - **AGM Pack Wiring (`Home.html`):** Rewired the primary print button in Group Overview header to launch the official AGM & Bank Audit Pack modal (`openReportModal('agm-pack')`).
   - **Official Letterhead Credentials:** Synchronized verified organization contact details, postal address, email, and registration credentials across `PrintReportModal.html` and statement export layouts.
+* **Task COM-5 Deliverables (True Chronological Member Statement Ledger & Single-Officer Treasurer Certification)**:
+  - **Chronological Statement Ledger (`openPrintMemberStatement`, `openPrintPersonalStatement`):** Re-engineered member statements from simple static receipts into true chronological double-entry financial transaction ledgers. Computes exact historical opening balances prior to statement period start, processes itemized contributions and loan repayments in strict ascending date order with running balances, and displays accounting-standard double-underlined closing balance totals.
+  - **Executive 4-Up Member KPI Header Cards:** Installed high-impact visual financial health summaries presenting Total Cumulative Savings, Net Unencumbered Free Savings, Current Active Loan Exposure, and Outstanding Guarantor Liability.
+  - **Net Unencumbered Free Savings Calculation:** Accurately isolates unencumbered savings by deducting active guarantor pledges (`Math.max(0, closingSavings - totalGuaranteed)`), providing transparent visibility into borrowing capacity.
+  - **Active Loan Amortization Sub-Schedules:** Embeds dedicated amortization schedules for active member borrowings, including principal, interest, fee breakdowns, and residual principal balance.
+  - **Single-Officer Treasurer Certification:** Implemented official "Certified by Treasurer" compliance and audit verification block featuring the treasurer's signature, timestamp, and unique deterministic verification audit reference code (`BLG-TR-YYYYMMDD-MEMBERID`), while strictly preserving mandatory 3-officer statutory sign-off for institutional Balance Sheet and Income Statements.
