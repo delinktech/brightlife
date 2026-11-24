@@ -95,9 +95,20 @@ function getNotificationSettings() {
   const props = PropertiesService.getScriptProperties();
   const autoEmail = props.getProperty("AUTO_EMAIL_RECEIPTS");
   const bcc = props.getProperty("NOTIFICATION_BCC_EMAIL");
+  const autoMonthly = props.getProperty("AUTO_MONTHLY_STATEMENTS");
+  const autoDay = props.getProperty("AUTO_STATEMENT_DAY");
+  const lastMonth = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_MONTH");
+  const lastTs = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_TIMESTAMP");
+  const lastCount = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_COUNT");
+
   return {
     autoEmailReceipts: autoEmail === null ? true : autoEmail === "true",
+    autoMonthlyStatements: autoMonthly === "true",
+    autoStatementDay: autoDay ? (parseInt(autoDay, 10) || 1) : 1,
     notificationBcc: bcc || "",
+    lastAutoDispatchMonth: lastMonth || "",
+    lastAutoDispatchTimestamp: lastTs || "",
+    lastAutoDispatchCount: lastCount ? (parseInt(lastCount, 10) || 0) : 0,
   };
 }
 
@@ -120,6 +131,23 @@ function saveNotificationSettings(data) {
   if (data.notificationBcc !== undefined) {
     props.setProperty("NOTIFICATION_BCC_EMAIL", String(data.notificationBcc || "").trim());
   }
+  if (data.autoMonthlyStatements !== undefined) {
+    const isAuto = data.autoMonthlyStatements === true || data.autoMonthlyStatements === "true";
+    props.setProperty("AUTO_MONTHLY_STATEMENTS", isAuto ? "true" : "false");
+    if (isAuto) {
+      setupAutomatedStatementTrigger_();
+    } else {
+      removeAutomatedStatementTrigger_();
+    }
+  }
+  if (data.autoStatementDay !== undefined) {
+    const day = parseInt(data.autoStatementDay, 10);
+    const validDay = !isNaN(day) && day >= 1 && day <= 28 ? day : 1;
+    props.setProperty("AUTO_STATEMENT_DAY", String(validDay));
+    if (props.getProperty("AUTO_MONTHLY_STATEMENTS") === "true") {
+      setupAutomatedStatementTrigger_();
+    }
+  }
 
   appendAuditLog_(
     "settings.notifications_update",
@@ -129,7 +157,7 @@ function saveNotificationSettings(data) {
     JSON.stringify(data)
   );
 
-  return { success: true };
+  return { success: true, settings: getNotificationSettings() };
 }
 
 /**
@@ -183,7 +211,13 @@ function getMemberContactAndFinancials_(memberIdOrName) {
   if (!targetRow) return null;
 
   const mId = col["Member ID"] !== undefined ? String(targetRow[col["Member ID"]] || "").trim() : "";
-  const mName = col["Full Name"] !== undefined ? String(targetRow[col["Full Name"]] || "").trim() : (col["Member Name"] !== undefined ? String(targetRow[col["Member Name"]] || "").trim() : "");
+  let mName = col["Full Name"] !== undefined ? String(targetRow[col["Full Name"]] || "").trim() : (col["Member Name"] !== undefined ? String(targetRow[col["Member Name"]] || "").trim() : "");
+  if (!mName && col["First Name"] !== undefined) {
+    const fn = String(targetRow[col["First Name"]] || "").trim();
+    const mn = col["Middle Name"] !== undefined ? String(targetRow[col["Middle Name"]] || "").trim() : "";
+    const ln = col["Last Name"] !== undefined ? String(targetRow[col["Last Name"]] || "").trim() : "";
+    mName = [fn, mn, ln].filter(Boolean).join(" ");
+  }
   const mPhone = col["Phone Number"] !== undefined ? String(targetRow[col["Phone Number"]] || "").trim() : "";
   const mEmail = col["Email"] !== undefined ? String(targetRow[col["Email"]] || "").trim() : "";
   const mSavings = col["Total Savings"] !== undefined ? (Number(targetRow[col["Total Savings"]]) || 0) : 0;
@@ -516,6 +550,206 @@ function triggerTransactionReceipt(txData) {
   }
 }
 
+let _BLG_DIVIDEND_POOL_CACHE = null;
+
+/**
+ * Calculates or retrieves cached group-wide financial aggregates for dividend projections:
+ * - totalGroupSavings: Sum of active member qualifying savings
+ * - totalDistributableSurplus: Annualized distributable surplus after statutory reserve (20%)
+ */
+function getGroupDividendProjectionPool_(ss) {
+  if (_BLG_DIVIDEND_POOL_CACHE) {
+    return _BLG_DIVIDEND_POOL_CACHE;
+  }
+
+  const spreadsheet = ss || getSpreadsheet_();
+  let totalGroupSavings = 0;
+  let activeMemberCount = 0;
+
+  // 1. Total Group Savings from active members in Members sheet
+  try {
+    const memSheet = spreadsheet.getSheetByName(SHEETS.MEMBERS);
+    if (memSheet && memSheet.getLastRow() > 1) {
+      const mVals = memSheet.getDataRange().getValues();
+      const mCol = getHeaderMap_(mVals[0]);
+      const statusIdx = mCol["Status"];
+      const savingsIdx = mCol["Total Savings"];
+
+      for (let i = 1; i < mVals.length; i++) {
+        const row = mVals[i];
+        const status = statusIdx !== undefined ? String(row[statusIdx] || "Active").trim().toLowerCase() : "active";
+        if (status === "active") {
+          activeMemberCount++;
+          if (savingsIdx !== undefined) {
+            totalGroupSavings += Number(row[savingsIdx]) || 0;
+          }
+        }
+      }
+    }
+  } catch (eM) {
+    console.warn("getGroupDividendProjectionPool_ members scan notice: " + eM.message);
+  }
+
+  // 2. Earnings calculation: check if income statement / actual historical surplus is available
+  let actualDistributablePool = null;
+  try {
+    if (typeof buildIncomeStatement_ === "function") {
+      const now = new Date();
+      const isRep = buildIncomeStatement_(spreadsheet, "Africa/Nairobi", now, "this_year");
+      if (isRep && isRep.distributableMemberPool !== undefined && isRep.distributableMemberPool > 0) {
+        actualDistributablePool = Number(isRep.distributableMemberPool);
+      }
+    }
+  } catch (eIs) {
+    // Expected if not available in current execution context
+  }
+
+  let totalDistributableSurplus = 0;
+
+  if (actualDistributablePool !== null && actualDistributablePool > 0) {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-12
+    const annualized = (actualDistributablePool / month) * 12;
+    totalDistributableSurplus = Math.round(annualized * 100) / 100;
+  } else {
+    // Fallback: calculate cumulative earnings from ledger
+    let totalLoanInterest = 0;
+    let loanProcessingFees = 0;
+    let finesAndPenalties = 0;
+    let investmentYields = 0;
+
+    // a) Loan Interest & Fees from LOAN_REPAYMENTS
+    try {
+      const repSheet = spreadsheet.getSheetByName(SHEETS.LOAN_REPAYMENTS);
+      if (repSheet && repSheet.getLastRow() > 1) {
+        const rVals = repSheet.getDataRange().getValues();
+        const rCol = getHeaderMap_(rVals[0]);
+        const intIdx = rCol["Interest Paid"] !== undefined ? rCol["Interest Paid"] : rCol["Interest Portion"];
+        const feeIdx = rCol["Fee Paid"] !== undefined ? rCol["Fee Paid"] : rCol["Transaction Fee"];
+        const statIdx = rCol["Status"];
+
+        for (let r = 1; r < rVals.length; r++) {
+          const row = rVals[r];
+          const stat = statIdx !== undefined ? String(row[statIdx] || "Approved").trim().toLowerCase() : "approved";
+          if (stat === "approved") {
+            if (intIdx !== undefined) totalLoanInterest += Number(row[intIdx]) || 0;
+            if (feeIdx !== undefined) loanProcessingFees += Number(row[feeIdx]) || 0;
+          }
+        }
+      }
+    } catch (eR) {
+      console.warn("getGroupDividendProjectionPool_ loan repayments notice: " + eR.message);
+    }
+
+    // b) Loan Processing Fees from LOANS table (if not in repayments)
+    try {
+      const loanSheet = spreadsheet.getSheetByName(SHEETS.LOANS);
+      if (loanSheet && loanSheet.getLastRow() > 1) {
+        const lVals = loanSheet.getDataRange().getValues();
+        const lCol = getHeaderMap_(lVals[0]);
+        const feeIdx = lCol["Transaction Fee"] !== undefined ? lCol["Transaction Fee"] : lCol["Processing Fee"];
+        const statIdx = lCol["Status"];
+
+        for (let l = 1; l < lVals.length; l++) {
+          const row = lVals[l];
+          const stat = statIdx !== undefined ? String(row[statIdx] || "").trim().toLowerCase() : "";
+          if (stat !== "rejected" && stat !== "cancelled") {
+            if (feeIdx !== undefined && loanProcessingFees === 0) {
+              loanProcessingFees += Number(row[feeIdx]) || 0;
+            }
+          }
+        }
+      }
+    } catch (eL) {
+      console.warn("getGroupDividendProjectionPool_ loans notice: " + eL.message);
+    }
+
+    // c) Fines & Penalties from CONTRIBUTIONS
+    try {
+      const cSheet = spreadsheet.getSheetByName(SHEETS.CONTRIBUTIONS);
+      if (cSheet && cSheet.getLastRow() > 1) {
+        const cVals = cSheet.getDataRange().getValues();
+        const cCol = getHeaderMap_(cVals[0]);
+        const typeIdx = cCol["Transaction Type"] !== undefined ? cCol["Transaction Type"] : cCol["Type"];
+        const amtIdx = cCol["Amount"];
+        const statIdx = cCol["Status"];
+
+        for (let c = 1; c < cVals.length; c++) {
+          const row = cVals[c];
+          const stat = statIdx !== undefined ? String(row[statIdx] || "Approved").trim().toLowerCase() : "approved";
+          if (stat === "approved") {
+            const tStr = typeIdx !== undefined ? String(row[typeIdx] || "").toLowerCase() : "";
+            if (tStr.indexOf("fine") !== -1 || tStr.indexOf("penalt") !== -1 || tStr.indexOf("late") !== -1) {
+              if (amtIdx !== undefined) finesAndPenalties += Number(row[amtIdx]) || 0;
+            }
+          }
+        }
+      }
+    } catch (eC) {
+      console.warn("getGroupDividendProjectionPool_ contributions notice: " + eC.message);
+    }
+
+    // d) Investment Yields from CIC Statement & Investments
+    try {
+      const cicSheet = spreadsheet.getSheetByName(SHEETS.CIC_STATEMENT);
+      if (cicSheet && cicSheet.getLastRow() > 1) {
+        const fVals = cicSheet.getDataRange().getValues();
+        const fCol = getHeaderMap_(fVals[0]);
+        const grossIdx = fCol["Gross Interest"];
+        const taxIdx = fCol["Withholding Tax"];
+        const netIdx = fCol["Net Yield"];
+
+        for (let f = 1; f < fVals.length; f++) {
+          const row = fVals[f];
+          const gross = grossIdx !== undefined ? (Number(row[grossIdx]) || 0) : 0;
+          const tax = taxIdx !== undefined ? (Number(row[taxIdx]) || 0) : 0;
+          const net = netIdx !== undefined && Number(row[netIdx]) ? Number(row[netIdx]) : (gross - tax);
+          investmentYields += net;
+        }
+      }
+    } catch (eCic) {
+      console.warn("getGroupDividendProjectionPool_ CIC notice: " + eCic.message);
+    }
+
+    try {
+      const invSheet = spreadsheet.getSheetByName(SHEETS.INVESTMENTS);
+      if (invSheet && invSheet.getLastRow() > 1) {
+        const iVals = invSheet.getDataRange().getValues();
+        const iCol = getHeaderMap_(iVals[0]);
+        const roiIdx = iCol["ROI Amount"];
+        const statIdx = iCol["Status"];
+
+        for (let j = 1; j < iVals.length; j++) {
+          const row = iVals[j];
+          const stat = statIdx !== undefined ? String(row[statIdx] || "").toLowerCase() : "";
+          if (stat !== "cancelled" && stat !== "rejected") {
+            if (roiIdx !== undefined) investmentYields += Number(row[roiIdx]) || 0;
+          }
+        }
+      }
+    } catch (eInv) {
+      console.warn("getGroupDividendProjectionPool_ investments notice: " + eInv.message);
+    }
+
+    const grossEarnings = totalLoanInterest + loanProcessingFees + finesAndPenalties + investmentYields;
+    const statutoryReserve = Math.round(grossEarnings * 0.20 * 100) / 100;
+    const distributable = Math.max(0, grossEarnings - statutoryReserve);
+
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-12
+    const annualizedDistributable = month > 0 && month < 12 ? (distributable / month) * 12 : distributable;
+    totalDistributableSurplus = Math.round(Math.max(distributable, annualizedDistributable) * 100) / 100;
+  }
+
+  _BLG_DIVIDEND_POOL_CACHE = {
+    totalGroupSavings: Math.max(0, Math.round(totalGroupSavings * 100) / 100),
+    totalDistributableSurplus: Math.max(0, totalDistributableSurplus),
+    activeMemberCount: activeMemberCount,
+  };
+
+  return _BLG_DIVIDEND_POOL_CACHE;
+}
+
 /**
  * Builds Monthly Statement Data for a specific member and month (e.g. "2026-10")
  * or custom date range (startDate / endDate as "yyyy-MM-dd").
@@ -633,7 +867,7 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
       const status = cCol["Status"] !== undefined ? String(row[cCol["Status"]] || "Approved").trim() : "Approved";
 
       if (status !== "Approved") continue;
-      if (rMid !== mIdLower && rName !== mNameLower && rName.indexOf(mNameLower) === -1) continue;
+      if (rMid !== mIdLower && (!mNameLower || (rName !== mNameLower && rName.indexOf(mNameLower) === -1))) continue;
 
       const rawDate = row[cCol["Date"]];
       const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
@@ -683,7 +917,7 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
       const lBorrower = lCol["Borrower Name"] !== undefined ? String(row[lCol["Borrower Name"]] || "").trim().toLowerCase() : "";
       const lStatus = String(row[lCol["Status"]] || "Active").trim();
 
-      if (lMid === mIdLower || lBorrower === mNameLower || lBorrower.indexOf(mNameLower) !== -1) {
+      if (lMid === mIdLower || (mNameLower && (lBorrower === mNameLower || lBorrower.indexOf(mNameLower) !== -1))) {
         if (lStatus !== LOAN_STATUS.REJECTED) {
           const reqAmt = Number(row[lCol["Requested Amount"]]) || 0;
           const intAmt = Number(row[lCol["Interest"]]) || 0;
@@ -718,7 +952,7 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
       const rName = rCol["Borrower Name"] !== undefined ? String(row[rCol["Borrower Name"]] || "").trim().toLowerCase() : "";
       const rStatus = rCol["Status"] !== undefined ? String(row[rCol["Status"]] || "Approved").trim() : "Approved";
       if (rStatus !== "Approved") continue;
-      if (rMid !== mIdLower && rName !== mNameLower && rName.indexOf(mNameLower) === -1) continue;
+      if (rMid !== mIdLower && (!mNameLower || (rName !== mNameLower && rName.indexOf(mNameLower) === -1))) continue;
 
       const rawDate = row[rCol["Payment Date"]];
       const d = rawDate instanceof Date ? rawDate : new Date(rawDate);
@@ -769,7 +1003,7 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
         const row = gVals[g];
         const gMid = midCol !== undefined ? String(row[midCol] || "").trim().toLowerCase() : "";
         const gName = gCol["Guarantor Name"] !== undefined ? String(row[gCol["Guarantor Name"]] || "").trim().toLowerCase() : "";
-        const isMyPledge = (gMid && gMid === mIdLower) || (gName && (gName === mNameLower || gName.indexOf(mNameLower) !== -1));
+        const isMyPledge = (gMid && gMid === mIdLower) || (mNameLower && (gName === mNameLower || gName.indexOf(mNameLower) !== -1));
 
         if (isMyPledge) {
           const pledgeAmt = Number(row[gCol["Guaranteed Amount"]]) || 0;
@@ -849,6 +1083,35 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
   const cleanId = String(member.id || "BLM").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
   const verificationRef = "BLG-STMT-" + cleanId + "-" + yyyymmdd + "-" + serial;
 
+  // Calculate member's projected year-end dividend & yield (Task COM-2)
+  const poolData = getGroupDividendProjectionPool_(ss);
+  const qualifyingSavings = Math.max(0, Number(member.savings) || Number(closingSavings) || 0);
+  const totalGroupSavings = poolData.totalGroupSavings || 0;
+  const totalDistributableSurplus = poolData.totalDistributableSurplus || 0;
+
+  let sharePct = 0;
+  let projectedDividend = 0;
+  let projectedRoiPct = 0;
+
+  if (totalGroupSavings > 0 && qualifyingSavings > 0) {
+    const weight = qualifyingSavings / totalGroupSavings;
+    projectedDividend = totalDistributableSurplus * weight;
+    sharePct = Math.round(weight * 10000) / 100;
+    projectedRoiPct = (projectedDividend / qualifyingSavings) * 100;
+  }
+
+  const dividendProjection = {
+    qualifyingSavings: qualifyingSavings,
+    groupSavings: totalGroupSavings,
+    shareOfPoolPct: sharePct,
+    projectedPool: totalDistributableSurplus,
+    projectedDividend: Math.round(projectedDividend * 100) / 100,
+    projectedRoiPct: Math.round(projectedRoiPct * 10) / 10,
+    payoutPriorityNote: (finalStmtLoanBalance > 0 || member.loanBalance > 0)
+      ? "Under Bylaws Rule 5.2, dividends will automatically offset active loan balance first."
+      : "Under Bylaws Rule 5.2, dividends will be credited to member savings."
+  };
+
   const stmt = {
     success: true,
     memberId: member.id,
@@ -877,6 +1140,7 @@ function getMemberMonthlyStatementData(memberId, monthKeyOrOpts, startDateArg, e
     guarantorPledges: guarantorPledges,
     statementDate: Utilities.formatDate(new Date(), tz, "dd MMMM yyyy"),
     verificationRef: verificationRef,
+    dividendProjection: dividendProjection,
   };
 
   const whatsAppText = buildMonthlyStatementWhatsAppMessage_(stmt);
@@ -899,6 +1163,17 @@ function buildMonthlyStatementWhatsAppMessage_(stmt) {
     stmt.activeLoans.forEach(function (ln) {
       loansText += "\n  └ " + ln.loanId + ": Bal " + formatCurrency_(ln.balance) + " (" + ln.status + ")";
     });
+  }
+
+  let dividendProjectionText = "";
+  if (stmt.dividendProjection) {
+    const proj = stmt.dividendProjection;
+    dividendProjectionText =
+      "\n💰 *PROJECTED DIVIDEND YIELD:*\n" +
+      "• Est. Year-End Dividend: " + formatCurrency_(proj.projectedDividend) + "\n" +
+      "• Est. Return on Savings: " + (proj.projectedRoiPct || 0) + "%\n" +
+      "• Share of Group Pool: " + (proj.shareOfPoolPct || 0) + "%\n" +
+      "• Payout Priority: " + (proj.payoutPriorityNote || "Credited under Bylaws Rule 5.2") + "\n";
   }
 
   let txListText = "";
@@ -929,6 +1204,7 @@ function buildMonthlyStatementWhatsAppMessage_(stmt) {
     "• Net Free Savings: " + formatCurrency_(stmt.netFreeSavings !== undefined ? stmt.netFreeSavings : stmt.closingSavings) + "\n\n" +
     "📋 *LOAN OVERVIEW:*\n" +
     loansText + "\n" +
+    dividendProjectionText +
     txListText +
     "────────────────────────────\n" +
     "_Verification Ref: " + (stmt.verificationRef || "Certified") + "_\n" +
@@ -949,6 +1225,16 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
   const closingSavingsStr = formatCurrency_(stmt.closingSavings);
   const loanBalanceNum = Number(stmt.loanBalance) || 0;
   const loanBalStr = formatCurrency_(loanBalanceNum);
+
+  const proj = stmt.dividendProjection || {
+    qualifyingSavings: 0,
+    groupSavings: 0,
+    shareOfPoolPct: 0,
+    projectedPool: 0,
+    projectedDividend: 0,
+    projectedRoiPct: 0,
+    payoutPriorityNote: "Under Bylaws Rule 5.2, dividends will be credited to member savings."
+  };
 
   let txRowsHtml = "";
   if (stmt.transactions && stmt.transactions.length > 0) {
@@ -1024,6 +1310,8 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
       .bl-surface { background-color: #0f172a !important; border-color: #334155 !important; }
       .bl-kpi-green { background-color: #064e3b !important; border-color: #065f46 !important; }
       .bl-kpi-red { background-color: #450a0a !important; border-color: #7f1d1d !important; }
+      .bl-proj-card { background-color: #1e293b !important; border-color: #059669 !important; }
+      .bl-proj-note { background-color: #064e3b !important; border-color: #065f46 !important; color: #a7f3d0 !important; }
       .bl-text-strong { color: #f8fafc !important; }
       .bl-text-muted { color: #94a3b8 !important; }
       .bl-border { border-color: #334155 !important; }
@@ -1097,6 +1385,51 @@ function buildMonthlyStatementHtmlEmail_(stmt) {
                   </td>
                 </tr>
               </table>
+
+              <!-- Projected Year-End Dividend & Interest Yield Card (COM-2) -->
+              <div style="margin-top: 20px;">
+                <table role="presentation" class="bl-card bl-border bl-proj-card" width="100%" cellspacing="0" cellpadding="0" style="border: 1px solid #10b981; border-radius: 12px; overflow: hidden; background-color: #ffffff; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.08);">
+                  <tr>
+                    <td style="background-color: #064e3b; background: linear-gradient(135deg, #064e3b 0%, #059669 100%); padding: 12px 18px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td>
+                            <h3 style="margin: 0; font-size: 13px; font-weight: 700; color: #ffffff; letter-spacing: 0.3px; text-transform: uppercase;">
+                              💰 Projected Year-End Dividend &amp; Interest Yield
+                            </h3>
+                          </td>
+                          <td align="right">
+                            <span style="display: inline-block; background-color: rgba(255,255,255,0.2); color: #ecfdf5; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px;">
+                              Est. ${escapeHtml_(String(proj.projectedRoiPct || 0))}% Yield
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 16px 18px;">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td class="bl-border" width="50%" style="padding-right: 14px; border-right: 1px solid #e2e8f0;">
+                            <div class="bl-text-muted" style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Projected Dividend</div>
+                            <div style="margin-top: 4px; font-size: 22px; font-weight: 800; color: #047857;">${escapeHtml_(formatCurrency_(proj.projectedDividend || 0))}</div>
+                            <div class="bl-text-muted" style="margin-top: 2px; font-size: 11px; color: #64748b;">Annualized return on qualifying savings</div>
+                          </td>
+                          <td width="50%" style="padding-left: 14px;">
+                            <div class="bl-text-muted" style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Share of Capital Pool</div>
+                            <div class="bl-text-strong" style="margin-top: 4px; font-size: 18px; font-weight: 800; color: #0f172a;">${escapeHtml_(String(proj.shareOfPoolPct || 0))}%</div>
+                            <div class="bl-text-muted" style="margin-top: 2px; font-size: 11px; color: #64748b;">of ${escapeHtml_(formatCurrency_(proj.projectedPool || 0))} pool</div>
+                          </td>
+                        </tr>
+                      </table>
+                      <div class="bl-surface bl-border bl-proj-note" style="margin-top: 14px; padding: 10px 14px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #166534; line-height: 1.4;">
+                        <strong>Payout Rule:</strong> ${escapeHtml_(proj.payoutPriorityNote || "")}
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
 
               <!-- Monthly Activity Table -->
               <div style="margin-top: 24px;">
@@ -1380,5 +1713,273 @@ function getMonthlyStatementsOverviewData(monthKey) {
     return result;
   } finally {
     if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
+  }
+}
+
+/**
+ * Returns the target month key ("yyyy-MM") for automated statement dispatch.
+ * If running in the first 5 days of the month, targets the previous completed month;
+ * otherwise targets the current month.
+ */
+function getAutomatedStatementMonthKey_(date) {
+  const d = date || new Date();
+  const day = d.getDate();
+  if (day <= 5) {
+    const prev = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+    const y = prev.getFullYear();
+    const m = String(prev.getMonth() + 1).padStart(2, "0");
+    return y + "-" + m;
+  } else {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return y + "-" + m;
+  }
+}
+
+/**
+ * Automated end-of-month monthly statement dispatch engine.
+ * Idempotently iterates active members and dispatches statements with dividend projections.
+ */
+function runAutomatedMonthlyStatementDispatch_(options) {
+  const opts = options || {};
+  const props = PropertiesService.getScriptProperties();
+  const autoEnabled = props.getProperty("AUTO_MONTHLY_STATEMENTS") === "true";
+
+  if (!autoEnabled && !opts.force && !opts.bypassDayCheck) {
+    return {
+      success: false,
+      skipped: true,
+      reason: "Automated monthly statements are disabled in settings.",
+      total: 0,
+      sent: 0,
+      skippedNoEmail: 0,
+      failed: 0,
+    };
+  }
+
+  const now = new Date();
+  let timeZone = "Africa/Nairobi";
+  let ss = null;
+  try {
+    ss = getSpreadsheet_();
+    if (ss) timeZone = ss.getSpreadsheetTimeZone() || timeZone;
+  } catch (eSs) {}
+
+  let currentDay = now.getDate();
+  try {
+    currentDay = parseInt(Utilities.formatDate(now, timeZone, "d"), 10);
+  } catch (eDay) {}
+
+  const autoStatementDay = parseInt(props.getProperty("AUTO_STATEMENT_DAY"), 10) || 1;
+
+  if (!opts.bypassDayCheck && currentDay !== autoStatementDay) {
+    return {
+      success: false,
+      skipped: true,
+      reason: "Current day (" + currentDay + ") does not match scheduled autoStatementDay (" + autoStatementDay + ").",
+      total: 0,
+      sent: 0,
+      skippedNoEmail: 0,
+      failed: 0,
+    };
+  }
+
+  const targetMonthKey = opts.monthKey || getAutomatedStatementMonthKey_(now);
+
+  // Idempotency guard: prevent duplicate automated dispatch in the same month
+  const lastDispatchedMonth = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_MONTH") || "";
+  if (!opts.force && lastDispatchedMonth === targetMonthKey) {
+    return {
+      success: false,
+      skipped: true,
+      reason: "Automated monthly statements for " + targetMonthKey + " have already been dispatched on " + (props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_TIMESTAMP") || "earlier") + ".",
+      monthKey: targetMonthKey,
+      total: 0,
+      sent: 0,
+      skippedNoEmail: 0,
+      failed: 0,
+    };
+  }
+
+  if (!ss) ss = getSpreadsheet_();
+  const memSheet = getRequiredSheet_(SHEETS.MEMBERS);
+  const mValues = memSheet.getDataRange().getValues();
+  if (!mValues || mValues.length <= 1) {
+    return {
+      success: false,
+      error: "No member records found.",
+      total: 0,
+      sent: 0,
+      skippedNoEmail: 0,
+      failed: 0,
+    };
+  }
+
+  const mCol = getHeaderMap_(mValues[0]);
+  requireHeaders_(mCol, ["Member ID", "Status"], SHEETS.MEMBERS);
+
+  const activeMembers = [];
+  for (let r = 1; r < mValues.length; r++) {
+    const row = mValues[r];
+    const status = String(row[mCol["Status"]] || "Active").trim().toLowerCase();
+    if (status !== "active") continue;
+
+    const mid = String(row[mCol["Member ID"]] || "").trim();
+    if (!mid) continue;
+
+    const email = mCol["Email"] !== undefined ? String(row[mCol["Email"]] || "").trim() : "";
+    activeMembers.push({
+      memberId: mid,
+      email: email,
+    });
+  }
+
+  const results = {
+    total: activeMembers.length,
+    sent: 0,
+    skippedNoEmail: 0,
+    failed: 0,
+    monthKey: targetMonthKey,
+    details: [],
+  };
+
+  const settings = getNotificationSettings();
+
+  activeMembers.forEach(function (mem) {
+    try {
+      const stmt = getMemberMonthlyStatementData(mem.memberId, targetMonthKey);
+      const recipientEmail = (stmt && stmt.email) ? stmt.email : mem.email;
+
+      if (recipientEmail && recipientEmail.indexOf("@") !== -1) {
+        const htmlBody = buildMonthlyStatementHtmlEmail_(stmt);
+        const mailOptions = {
+          to: recipientEmail,
+          subject: "Brightlife SHG - Monthly Statement (" + stmt.monthLabel + ")",
+          htmlBody: htmlBody,
+          name: "Brightlife SHG Treasury",
+        };
+        if (settings.notificationBcc && settings.notificationBcc.indexOf("@") !== -1) {
+          mailOptions.bcc = settings.notificationBcc;
+        }
+        MailApp.sendEmail(mailOptions);
+        results.sent++;
+        results.details.push({ memberId: mem.memberId, name: stmt.memberName, status: "Sent", email: recipientEmail });
+        Utilities.sleep(200);
+      } else {
+        results.skippedNoEmail++;
+        results.details.push({ memberId: mem.memberId, name: (stmt ? stmt.memberName : mem.memberId), status: "Skipped (No Email)", email: "" });
+      }
+    } catch (err) {
+      results.failed++;
+      results.details.push({ memberId: mem.memberId, status: "Failed", error: err.message });
+    }
+  });
+
+  const nowIso = new Date().toISOString();
+  props.setProperty("LAST_AUTO_STATEMENT_DISPATCH_MONTH", targetMonthKey);
+  props.setProperty("LAST_AUTO_STATEMENT_DISPATCH_TIMESTAMP", nowIso);
+  props.setProperty("LAST_AUTO_STATEMENT_DISPATCH_COUNT", String(results.sent));
+
+  appendAuditLog_(
+    "statement.automated_monthly_dispatch",
+    "Statement",
+    targetMonthKey,
+    "Automated monthly statements dispatched for " + targetMonthKey + ": " + results.sent + " sent, " + results.skippedNoEmail + " skipped, " + results.failed + " failed.",
+    JSON.stringify({ monthKey: targetMonthKey, total: results.total, sent: results.sent, skippedNoEmail: results.skippedNoEmail, failed: results.failed })
+  );
+
+  return {
+    success: true,
+    total: results.total,
+    sent: results.sent,
+    skippedNoEmail: results.skippedNoEmail,
+    failed: results.failed,
+    monthKey: targetMonthKey,
+    timestamp: nowIso,
+    details: results.details,
+  };
+}
+
+/**
+ * Public RPC: Manually triggers automated monthly statements immediately (Admin/Treasurer only).
+ * Bypasses day-of-month check.
+ * Optional `force` boolean bypasses the month idempotency check.
+ */
+function dispatchAutomatedMonthlyStatementsNow(force) {
+  const ctx = requirePermission_("accountsWrite");
+  const session = requireAccess_();
+  const role = String(ctx.roleKey || session.roleKey || session.role || "").toLowerCase();
+  const isPrivileged = role === ROLE_KEY.ADMIN || role === ROLE_KEY.TREASURER;
+  if (!isPrivileged) {
+    return { success: false, error: "Only the Treasurer or Admin can trigger automated statements dispatch." };
+  }
+
+  return runAutomatedMonthlyStatementDispatch_({
+    force: Boolean(force),
+    bypassDayCheck: true,
+  });
+}
+
+/**
+ * Inspects project triggers for automated monthly statement dispatch
+ */
+function getAutomatedStatementTriggers_() {
+  try {
+    if (typeof ScriptApp === "undefined" || !ScriptApp.getProjectTriggers) return [];
+    const triggers = ScriptApp.getProjectTriggers();
+    return triggers.filter(function (t) {
+      return t && typeof t.getHandlerFunction === "function" && t.getHandlerFunction() === "runAutomatedMonthlyStatementDispatch_";
+    });
+  } catch (e) {
+    console.warn("Could not inspect project triggers: " + e.message);
+    return [];
+  }
+}
+
+/**
+ * Removes any existing automated statement triggers
+ */
+function removeAutomatedStatementTrigger_() {
+  try {
+    if (typeof ScriptApp === "undefined" || !ScriptApp.deleteTrigger) return false;
+    const triggers = getAutomatedStatementTriggers_();
+    triggers.forEach(function (t) {
+      try {
+        ScriptApp.deleteTrigger(t);
+      } catch (delErr) {
+        console.warn("Could not delete trigger: " + delErr.message);
+      }
+    });
+    return true;
+  } catch (e) {
+    console.warn("removeAutomatedStatementTrigger_ error: " + e.message);
+    return false;
+  }
+}
+
+/**
+ * Sets up monthly time-driven trigger for runAutomatedMonthlyStatementDispatch_
+ * on the configured autoStatementDay at 08:00 Nairobi time.
+ */
+function setupAutomatedStatementTrigger_() {
+  try {
+    if (typeof ScriptApp === "undefined" || !ScriptApp.newTrigger) return false;
+    removeAutomatedStatementTrigger_();
+
+    const props = PropertiesService.getScriptProperties();
+    const autoDay = parseInt(props.getProperty("AUTO_STATEMENT_DAY"), 10) || 1;
+    const validDay = Math.max(1, Math.min(28, autoDay));
+
+    ScriptApp.newTrigger("runAutomatedMonthlyStatementDispatch_")
+      .timeBased()
+      .onMonthDay(validDay)
+      .atHour(8)
+      .inTimezone("Africa/Nairobi")
+      .create();
+
+    return true;
+  } catch (e) {
+    console.warn("setupAutomatedStatementTrigger_ notice: " + e.message);
+    return false;
   }
 }

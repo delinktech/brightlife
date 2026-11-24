@@ -934,12 +934,24 @@ function executeBulkEmailDispatch() {
 function openNotificationSettingsModal() {
   const modal = document.getElementById("stmt-settings-modal");
   const chkAuto = document.getElementById("setting-auto-email");
+  const chkAutoMonthly = document.getElementById("setting-auto-monthly-statements");
+  const inpAutoDay = document.getElementById("setting-auto-statement-day");
   const inpBcc = document.getElementById("setting-bcc-email");
+  const dispatchText = document.getElementById("setting-last-dispatch-text");
 
   if (statementsState.overview && statementsState.overview.settings) {
     const s = statementsState.overview.settings;
     if (chkAuto) chkAuto.checked = Boolean(s.autoEmailReceipts);
+    if (chkAutoMonthly) chkAutoMonthly.checked = Boolean(s.autoMonthlyStatements);
+    if (inpAutoDay) inpAutoDay.value = s.autoStatementDay || 1;
     if (inpBcc) inpBcc.value = s.notificationBcc || "";
+    if (dispatchText) {
+      if (s.lastAutoDispatchMonth) {
+        dispatchText.textContent = s.lastAutoDispatchMonth + " (" + (s.lastAutoDispatchCount || 0) + " sent)";
+      } else {
+        dispatchText.textContent = "Never";
+      }
+    }
   }
 
   if (modal) modal.classList.remove("hidden");
@@ -953,6 +965,8 @@ function closeNotificationSettingsModal() {
 function handleSaveNotificationSettings(e) {
   if (e && e.preventDefault) e.preventDefault();
   const chkAuto = document.getElementById("setting-auto-email");
+  const chkAutoMonthly = document.getElementById("setting-auto-monthly-statements");
+  const inpAutoDay = document.getElementById("setting-auto-statement-day");
   const inpBcc = document.getElementById("setting-bcc-email");
   const btn = document.getElementById("btn-save-settings");
 
@@ -985,8 +999,46 @@ function handleSaveNotificationSettings(e) {
     })
     .saveNotificationSettings({
       autoEmailReceipts: chkAuto ? chkAuto.checked : true,
+      autoMonthlyStatements: chkAutoMonthly ? chkAutoMonthly.checked : false,
+      autoStatementDay: inpAutoDay ? (parseInt(inpAutoDay.value, 10) || 1) : 1,
       notificationBcc: inpBcc ? inpBcc.value.trim() : ""
     });
+}
+
+function handleDispatchAutoStatementsNow() {
+  if (!confirm("Are you sure you want to trigger automated statement dispatch now for all active members?")) {
+    return;
+  }
+  const btn = document.getElementById("btn-dispatch-auto-now");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[10px]"></i> <span>Dispatching...</span>';
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane text-[10px]"></i> <span>Dispatch Auto Statements Now</span>';
+      }
+      if (res && res.success) {
+        showNotification("Dispatched statements to " + (res.sent || 0) + " members (" + (res.skippedNoEmail || 0) + " skipped, no email).", "success", 7000);
+        closeNotificationSettingsModal();
+        loadMonthlyStatementsView(statementsState.selectedMonthKey, true);
+      } else if (res && res.skipped) {
+        showNotification("Dispatch skipped: " + (res.reason || "Already sent"), "info", 6000);
+      } else {
+        showNotification((res && res.error) || "Failed to dispatch statements.", "error", 7000);
+      }
+    })
+    .withFailureHandler(function (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane text-[10px]"></i> <span>Dispatch Auto Statements Now</span>';
+      }
+      handleErr(err);
+    })
+    .dispatchAutomatedMonthlyStatementsNow(true);
 }
 
 function buildClientSideStatementHtml_(stmt) {
@@ -995,6 +1047,20 @@ function buildClientSideStatementHtml_(stmt) {
   const mLabel = escapeHtmlAttr(stmt.monthLabel || "");
   const mEmail = escapeHtmlAttr(stmt.email || "—");
   const mPhone = escapeHtmlAttr(stmt.phone || "—");
+
+  let divProjHtml = "";
+  if (stmt.dividendProjection) {
+    const p = stmt.dividendProjection;
+    divProjHtml = '<div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;padding:12px;margin-bottom:16px;">' +
+      '<div style="font-size:11px;font-weight:bold;color:#065f46;text-transform:uppercase;">💰 Projected Year-End Dividend &amp; Yield</div>' +
+      '<div style="display:flex;justify-content:space-between;margin-top:6px;">' +
+        '<div><span style="font-size:11px;color:#047857;">Est. Dividend:</span> <strong style="font-size:16px;color:#064e3b;">' + escapeHtmlAttr(formatKshStmtExact_(p.projectedDividend)) + '</strong></div>' +
+        '<div><span style="font-size:11px;color:#047857;">Est. Yield:</span> <strong style="font-size:14px;color:#064e3b;">' + (p.projectedRoiPct || 0) + '%</strong> (' + (p.shareOfPoolPct || 0) + '% pool share)</div>' +
+      '</div>' +
+      '<div style="margin-top:6px;font-size:10px;color:#047857;">' + escapeHtmlAttr(p.payoutPriorityNote || '') + '</div>' +
+    '</div>';
+  }
+
   return '<div style="font-family:sans-serif;padding:20px;color:#1e293b;">' +
     '<h2 style="color:#064e3b;margin:0;">BRIGHTLIFE SELF HELP GROUP</h2>' +
     '<p style="color:#64748b;margin:4px 0 16px 0;">Monthly Financial Statement • ' + mLabel + '</p>' +
@@ -1013,6 +1079,7 @@ function buildClientSideStatementHtml_(stmt) {
         '<div style="font-size:20px;font-weight:bold;color:#dc2626;">' + escapeHtmlAttr(formatKshStmtExact_(stmt.loanBalance)) + '</div>' +
       '</div>' +
     '</div>' +
+    divProjHtml +
   '</div>';
 }
 </script>

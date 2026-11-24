@@ -317,6 +317,26 @@
           </div>
         </div>
 
+        <!-- COM-2: Automated Monthly Member Statements -->
+        <div class="p-3 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-500/30 space-y-3">
+          <div class="flex items-start gap-3">
+            <input type="checkbox" id="setting-auto-monthly-statements" class="mt-0.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+            <div>
+              <label for="setting-auto-monthly-statements" class="font-bold text-slate-800 dark:text-slate-100 cursor-pointer">Automated Monthly Member Statements</label>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Automatically emails monthly statements &amp; dividend projections to all active members on the scheduled day.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pl-7">
+            <label for="setting-auto-statement-day" class="text-slate-600 dark:text-slate-300 font-semibold">Dispatch Day of Month:</label>
+            <input type="number" id="setting-auto-statement-day" min="1" max="28" value="1"
+              class="w-16 px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center text-xs text-slate-900 dark:text-white" />
+            <span class="text-[11px] text-slate-400">(Day 1 to 28 at 08:00 EAT)</span>
+          </div>
+          <div id="setting-auto-dispatch-status" class="pl-7 text-[11px] text-slate-500 dark:text-slate-400">
+            Last dispatch: <span id="setting-last-dispatch-text" class="font-medium text-slate-700 dark:text-slate-300">Never</span>
+          </div>
+        </div>
+
         <div>
           <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Group Treasury BCC Email (Optional)</label>
           <input type="email" id="setting-bcc-email" placeholder="e.g. brightlyfe@gmail.com"
@@ -324,13 +344,19 @@
           <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Receive an archival copy of all outgoing receipts and monthly statements.</p>
         </div>
 
-        <div class="pt-2 flex items-center justify-end gap-2">
-          <button type="button" onclick="closeNotificationSettingsModal()" class="min-h-[38px] px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors">
-            Cancel
+        <div class="pt-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
+          <button type="button" onclick="handleDispatchAutoStatementsNow()" id="btn-dispatch-auto-now"
+            class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1.5 min-h-[36px]">
+            <i class="fas fa-paper-plane text-[10px]"></i> <span>Dispatch Auto Statements Now</span>
           </button>
-          <button type="submit" id="btn-save-settings" class="min-h-[38px] px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
-            <i class="fas fa-check text-xs"></i> <span>Save Settings</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closeNotificationSettingsModal()" class="min-h-[38px] px-4 py-2 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg font-medium transition-colors">
+              Cancel
+            </button>
+            <button type="submit" id="btn-save-settings" class="min-h-[38px] px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 rounded-lg font-semibold shadow-sm transition-colors inline-flex items-center gap-1.5">
+              <i class="fas fa-check text-xs"></i> <span>Save Settings</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>
