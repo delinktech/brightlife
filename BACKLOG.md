@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v144`** (Google Apps Script Build `@145`) |
-| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-4`–`UI-7`, `COM-3`–`COM-6`, `RPT-5`, `SET-1` & `MIG-3`) |
-| **Completed & Shipped (`[DONE]`)** | **35 Tasks (89.7%)** |
+| **Current Live Release** | **`v145`** (Google Apps Script Build `@146`) |
+| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-4`–`UI-7`, `COM-3`–`COM-6`, `RPT-5`, `SET-1`, `MIG-3` & `RPT-3`) |
+| **Completed & Shipped (`[DONE]`)** | **36 Tasks (92.3%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **4 Tasks (10.3%)** (plus MIG-2 full historical backfill pending statements) |
-| **Current Sprint Focus** | `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement` (P2) / `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (Awaiting Statements) |
+| **Prioritized Backlog (`[BACKLOG]`)** | **3 Tasks (7.7%)** (plus MIG-2 full historical backfill pending statements) |
+| **Current Sprint Focus** | `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (Awaiting Statements) / `UI-3: Advanced Ledger Multi-Sort & Filter Presets` (P2) |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`RPT-3`** | Financial Reporting & Operations | **Statement of Changes in Equity & Direct Cash Flow Statement**: Added IFRS 4-column Equity Statement (Member Savings, 20% Statutory Reserve, 80% Retained Distributable Surplus, Total Equity with zero-variance balance sheet reconciliation), IAS 7 Direct Method Statement of Cash Flows (Operating, Investing, Financing activities with zero-variance cash reconciliation against bank & liquid accounts), standalone print engines (`openPrintEquityStatementReport()`, `openPrintCashFlowStatementReport()`) with official BLG letterhead (`brightlyfe@gmail.com`) and 3-officer governance sign-offs, AGM Audit Pack expansion to 6 institutional sections, and formula-injection-safe CSV exporters (`exportEquityStatementCSV()`, `exportCashFlowStatementCSV()`). | `@fixer`, `@designer`, `@sentinel` | **`v145`** (`@146`) | 2026-11-24 |
 | **`MIG-3`** | Migration & Operations | **One-Time 'Form Loan Requests' Backfill & Google Form Deprecation**: Ingests historical executed loans from authoritative Loans_table preserving exact legacy Loan Ids, normalizes Member IDs (BLM-XX), cross-references Form Loan Requests for guarantor pledges, enforces strict Row 2 spill formula safety, provides safe tab archiving ([ARCHIVED] Form Loan Requests with tab color #94a3b8), logs complete audit trail to Audit Log, and adds admin migration modal to Loans.html. | `@migrator`, `@fixer`, `@sentinel` | **`v144`** (`@145`) | 2026-11-24 |
 | **`RPT-5`** | Financial Reporting & Credit Operations | **Individual Loan Statement & Amortization Schedule**: Added print statement action buttons to every loan record in Loans.html, implemented getLoanStatementData server RPC with strict RBAC IDOR isolation, and built openPrintLoanStatement in print.ui.js.html rendering official BLG letterhead, 4-up loan KPI cards, facility parameters matrix, guarantor security schedule, itemized repayment ledger with principal & interest breakdown, double-underlined accounting totals, and Dual-Officer Credit Committee & Treasurer certification block. | `@fixer`, `@designer`, `@sentinel` | **`v143`** (`@144`) | 2026-11-23 |
 | **`COM-6`** | Member Communications & Financial Reporting | **Official 1/3-Page Member Contribution Receipt Slip & Email Standardization**: Standardized official group contact email to brightlyfe@gmail.com across all letterheads and print views. Added [Print Receipt Slip] in receiptShareModal and direct row actions on Contributions.html, generating compact 1/3-page A4 payment vouchers with receipt serial (BL-RCP-...), M-Pesa/Bank ref, amount in words (numberToWordsKES), post-payment updated savings and loan debt standing, and Treasury Office stamp block. | `@designer`, `@sentinel` | **`v142`** (`@143`) | 2026-11-23 |
@@ -83,7 +84,7 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 
 ### Tier 3: Advanced Intelligence, Financial Reporting & Platform Hardening (`P2`)
 
-#### 2. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement`
+#### 2. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement` *(Shipped in v145)*
 * **Priority:** `P2 (Medium)`
 * **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
 * **Location:** `Reports` tab
