@@ -118,7 +118,7 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v144)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v145)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -128,6 +128,7 @@ graph TD
         V3["VIS-3: SASRA Aging & Provision Matrix"]
         R1["RPT-1: Statement of Financial Position"]
         R2["RPT-2: Statement of Comprehensive Income"]
+        R3["RPT-3: Statement of Changes in Equity & Direct Cash Flow"]
         A1["ARC-1: Schema Standard & Reference Constants"]
         A5["ARC-5: 'BL' Entity ID Standardization"]
         A6["ARC-6: Canonical CIC Statement Standardization"]
@@ -157,7 +158,6 @@ graph TD
     end
 
     subgraph Future_Enhancements ["Deferred & Backlog Enhancements (P2 Priorities)"]
-        R3["RPT-3: Statement of Changes in Equity"]
         U3["UI-3: Column Sorting & Filter Presets"]
         C2["COM-2: Monthly Member Statements Dispatch"]
         S1["SEC-1: Tamper-Evident Ledger Hashing"]
@@ -170,6 +170,7 @@ graph TD
     A1 --> M2B
     M2B -.-> M2
     R1 & R2 & A1 & A2 --> R4
+    R1 & R2 --> R3
     U2 --> G1
     C4 --> C5
     C1 & C4 --> C6
