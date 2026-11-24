@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v147` (Google Apps Script Build `@148`, Deployed `@154`)
+- **Current Live Version:** `v148` (Google Apps Script Build `@149`, Deployed `@155`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -88,6 +88,20 @@ Client-server contracts called via `google.script.run`:
   - **Payload**: `{ dryRun?: boolean, deprecateTab?: boolean }`
   - **Returns**: `{ success: boolean, dryRun: boolean, ingestedLoans: number, skippedLoans: number, ingestedGuarantors: number, tabArchived: boolean, deprecationResult?: string, errors: string[] }`
   - **RBAC**: Protected by `requirePermission_('isAdmin')`. Executes historical loan ingestion and Form Loan Requests tab deprecation.
+* **`getAuditIntegrityStatus()`**
+  - **Returns**: `{ success: boolean, status: string, totalEntries: number, lastVerifiedHash: string, lastVerifiedTimestamp: string, anomalies: Array, cached: boolean }`
+* **`verifyLedgerIntegrity()`**
+  - **Returns**: `{ success: boolean, status: string, totalEntries: number, lastVerifiedHash: string, anomalies: Array }`
+  - **RBAC**: Protected by `requirePermission_('isAdmin')` or Treasurer.
+* **`getAuditRetentionSettings()`**
+  - **Returns**: `{ success: boolean, retentionDays: number }`
+* **`saveAuditRetentionSettings(settings)`**
+  - **Payload**: `{ retentionDays: number }`
+  - **Returns**: `{ success: boolean, retentionDays: number }`
+  - **RBAC**: Protected by `requirePermission_('isAdmin')` or Treasurer.
+* **`archiveOldAuditLogsNow()`**
+  - **Returns**: `{ success: boolean, archivedCount: number, remainingCount: number, checkpointHash: string }`
+  - **RBAC**: Protected by `requirePermission_('isAdmin')` or Treasurer.
 
 ---
 
@@ -157,3 +171,13 @@ Client-server contracts called via `google.script.run`:
   - **Branded Notification Templates:** Standardized HTML email and WhatsApp statement templates featuring high-contrast layout, group credentials (`brightlyfe@gmail.com`), monthly savings and loan KPI matrix, and projected year-end dividend cards.
   - **Settings & Administration UI (`Settings.html` Card 5 & `Statements.html`):** Integrated admin controls for automated monthly statements toggle, dispatch day-of-month selector (days 1–28), and manual `[Run Dispatch Now]` instant trigger.
   - **Trigger Lifecycle Management (`setupAutomatedStatementTrigger_`, `removeAutomatedStatementTrigger_`):** Background Apps Script time-driven triggers dynamically configured or retired based on setting toggles without manual Apps Script intervention.
+
+---
+
+## 8. Cryptographic Ledger Integrity & Audit Retention (`@sentinel`, `@fixer`, `@designer`)
+* **Task SEC-1 Deliverables (Tamper-Evident SHA-256 Rolling Hash Chain & Audit Log Retention)**:
+  - **Cryptographic SHA-256 Rolling Hash Chain Engine (`audit.service.js`):** Enforces cryptographic linking across every row of the `Audit Log` sheet. Computes deterministic canonical 8-field pipe-separated SHA-256 digest (`Timestamp | Actor Email | Action | Entity | Entity ID | Summary | Details | Previous Hash`), linking sequential entries from 64-char `GENESIS_HASH`.
+  - **Dynamic Schema Migration & Historical Backfill (`upgradeAuditLogSchemaAndHashChain_`):** Detects legacy 7-column schema and dynamically upgrades to canonical 9-column schema (`Previous Hash`, `Entry Hash`), sealing all historical records in unbroken chronological chain.
+  - **Tamper-Evident Verification Scanner (`verifyAuditLogIntegrity_()`, `verifyLedgerIntegrity`):** High-speed auditing scanner verifying rolling chain integrity, immediately detecting and pinpointing out-of-band cell modification, row insertion, and row deletion with exact row numbers.
+  - **Retention Policy & Partition Archive Manager (`archiveOldAuditLogs_`, `saveAuditRetentionSettings`):** Configurable retention window (`AUDIT_LOG_RETENTION_DAYS`, 30–3650 days, default 365 days). Safely archives expired rows to `[ARCHIVE] Audit Log` while maintaining cryptographic continuity via `AUDIT_LOG_CHECKPOINT_HASH`.
+  - **Cryptographic Monitoring UI (`Settings.html` Card 6 & `settings.ui.js.html`):** Interactive dashboard card with real-time status badges (`IMMUTABLE & VERIFIED` vs `TAMPER DETECTED`), total sealed entries counter, last verified seal hash with 1-click clipboard copy, tamper anomaly alerts, and instant verification trigger.
