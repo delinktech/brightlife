@@ -1019,6 +1019,12 @@
         if (typeof window.renderIncomeStatement === "function") {
           window.renderIncomeStatement(window.latestHomeAnalyticsData);
         }
+        if (typeof window.renderEquityStatement === "function") {
+          window.renderEquityStatement(window.latestHomeAnalyticsData);
+        }
+        if (typeof window.renderCashFlowStatement === "function") {
+          window.renderCashFlowStatement(window.latestHomeAnalyticsData);
+        }
       }
     }
   }

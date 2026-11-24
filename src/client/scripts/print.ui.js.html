@@ -1606,6 +1606,341 @@
     });
   }
 
+  function openPrintEquityStatementReport(options) {
+    const opts = options || {};
+    let m = window.latestEquityStatementModel;
+    if (!m && typeof buildEquityStatementModel_ === "function") {
+      m = buildEquityStatementModel_(window.latestHomeAnalyticsData || {});
+      window.latestEquityStatementModel = m;
+    }
+
+    if (!m && typeof google !== "undefined" && google.script && google.script.run) {
+      renderPrintStatementLoading_("Loading certified Statement of Changes in Equity...");
+      showPrintModal_({ refText: "Loading..." });
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            if (typeof showNotification === "function") {
+              showNotification((res && res.error) || "Failed to load Equity Statement.", "error");
+            }
+            closePrintModal();
+            return;
+          }
+          const model = typeof buildEquityStatementModel_ === "function" ? buildEquityStatementModel_(res) : res.equityStatement;
+          window.latestEquityStatementModel = model;
+          renderPrintEquityStatementView_(model, opts);
+        })
+        .withFailureHandler(function (err) {
+          if (typeof showNotification === "function") {
+            showNotification("Equity Statement load error: " + (err ? err.message : "Network error"), "error");
+          }
+          closePrintModal();
+        })
+        .getExecutiveFinancialReports("year");
+      return;
+    }
+
+    if (!m) {
+      if (typeof showNotification === "function") {
+        showNotification("Equity Statement data is still loading. Please open Group Overview first.", "warning");
+      }
+      return;
+    }
+
+    renderPrintEquityStatementView_(m, opts);
+  }
+
+  function renderPrintEquityStatementView_(m, options) {
+    const opts = options || {};
+    const periodLabel = m.periodLabel || (m.periodStart && m.periodEnd ? (m.periodStart + " \u2013 " + m.periodEnd) : "Current Fiscal Period");
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "STATEMENT OF CHANGES IN EQUITY";
+    document.getElementById("print-report-badge").textContent = "IFRS / SASRA Standard";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official Statement of Changes in Equity \u2022 Period Covered: " + periodLabel + " \u2022 Currency: Kenya Shillings (KES)";
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Opening Members\' Equity</div>' +
+      '<div class="text-sm font-bold text-slate-900 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.opening.total) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Total Net Surplus</div>' +
+      '<div class="text-sm font-bold text-emerald-700 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.movements.netOperatingSurplus) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Closing Members\' Equity</div>' +
+      '<div class="text-sm font-bold text-indigo-700 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.closing.total) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Reconciliation Status</div>' +
+      '<div class="text-sm font-bold ' + (m.isBalanced ? "text-emerald-700" : "text-amber-700") + ' font-mono tabular-nums mt-0.5">' + (m.isBalanced ? "Balanced \u00B1 0.00" : "Variance: " + formatPrintBsMoney_(m.variance)) + '</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-3 py-2.5">Equity Movement / Component (IFRS)</th>' +
+      '<th class="px-3 py-2.5 text-right whitespace-nowrap">Member Savings</th>' +
+      '<th class="px-3 py-2.5 text-right whitespace-nowrap">Statutory Reserve</th>' +
+      '<th class="px-3 py-2.5 text-right whitespace-nowrap">Retained Surplus</th>' +
+      '<th class="px-3 py-2.5 text-right whitespace-nowrap font-bold">Total Equity (KES)</th>' +
+      '</tr>';
+
+    const colRow = function (label, s, r, ret, tot, isBold, isTotal, isDeduct) {
+      const cls = isTotal
+        ? 'bg-slate-100 border-t-2 border-slate-300 border-b-4 border-double border-b-slate-900 font-bold'
+        : (isBold ? 'bg-slate-50/80 font-bold text-slate-900' : 'text-slate-700');
+      const valColor = isDeduct ? 'text-rose-700' : '';
+      return (
+        '<tr class="' + cls + '">' +
+        '<td class="px-3 py-2 ' + (isBold || isTotal ? '' : 'pl-6') + '">' + escapePrintHtml(label) + '</td>' +
+        '<td class="px-3 py-2 text-right font-mono tabular-nums ' + valColor + '">' + s + '</td>' +
+        '<td class="px-3 py-2 text-right font-mono tabular-nums ' + valColor + '">' + r + '</td>' +
+        '<td class="px-3 py-2 text-right font-mono tabular-nums ' + valColor + '">' + ret + '</td>' +
+        '<td class="px-3 py-2 text-right font-mono tabular-nums font-bold ' + valColor + '">' + tot + '</td>' +
+        '</tr>'
+      );
+    };
+
+    const refFmt = m.movements.refunds > 0 ? ('(' + formatPrintBsMoney_(m.movements.refunds) + ')') : '\u2014';
+    const divFmt = m.movements.dividends > 0 ? ('(' + formatPrintBsMoney_(m.movements.dividends) + ')') : '\u2014';
+
+    document.getElementById("print-table-body").innerHTML =
+      colRow(
+        "Balance as at Beginning of Period (Opening Balances B/F)",
+        formatPrintBsMoney_(m.opening.memberSavings),
+        formatPrintBsMoney_(m.opening.statutoryReserve),
+        formatPrintBsMoney_(m.opening.retainedSurplus),
+        formatPrintBsMoney_(m.opening.total),
+        true, false, false
+      ) +
+      colRow(
+        "Add: Member Contributions & Savings Inflows",
+        formatPrintBsMoney_(m.movements.contributions),
+        "\u2014", "\u2014",
+        formatPrintBsMoney_(m.movements.contributions),
+        false, false, false
+      ) +
+      colRow(
+        "Less: Approved Member Refunds / Exits Paid",
+        refFmt, "\u2014", "\u2014", refFmt,
+        false, false, m.movements.refunds > 0
+      ) +
+      colRow(
+        "Net Operating Surplus for the Period",
+        "\u2014",
+        formatPrintBsMoney_(m.movements.statutoryAllocation),
+        formatPrintBsMoney_(m.movements.distributableAllocation),
+        formatPrintBsMoney_(m.movements.netOperatingSurplus),
+        false, false, false
+      ) +
+      colRow(
+        "Transfer to Statutory Reserve Fund (20% SASRA Sec 51(1))",
+        "\u2014",
+        formatPrintBsMoney_(m.movements.statutoryAllocation),
+        "\u2014",
+        formatPrintBsMoney_(m.movements.statutoryAllocation),
+        false, false, false
+      ) +
+      colRow(
+        "Allocation to Retained Distributable Surplus (80%)",
+        "\u2014", "\u2014",
+        formatPrintBsMoney_(m.movements.distributableAllocation),
+        formatPrintBsMoney_(m.movements.distributableAllocation),
+        false, false, false
+      ) +
+      colRow(
+        "Less: Dividends & Surplus Distributions Declared / Paid",
+        "\u2014", "\u2014", divFmt, divFmt,
+        false, false, m.movements.dividends > 0
+      ) +
+      colRow(
+        "Balance as at End of Period (Closing Balances C/F)",
+        formatPrintBsMoney_(m.closing.memberSavings),
+        formatPrintBsMoney_(m.closing.statutoryReserve),
+        formatPrintBsMoney_(m.closing.retainedSurplus),
+        formatPrintBsMoney_(m.closing.total),
+        true, true, false
+      ) +
+      '<tr class="bg-slate-50 border-t border-slate-200">' +
+      '<td colspan="3" class="px-3 py-2 text-[11px] font-semibold text-slate-600">Balance Sheet Total Equity Reconciliation Check:</td>' +
+      '<td colspan="2" class="px-3 py-2 text-right font-mono tabular-nums text-[11px] font-bold ' + (m.isBalanced ? "text-emerald-700" : "text-amber-700") + '">' +
+      (m.isBalanced ? "Reconciled with Balance Sheet (Variance: 0.00 KES)" : "Variance: " + formatPrintBsMoney_(m.variance)) +
+      '</td>' +
+      '</tr>';
+
+    showPrintModal_({
+      showSignoff: true,
+      kpiGridClass: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6",
+      refText: "Ref: BLG-EQ-" + new Date().getFullYear() + "-CERT"
+    });
+
+    if (opts.autoPrint !== false) {
+      setTimeout(function () {
+        try { window.print(); } catch (_) {}
+      }, 300);
+    }
+  }
+
+  function openPrintCashFlowStatementReport(options) {
+    const opts = options || {};
+    let m = window.latestCashFlowStatementModel;
+    if (!m && typeof buildCashFlowStatementModel_ === "function") {
+      m = buildCashFlowStatementModel_(window.latestHomeAnalyticsData || {});
+      window.latestCashFlowStatementModel = m;
+    }
+
+    if (!m && typeof google !== "undefined" && google.script && google.script.run) {
+      renderPrintStatementLoading_("Loading certified Statement of Cash Flows (IAS 7)...");
+      showPrintModal_({ refText: "Loading..." });
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.ok) {
+            if (typeof showNotification === "function") {
+              showNotification((res && res.error) || "Failed to load Cash Flow Statement.", "error");
+            }
+            closePrintModal();
+            return;
+          }
+          const model = typeof buildCashFlowStatementModel_ === "function" ? buildCashFlowStatementModel_(res) : res.cashFlowStatement;
+          window.latestCashFlowStatementModel = model;
+          renderPrintCashFlowStatementView_(model, opts);
+        })
+        .withFailureHandler(function (err) {
+          if (typeof showNotification === "function") {
+            showNotification("Cash Flow Statement load error: " + (err ? err.message : "Network error"), "error");
+          }
+          closePrintModal();
+        })
+        .getExecutiveFinancialReports("year");
+      return;
+    }
+
+    if (!m) {
+      if (typeof showNotification === "function") {
+        showNotification("Cash Flow Statement data is still loading. Please open Group Overview first.", "warning");
+      }
+      return;
+    }
+
+    renderPrintCashFlowStatementView_(m, opts);
+  }
+
+  function renderPrintCashFlowStatementView_(m, options) {
+    const opts = options || {};
+    const periodLabel = m.periodLabel || (m.periodStart && m.periodEnd ? (m.periodStart + " \u2013 " + m.periodEnd) : "Current Fiscal Period");
+
+    document.getElementById("print-date-display").textContent = formatDateForLetterhead(new Date());
+    document.getElementById("print-report-title").textContent = "STATEMENT OF CASH FLOWS (IAS 7 DIRECT METHOD)";
+    document.getElementById("print-report-badge").textContent = "IAS 7 Direct Method";
+    document.getElementById("print-report-subtitle").textContent =
+      "Official Statement of Cash Flows \u2022 Operating, Investing & Financing Activities \u2022 Period: " + periodLabel + " \u2022 Currency: Kenya Shillings (KES)";
+
+    const kpiContainer = document.getElementById("print-kpi-row");
+    kpiContainer.innerHTML =
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Operating Cash Flow</div>' +
+      '<div class="text-sm font-bold ' + (m.operatingActivities.netOperatingCashFlow >= 0 ? "text-emerald-700" : "text-rose-700") + ' font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.operatingActivities.netOperatingCashFlow) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Investing Cash Flow</div>' +
+      '<div class="text-sm font-bold ' + (m.investingActivities.netInvestingCashFlow >= 0 ? "text-slate-900" : "text-rose-700") + ' font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.investingActivities.netInvestingCashFlow) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Financing Cash Flow</div>' +
+      '<div class="text-sm font-bold ' + (m.financingActivities.netFinancingCashFlow >= 0 ? "text-slate-900" : "text-rose-700") + ' font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.financingActivities.netFinancingCashFlow) + '</div>' +
+      '</div>' +
+      '<div class="p-3 bg-slate-50 rounded-xl border border-slate-200">' +
+      '<div class="text-[10px] uppercase font-bold text-slate-400">Closing Cash Reconciled</div>' +
+      '<div class="text-sm font-bold text-teal-700 font-mono tabular-nums mt-0.5">' + formatPrintBsMoney_(m.summary.closingCash) + '</div>' +
+      '</div>';
+
+    document.getElementById("print-table-head").innerHTML =
+      '<tr>' +
+      '<th class="px-4 py-3">Cash Flow Activities / Classification (IAS 7)</th>' +
+      '<th class="px-4 py-3 text-right">Amount (KES)</th>' +
+      '</tr>';
+
+    const secHdr = function (title) {
+      return (
+        '<tr class="bg-slate-100/90 border-t border-slate-200">' +
+        '<td colspan="2" class="px-4 py-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-800">' + escapePrintHtml(title) + '</td>' +
+        '</tr>'
+      );
+    };
+    const row = function (label, val, isDeduct) {
+      const valStr = isDeduct ? ('(' + formatPrintBsMoney_(Math.abs(val)) + ')') : formatPrintBsMoney_(val);
+      return (
+        '<tr>' +
+        '<td class="px-4 py-2 pl-8 text-slate-700">' + escapePrintHtml(label) + '</td>' +
+        '<td class="px-4 py-2 text-right font-mono tabular-nums ' + (isDeduct ? "text-rose-700" : "text-slate-800 font-medium") + '">' + valStr + '</td>' +
+        '</tr>'
+      );
+    };
+    const subtotalRow = function (label, val) {
+      const cls = val < 0 ? 'text-rose-700' : 'text-slate-900';
+      return (
+        '<tr class="bg-slate-50/80 border-t border-slate-200 font-bold">' +
+        '<td class="px-4 py-2.5 pl-6 text-slate-900">' + escapePrintHtml(label) + '</td>' +
+        '<td class="px-4 py-2.5 text-right font-mono tabular-nums font-bold ' + cls + '">' + formatPrintBsMoney_(val) + '</td>' +
+        '</tr>'
+      );
+    };
+
+    document.getElementById("print-table-body").innerHTML =
+      secHdr("Section I: Cash Flows from Operating Activities") +
+      row("Cash Receipts from Member Contributions", m.operatingActivities.contributionsReceipts, false) +
+      row("Cash Receipts from Loan Repayments (Principal & Interest)", m.operatingActivities.loanRepaymentsReceipts, false) +
+      row("Cash Receipts from Loan Processing Fees & Fines", m.operatingActivities.loanFeesAndFinesReceipts, false) +
+      row("Cash Receipts from Liquid Investment Yields (CIC MMF Yield)", m.operatingActivities.liquidFundYieldsReceipts, false) +
+      row("Less: Cash Disbursed for Member Loans", m.operatingActivities.loansDisbursed, true) +
+      row("Less: Cash Paid for Operating Expenses & Bank Charges", m.operatingActivities.operatingExpensesPaid, true) +
+      subtotalRow("Net Cash Flow from Operating Activities", m.operatingActivities.netOperatingCashFlow) +
+
+      secHdr("Section II: Cash Flows from Investing Activities") +
+      row("Cash Inflows from Tangible Capital Projects", m.investingActivities.projectInflows, false) +
+      row("Cash Receipts from Investment Liquidations & Capital Yields", m.investingActivities.investmentLiquidationAndYields, false) +
+      row("Less: Capital Injected into Tangible Projects (Beekeeping, Land)", m.investingActivities.capitalInjectedProjects, true) +
+      row("Less: Capital Deployed into External Holdings (Mansa X, Treasury Bonds)", m.investingActivities.capitalInjectedExternal, true) +
+      subtotalRow("Net Cash Flow from Investing Activities", m.investingActivities.netInvestingCashFlow) +
+
+      secHdr("Section III: Cash Flows from Financing Activities") +
+      row("Cash Receipts from Member Registration & Welfare Fees", m.financingActivities.registrationAndWelfareFees, false) +
+      row("Less: Approved Member Refunds / Exits Paid", m.financingActivities.memberRefundsPaid, true) +
+      row("Less: Dividends & Surplus Distributions Paid to Members", m.financingActivities.dividendsPaid, true) +
+      subtotalRow("Net Cash Flow from Financing Activities", m.financingActivities.netFinancingCashFlow) +
+
+      '<tr class="bg-slate-100 border-t-2 border-b-2 border-slate-300 font-extrabold">' +
+      '<td class="px-4 py-2.5 uppercase tracking-wider text-slate-900">Net Increase / (Decrease) in Cash and Cash Equivalents</td>' +
+      '<td class="px-4 py-2.5 text-right font-mono tabular-nums text-sm font-extrabold ' + (m.summary.netIncreaseInCash >= 0 ? "text-emerald-700" : "text-rose-700") + '">' + formatPrintBsMoney_(m.summary.netIncreaseInCash) + '</td>' +
+      '</tr>' +
+      row("Cash and Cash Equivalents at Beginning of Period", m.summary.openingCash, false) +
+      '<tr class="bg-teal-50/70 border-t border-slate-300 border-b-4 border-double border-b-teal-800 font-extrabold">' +
+      '<td class="px-4 py-3 uppercase tracking-wider text-slate-900">Cash and Cash Equivalents at End of Period</td>' +
+      '<td class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-teal-800">' + formatPrintBsMoney_(m.summary.closingCash) + '</td>' +
+      '</tr>' +
+      '<tr class="bg-slate-50 border-t border-slate-200">' +
+      '<td class="px-4 py-2 text-[11px] font-semibold text-slate-600">Reconciliation vs Bank & Cash Accounts:</td>' +
+      '<td class="px-4 py-2 text-right font-mono tabular-nums text-[11px] font-bold ' + (m.isBalanced ? "text-emerald-700" : "text-amber-700") + '">' +
+      (m.isBalanced ? "Zero Variance Verified (0.00 KES Variance)" : "Variance: " + formatPrintBsMoney_(m.variance)) +
+      '</td>' +
+      '</tr>';
+
+    showPrintModal_({
+      showSignoff: true,
+      kpiGridClass: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6",
+      refText: "Ref: BLG-CF-" + new Date().getFullYear() + "-CERT"
+    });
+
+    if (opts.autoPrint !== false) {
+      setTimeout(function () {
+        try { window.print(); } catch (_) {}
+      }, 300);
+    }
+  }
+
   function safeCellText_(val) {
     let s = String(val === undefined || val === null ? "" : val);
     if (/^[=+\-@\t\r]/.test(s)) {
@@ -1615,8 +1950,10 @@
   }
 
   function gatherAgmAuditContext_() {
-    const bs = window.latestBalanceSheetModel || null;
-    const is = window.latestIncomeStatementModel || null;
+    const bs = window.latestBalanceSheetModel || (typeof buildBalanceSheetModel_ === "function" ? buildBalanceSheetModel_(window.latestHomeAnalyticsData || {}) : null);
+    const is = window.latestIncomeStatementModel || (typeof buildIncomeStatementModel_ === "function" ? buildIncomeStatementModel_(window.latestHomeAnalyticsData || {}) : null);
+    const eq = window.latestEquityStatementModel || (typeof buildEquityStatementModel_ === "function" ? buildEquityStatementModel_(window.latestHomeAnalyticsData || {}) : null);
+    const cf = window.latestCashFlowStatementModel || (typeof buildCashFlowStatementModel_ === "function" ? buildCashFlowStatementModel_(window.latestHomeAnalyticsData || {}) : null);
     const analytics = window.latestHomeAnalyticsData || {};
     if (!bs || !is) {
       return null;
@@ -1663,6 +2000,8 @@
     return {
       bs: bs,
       is: is,
+      eq: eq,
+      cf: cf,
       year: new Date().getFullYear(),
       refId: "BLG-AGM-AUDIT-" + new Date().getFullYear() + "-VERIFIED",
       projectsSchedule: projectsSchedule,
@@ -1689,6 +2028,8 @@
 
     const bs = ctx.bs;
     const is = ctx.is;
+    const eq = ctx.eq;
+    const cf = ctx.cf;
     const netText = is.netOperatingSurplus < 0
       ? ("(" + formatPrintBsMoney_(Math.abs(is.netOperatingSurplus)) + ")")
       : formatPrintBsMoney_(is.netOperatingSurplus);
@@ -1697,7 +2038,7 @@
     document.getElementById("print-report-title").textContent = "ANNUAL FINANCIAL STATEMENTS & AGM AUDIT PACK";
     document.getElementById("print-report-badge").textContent = "SASRA / IFRS AUDIT";
     document.getElementById("print-report-subtitle").textContent =
-      "Consolidated Multi-Statement Report • Balance Sheet, P&L, Capital Projects & SASRA Prudential Ratios";
+      "Consolidated Multi-Statement Report \u2022 Balance Sheet, P&L, Equity Changes, Direct Cash Flows & SASRA Quality Schedule";
 
     const kpiContainer = document.getElementById("print-kpi-row");
     kpiContainer.innerHTML =
@@ -1750,8 +2091,36 @@
       return row(r.label, "Benchmark: " + r.benchmark, escapePrintHtml(r.value), false);
     }).join("");
 
+    let eqHtml = "";
+    if (eq) {
+      eqHtml =
+        row("Opening Members' Equity (B/F)", "Beginning of Fiscal Period", formatPrintBsMoney_(eq.opening.total), false) +
+        row("Member Contributions & Savings Inflows", "Share Capital Deposits", formatPrintBsMoney_(eq.movements.contributions), false) +
+        row("Less: Approved Member Refunds / Exits", "Capital Redemptions", "(" + formatPrintBsMoney_(eq.movements.refunds) + ")", false) +
+        row("Net Operating Surplus for Period", "Total Comprehensive Performance", formatPrintBsMoney_(eq.movements.netOperatingSurplus), false) +
+        row("20% Statutory Reserve Transfer", "SASRA Sec 51(1) Indivisible Capital", formatPrintBsMoney_(eq.movements.statutoryAllocation), false) +
+        row("80% Retained Distributable Surplus", "Member Surplus Base", formatPrintBsMoney_(eq.movements.distributableAllocation), false) +
+        row("Less: Member Dividends Paid / Declared", "Distributions to Members", "(" + formatPrintBsMoney_(eq.movements.dividends) + ")", false) +
+        row("CLOSING MEMBERS' EQUITY (C/F)", eq.isBalanced ? "Verified vs Balance Sheet" : "Audit Discrepancy", formatPrintBsMoney_(eq.closing.total), true);
+    } else {
+      eqHtml = row("Total Members' Equity", "Balance Sheet Core Capital", formatPrintBsMoney_(bs.equity.subtotal), true);
+    }
+
+    let cfHtml = "";
+    if (cf) {
+      cfHtml =
+        row("Net Cash Flow from Operating Activities", "Inflows minus Operational Outflows", formatPrintBsMoney_(cf.operatingActivities.netOperatingCashFlow), false) +
+        row("Net Cash Flow from Investing Activities", "Capital Projects & Holdings Yields", formatPrintBsMoney_(cf.investingActivities.netInvestingCashFlow), false) +
+        row("Net Cash Flow from Financing Activities", "Fees, Refunds & Dividends", formatPrintBsMoney_(cf.financingActivities.netFinancingCashFlow), false) +
+        row("Net Increase / (Decrease) in Cash", "Consolidated Net Cash Movement", formatPrintBsMoney_(cf.summary.netIncreaseInCash), true) +
+        row("Cash & Cash Equivalents at Beginning of Year", "Opening Liquid Treasury", formatPrintBsMoney_(cf.summary.openingCash), false) +
+        row("CLOSING CASH & CASH EQUIVALENTS", cf.isBalanced ? "Zero Variance vs Bank Accounts" : "Reconciliation Variance", formatPrintBsMoney_(cf.summary.closingCash), true);
+    } else {
+      cfHtml = row("Closing Cash & Equivalents", "Current Liquid Assets", formatPrintBsMoney_(bs.assets.current.subtotal), true);
+    }
+
     document.getElementById("print-table-body").innerHTML =
-      secHdr("Section I: Statement of Financial Position (Balance Sheet)") +
+      secHdr("Section I: Balance Sheet (Statement of Financial Position)") +
       row("Cash & Cash Equivalents", "Bank, Mobile Till & CIC MMF", formatPrintBsMoney_(bs.assets.current.subtotal), false) +
       row("Gross Loans Receivable", "Active Member Credit Book", formatPrintBsMoney_(bs.assets.loans.grossLoans), false) +
       row("Less: SASRA Credit Loss Allowance", "Statutory Impairment Reserve", "(" + formatPrintBsMoney_(bs.assets.loans.lossAllowance) + ")", false) +
@@ -1764,7 +2133,7 @@
       row("Retained Distributable Surplus", "Undistributed Member Earnings", formatPrintBsMoney_(bs.equity.retainedSurplus), false) +
       row("TOTAL LIABILITIES & MEMBERS' EQUITY", "Total Claims & Equity", formatPrintBsMoney_(bs.totalLiabilitiesAndEquity), true) +
 
-      secHdr("Section II: Statement of Comprehensive Income (P&L)") +
+      secHdr("Section II: Income Statement (Statement of Comprehensive Income)") +
       row("Operating Revenue", "Interest, Processing Fees & Fines", formatPrintBsMoney_(is.operatingRevenue.operatingSubtotal), false) +
       row("Investment Yields", "CIC MMF & External Yield", formatPrintBsMoney_(is.investmentYields.investmentSubtotal), false) +
       row("Total Comprehensive Revenue", "Gross Operating Income", formatPrintBsMoney_(is.totalRevenue), true) +
@@ -1774,12 +2143,23 @@
       row("20% Statutory Reserve Appropriation", "Indivisible Institutional Capital", formatPrintBsMoney_(is.appropriations.statutoryReserveTransfer), false) +
       row("80% Distributable Member Surplus Pool", "Dividend / Rebate Allocation Base", formatPrintBsMoney_(is.appropriations.distributableMemberPool), true) +
 
-      secHdr("Section III: Tangible Capital Projects & External Holdings Schedule") +
+      secHdr("Section III: Statement of Changes in Equity") +
+      eqHtml +
+
+      secHdr("Section IV: Statement of Cash Flows (IAS 7 Direct Method)") +
+      cfHtml +
+
+      secHdr("Section V: Loan Portfolio Quality & Provisioning Schedule") +
+      row("Gross Loan Book Outstanding", "Active Credit Facility Balance", formatPrintBsMoney_(bs.assets.loans.grossLoans), false) +
+      row("Statutory Loan Loss Provision", "SASRA Impairment Allowance", "(" + formatPrintBsMoney_(bs.assets.loans.lossAllowance) + ")", false) +
+      row("Net Performing Credit Portfolio", "Carrying Value of Advances", formatPrintBsMoney_(bs.assets.loans.netLoans), true) +
       projectsHtml +
       row("Total Capital Projects & Holdings", "Consolidated Schedule Total", formatPrintBsMoney_(ctx.totalCapitalProjects), true) +
+      ratiosHtml +
 
-      secHdr("Section IV: SASRA Prudential & Key Financial Ratios") +
-      ratiosHtml;
+      secHdr("Section VI: Executive Certification & Audit Committee Sign-Off") +
+      row("Statutory Governance Mandate", "SASRA Act 2020 & Cooperative By-Laws", "Certified Compliant", false) +
+      row("Tripartite Officer Sign-Off", "Chairperson, Treasurer, Secretary", "Attestations Verified Below", true);
 
     showPrintModal_({
       showSignoff: true,
@@ -1799,6 +2179,8 @@
 
     const bs = ctx.bs;
     const is = ctx.is;
+    const eq = ctx.eq;
+    const cf = ctx.cf;
     const generatedDate = new Date().toISOString().slice(0, 10);
     const rows = [
       ["BRIGHTLIFE SHG - CONSOLIDATED ANNUAL AGM & BANK AUDIT PACK", "", "", ""],
@@ -1829,22 +2211,53 @@
       ["20% Statutory Reserve Appropriation", "Appropriation", is.appropriations.statutoryReserveTransfer.toFixed(2), "SASRA Sec 51(1) Reserve"],
       ["80% Distributable Member Surplus Pool", "Appropriation", is.appropriations.distributableMemberPool.toFixed(2), "Dividend Allocation Base"],
       [],
-      ["=== SECTION III: TANGIBLE CAPITAL PROJECTS & EXTERNAL HOLDINGS SCHEDULE ===", "", "", ""],
-      ["Project / Holding", "Category", "Carrying Value (KES)", "Status"]
+      ["=== SECTION III: STATEMENT OF CHANGES IN EQUITY ===", "", "", ""],
+      ["Movement / Component", "Classification", "Amount (KES)", "Notes"]
     ];
+
+    if (eq) {
+      rows.push(["Opening Members' Equity (B/F)", "Members' Equity", eq.opening.total.toFixed(2), "Beginning Balances"]);
+      rows.push(["Member Contributions & Inflows", "Members' Equity", eq.movements.contributions.toFixed(2), "Savings Additions"]);
+      rows.push(["Less: Member Refunds / Exits Paid", "Members' Equity", (-Math.abs(eq.movements.refunds)).toFixed(2), "Exit Redemptions"]);
+      rows.push(["Net Operating Surplus for Period", "Members' Equity", eq.movements.netOperatingSurplus.toFixed(2), "Comprehensive Surplus"]);
+      rows.push(["Transfer to Statutory Reserve Fund (20%)", "Members' Equity", eq.movements.statutoryAllocation.toFixed(2), "SASRA Sec 51(1) Reserve"]);
+      rows.push(["Allocation to Retained Distributable Surplus (80%)", "Members' Equity", eq.movements.distributableAllocation.toFixed(2), "Distributable Pool"]);
+      rows.push(["Less: Dividends & Surplus Distributions", "Members' Equity", (-Math.abs(eq.movements.dividends)).toFixed(2), "Surplus Distributions"]);
+      rows.push(["CLOSING MEMBERS' EQUITY (C/F)", "Summary", eq.closing.total.toFixed(2), eq.isBalanced ? "Balanced vs Balance Sheet" : "Discrepancy"]);
+    } else {
+      rows.push(["Total Members' Equity", "Summary", bs.equity.subtotal.toFixed(2), "Balance Sheet Core Capital"]);
+    }
+
+    rows.push([]);
+    rows.push(["=== SECTION IV: DIRECT CASH FLOW STATEMENT (IAS 7) ===", "", "", ""]);
+    rows.push(["Cash Flow Stream", "Classification", "Amount (KES)", "Notes"]);
+    if (cf) {
+      rows.push(["Net Cash Flow from Operating Activities", "Operating", cf.operatingActivities.netOperatingCashFlow.toFixed(2), "Operational Receipts vs Payments"]);
+      rows.push(["Net Cash Flow from Investing Activities", "Investing", cf.investingActivities.netInvestingCashFlow.toFixed(2), "Projects & Investments Net"]);
+      rows.push(["Net Cash Flow from Financing Activities", "Financing", cf.financingActivities.netFinancingCashFlow.toFixed(2), "Fees vs Exits & Dividends"]);
+      rows.push(["Net Increase / (Decrease) in Cash", "Summary", cf.summary.netIncreaseInCash.toFixed(2), "Net Periodic Cashflow"]);
+      rows.push(["Cash & Equivalents at Beginning of Year", "Current Assets", cf.summary.openingCash.toFixed(2), "Opening Liquid Balances"]);
+      rows.push(["CLOSING CASH & CASH EQUIVALENTS", "Current Assets", cf.summary.closingCash.toFixed(2), cf.isBalanced ? "Zero Variance Reconciled" : "Variance: " + cf.variance.toFixed(2)]);
+    } else {
+      rows.push(["Closing Cash & Equivalents", "Current Assets", bs.assets.current.subtotal.toFixed(2), "Current Liquid Balances"]);
+    }
+
+    rows.push([]);
+    rows.push(["=== SECTION V: TANGIBLE CAPITAL PROJECTS & EXTERNAL HOLDINGS SCHEDULE ===", "", "", ""]);
+    rows.push(["Project / Holding", "Category", "Carrying Value (KES)", "Status"]);
 
     ctx.projectsSchedule.forEach(function (p) {
       rows.push([p.name, p.category, Number(p.value || 0).toFixed(2), p.status]);
     });
     rows.push(["Total Capital Projects & Holdings", "Summary", ctx.totalCapitalProjects.toFixed(2), "Verified"]);
     rows.push([]);
-    rows.push(["=== SECTION IV: SASRA PRUDENTIAL & KEY FINANCIAL RATIOS ===", "", "", ""]);
+    rows.push(["=== SECTION VI: SASRA PRUDENTIAL & KEY FINANCIAL RATIOS ===", "", "", ""]);
     rows.push(["Ratio / Metric", "SASRA Benchmark", "Observed Value", "Status"]);
     ctx.ratios.forEach(function (r) {
       rows.push([r.label, r.benchmark, r.value, "Audited"]);
     });
     rows.push([]);
-    rows.push(["=== SECTION V: 3-OFFICER STATUTORY SIGN-OFF ATTESTATIONS ===", "", "", ""]);
+    rows.push(["=== SECTION VII: 3-OFFICER STATUTORY SIGN-OFF ATTESTATIONS ===", "", "", ""]);
     rows.push(["Office", "Attestation Role", "Signature", "Date"]);
     rows.push(["Chairperson", "Approved By (Chairperson)", "____________________", "__________"]);
     rows.push(["Treasurer", "Prepared By (Treasurer)", "____________________", "__________"]);
@@ -1872,6 +2285,13 @@
     return csvContent;
   }
 
+  window.openPrintReceiptSlip = openPrintReceiptSlip;
   window.openPrintLoanStatement = openPrintLoanStatement;
   window.renderPrintLoanStatementFromData_ = renderPrintLoanStatementFromData_;
+  window.openPrintBalanceSheetReport = openPrintBalanceSheetReport;
+  window.openPrintIncomeStatementReport = openPrintIncomeStatementReport;
+  window.openPrintEquityStatementReport = openPrintEquityStatementReport;
+  window.openPrintCashFlowStatementReport = openPrintCashFlowStatementReport;
+  window.openPrintAgmAuditPack = openPrintAgmAuditPack;
+  window.exportAgmAuditPackCSV = exportAgmAuditPackCSV;
 </script>

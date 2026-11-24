@@ -798,7 +798,32 @@
             class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
             <i class="fas fa-print text-xs"></i> <span>Print / Preview AGM Pack</span>
           </button>
+          <button type="button" onclick="openPrintEquityStatementReport()"
+            class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+            <i class="fas fa-print text-indigo-500"></i> <span>Print Equity Statement</span>
+          </button>
+          <button type="button" onclick="openPrintCashFlowStatementReport()"
+            class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+            <i class="fas fa-print text-teal-500"></i> <span>Print Cash Flow</span>
+          </button>
         </div>
+      </div>
+
+      <!-- Institutional Statement Navigation Bar -->
+      <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+        <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mr-1">Statement Jump:</span>
+        <a href="#card-balance-sheet" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+          <i class="fas fa-scale-balanced mr-1 text-sky-600 dark:text-sky-400"></i>Balance Sheet
+        </a>
+        <a href="#card-income-statement" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+          <i class="fas fa-file-invoice-dollar mr-1 text-emerald-600 dark:text-emerald-400"></i>Income Statement (P&amp;L)
+        </a>
+        <a href="#card-equity-statement" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/70 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800/60 transition-colors">
+          <i class="fas fa-layer-group mr-1 text-indigo-600 dark:text-indigo-400"></i>Changes in Equity
+        </a>
+        <a href="#card-cash-flow-statement" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/70 dark:hover:bg-teal-900/80 text-teal-700 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/60 transition-colors">
+          <i class="fas fa-money-bill-transfer mr-1 text-teal-600 dark:text-teal-400"></i>Direct Cash Flows
+        </a>
       </div>
 
       <!-- Executive 4-Badge Summary Ribbon -->
@@ -846,7 +871,7 @@
     </div>
 
     <!-- RPT-1: Full-Width Statement of Financial Position (Balance Sheet) -->
-    <div class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
+    <div id="card-balance-sheet" class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
       <!-- Header & Action Toolbar -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div class="flex items-start gap-3">
@@ -1071,7 +1096,7 @@
     </div>
 
     <!-- RPT-2: Full-Width Statement of Comprehensive Income (Profit & Loss) -->
-    <div class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
+    <div id="card-income-statement" class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
       <!-- Header & Action Toolbar -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div class="flex items-start gap-3">
@@ -1335,7 +1360,416 @@
       </div>
     </div>
 
-    <!-- Remaining Institutional Reports & Export Suite (RPT-4 Audit Export) -->
+    <!-- RPT-3: Statement of Changes in Equity -->
+    <div id="card-equity-statement" class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
+      <!-- Header & Action Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200/80 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shrink-0">
+            <i class="fas fa-layer-group text-sm"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Statement of Changes in Equity</h3>
+              <span id="eq-source-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">
+                IFRS / SASRA Standard
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              4-Column Movement of Members' Funds &bull; SASRA Section 51(1) Reserve Transfer &bull; <span id="eq-period-label" class="font-medium text-slate-700 dark:text-slate-200">—</span>
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button type="button" onclick="exportEquityStatementCSV()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+            <i class="fas fa-file-csv text-slate-500 dark:text-slate-400"></i> <span>Export CSV</span>
+          </button>
+          <button type="button" onclick="openPrintEquityStatementReport()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+            <i class="fas fa-print text-xs"></i> <span>Print Equity Statement</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive 4-Card Equity Ribbon -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. Opening Total Equity -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Opening Members' Equity</span>
+            <span class="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-hourglass-start"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="eq-kpi-opening" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Balance at beginning of period (B/F)</p>
+          </div>
+        </div>
+
+        <!-- 2. Net Operating Surplus -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Net Surplus</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-chart-line"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="eq-kpi-surplus" class="text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p id="eq-kpi-surplus-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">20% Reserve + 80% Retained</p>
+          </div>
+        </div>
+
+        <!-- 3. Closing Members' Equity -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Closing Members' Equity</span>
+            <span class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-users-line"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="eq-kpi-closing" class="text-base sm:text-lg font-bold text-indigo-700 dark:text-indigo-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Cumulative capital at period end (C/F)</p>
+          </div>
+        </div>
+
+        <!-- 4. Balance Sheet Reconciliation Status -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Audit Reconciliation</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-check-double"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="eq-kpi-status" class="text-sm sm:text-base font-bold text-emerald-700 dark:text-emerald-400 tracking-tight">Balanced &plusmn; 0.00</h4>
+            <p id="eq-kpi-variance" class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5 truncate">Variance vs Balance Sheet: KES 0.00</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4-Column Classical Equity Movement Ledger Table -->
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1320]">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-900/90 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="px-4 py-2.5">Equity Movement / Component (IFRS)</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap">Member Savings (Share Capital)</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap">Statutory Reserve (20%)</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap">Retained Distributable Surplus</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap font-bold text-slate-900 dark:text-white">Total Members' Equity (KES)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
+            <!-- Row 1: Opening Balances -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50 font-semibold text-slate-900 dark:text-white">
+              <td class="px-4 py-2.5">Balance as at Beginning of Period (Opening Balances)</td>
+              <td id="eq-row1-savings" class="px-4 py-2.5 text-right font-mono tabular-nums">KES 0.00</td>
+              <td id="eq-row1-reserve" class="px-4 py-2.5 text-right font-mono tabular-nums">KES 0.00</td>
+              <td id="eq-row1-retained" class="px-4 py-2.5 text-right font-mono tabular-nums">KES 0.00</td>
+              <td id="eq-row1-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold">KES 0.00</td>
+            </tr>
+            <!-- Row 2: Member Contributions -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Add: Member Contributions &amp; Savings Inflows</td>
+              <td id="eq-row2-savings" class="px-4 py-2.5 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400">KES 0.00</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row2-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">KES 0.00</td>
+            </tr>
+            <!-- Row 3: Member Refunds / Exits -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Approved Member Refunds / Exits</td>
+              <td id="eq-row3-savings" class="px-4 py-2.5 text-right font-mono tabular-nums text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row3-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <!-- Row 4: Net Operating Surplus for the Period -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors bg-emerald-50/30 dark:bg-emerald-950/20">
+              <td class="px-4 py-2.5 pl-7 font-medium text-emerald-900 dark:text-emerald-300">Net Operating Surplus for the Period</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row4-reserve" class="px-4 py-2.5 text-right font-mono tabular-nums text-amber-700 dark:text-amber-400 font-medium">KES 0.00</td>
+              <td id="eq-row4-retained" class="px-4 py-2.5 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-medium">KES 0.00</td>
+              <td id="eq-row4-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">KES 0.00</td>
+            </tr>
+            <!-- Row 5: 20% Statutory Reserve Transfer -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Transfer to Statutory Reserve Fund (20% SASRA Sec 51(1))</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row5-reserve" class="px-4 py-2.5 text-right font-mono tabular-nums text-amber-700 dark:text-amber-400 font-semibold">KES 0.00</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row5-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-amber-700 dark:text-amber-400">KES 0.00</td>
+            </tr>
+            <!-- Row 6: 80% Retained Distributable Surplus Allocation -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Allocation to Retained Distributable Surplus (80%)</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row6-retained" class="px-4 py-2.5 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-semibold">KES 0.00</td>
+              <td id="eq-row6-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-emerald-700 dark:text-emerald-400">KES 0.00</td>
+            </tr>
+            <!-- Row 7: Dividends Paid / Declared -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Dividends &amp; Surplus Distributions Declared / Paid</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td class="px-4 py-2.5 text-right font-mono tabular-nums text-slate-400">—</td>
+              <td id="eq-row7-retained" class="px-4 py-2.5 text-right font-mono tabular-nums text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+              <td id="eq-row7-total" class="px-4 py-2.5 text-right font-mono tabular-nums font-semibold text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <!-- Row 8: Closing Balances -->
+            <tr class="bg-indigo-50/70 dark:bg-indigo-950/40 border-t-2 border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-indigo-700 dark:border-b-indigo-400 font-bold">
+              <td class="px-4 py-3 uppercase tracking-wider text-indigo-900 dark:text-indigo-300">Balance as at End of Period (Closing Balances)</td>
+              <td id="eq-row8-savings" class="px-4 py-3 text-right font-mono tabular-nums text-indigo-900 dark:text-indigo-300">KES 0.00</td>
+              <td id="eq-row8-reserve" class="px-4 py-3 text-right font-mono tabular-nums text-amber-700 dark:text-amber-400">KES 0.00</td>
+              <td id="eq-row8-retained" class="px-4 py-3 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400">KES 0.00</td>
+              <td id="eq-row8-total" class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-indigo-900 dark:text-indigo-200">KES 0.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Audit Reconciliation Footer Bar -->
+      <div id="eq-reconcile-footer" class="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono tabular-nums text-slate-700 dark:text-slate-300">
+        <span>Balance Sheet Total Equity: <span id="eq-foot-bs">KES 0.00</span> &nbsp;|&nbsp; Statement Closing Equity: <span id="eq-foot-stmt">KES 0.00</span> &nbsp;|&nbsp; Variance: <span id="eq-foot-variance" class="font-bold text-emerald-600 dark:text-emerald-400">KES 0.00 (Balanced)</span></span>
+      </div>
+    </div>
+
+    <!-- RPT-3: Statement of Cash Flows (IAS 7 Direct Method) -->
+    <div id="card-cash-flow-statement" class="w-full bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-6 shadow-sm space-y-5">
+      <!-- Header & Action Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 dark:bg-teal-950/70 border border-teal-200/80 dark:border-teal-800/60 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+            <i class="fas fa-money-bill-transfer text-sm"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Statement of Cash Flows (IAS 7 Direct Method)</h3>
+              <span id="cf-source-badge" class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+                IAS 7 Direct Method
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Operating, Investing &amp; Financing Cash Movements &bull; Reconciled to Bank &amp; Cash Accounts &bull; <span id="cf-period-label" class="font-medium text-slate-700 dark:text-slate-200">—</span>
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <button type="button" onclick="exportCashFlowStatementCSV()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
+            <i class="fas fa-file-csv text-slate-500 dark:text-slate-400"></i> <span>Export CSV</span>
+          </button>
+          <button type="button" onclick="openPrintCashFlowStatementReport()"
+            class="min-h-[38px] inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
+            <i class="fas fa-print text-xs"></i> <span>Print Cash Flow</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Executive 4-Card Cash Flow Ribbon -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <!-- 1. Net Operating Cash Flow -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Operating Cash Flow</span>
+            <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-hand-holding-dollar"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="cf-kpi-operating" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Contributions, collections &amp; expenses</p>
+          </div>
+        </div>
+
+        <!-- 2. Net Investing Cash Flow -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Investing Cash Flow</span>
+            <span class="w-6 h-6 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-seedling"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="cf-kpi-investing" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Project capital &amp; external holdings</p>
+          </div>
+        </div>
+
+        <!-- 3. Net Financing Cash Flow -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Financing Cash Flow</span>
+            <span class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-coins"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="cf-kpi-financing" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">Registration fees vs exits &amp; dividends</p>
+          </div>
+        </div>
+
+        <!-- 4. Closing Cash & Equivalents -->
+        <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Closing Cash Reconciled</span>
+            <span class="w-6 h-6 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400 flex items-center justify-center text-[11px] shrink-0">
+              <i class="fas fa-wallet"></i>
+            </span>
+          </div>
+          <div>
+            <h4 id="cf-kpi-closing" class="text-base sm:text-lg font-bold text-teal-700 dark:text-teal-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+            <p id="cf-kpi-status" class="text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5 truncate">Zero Variance &plusmn; 0.00</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- IAS 7 Direct Method Multi-Section Table -->
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0b1320]">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-900/90 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="px-4 py-2.5">Cash Flow Activity / Classification (IAS 7 Direct)</th>
+              <th class="px-4 py-2.5 whitespace-nowrap hidden sm:table-cell">Note</th>
+              <th class="px-4 py-2.5 text-right whitespace-nowrap">Amount (KES)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">
+            <!-- Section I: Operating Activities Header -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50">
+              <td colspan="3" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                Section I: Cash Flows from Operating Activities
+              </td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Receipts from Member Contributions</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.1</td>
+              <td id="cf-op-contributions" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Receipts from Loan Repayments (Principal &amp; Interest)</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.2</td>
+              <td id="cf-op-repayments" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Receipts from Loan Processing Fees &amp; Fines</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.3</td>
+              <td id="cf-op-fees" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Receipts from Liquid Investment Yields (CIC MMF Yield)</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.4</td>
+              <td id="cf-op-yields" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Cash Disbursed for Member Loans</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.5</td>
+              <td id="cf-op-disbursements" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Cash Paid for Operating Expenses &amp; Bank Charges</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.6</td>
+              <td id="cf-op-expenses" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 font-bold">
+              <td class="px-4 py-2.5 text-slate-900 dark:text-white">Net Cash Flow from Operating Activities</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">I</td>
+              <td id="cf-op-net" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Section II: Investing Activities Header -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50">
+              <td colspan="3" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                Section II: Cash Flows from Investing Activities
+              </td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Inflows from Tangible Capital Projects (Honey Sales, etc.)</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.7</td>
+              <td id="cf-inv-projects-in" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Receipts from Investment Liquidations &amp; Capital Yields</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.8</td>
+              <td id="cf-inv-liquidations" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Capital Injected into Tangible Projects (Beekeeping, Land)</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.9</td>
+              <td id="cf-inv-projects-out" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Capital Deployed into External Holdings (Mansa X, Treasury Bonds)</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.10</td>
+              <td id="cf-inv-external-out" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 font-bold">
+              <td class="px-4 py-2.5 text-slate-900 dark:text-white">Net Cash Flow from Investing Activities</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">II</td>
+              <td id="cf-inv-net" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Section III: Financing Activities Header -->
+            <tr class="bg-slate-50/70 dark:bg-slate-900/50">
+              <td colspan="3" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                Section III: Cash Flows from Financing Activities
+              </td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash Receipts from Member Registration &amp; Welfare Fees</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.11</td>
+              <td id="cf-fin-fees" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Approved Member Refunds / Exits Paid</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.12</td>
+              <td id="cf-fin-refunds" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Less: Dividends &amp; Surplus Distributions Paid to Members</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.13</td>
+              <td id="cf-fin-dividends" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-rose-700 dark:text-rose-400">(KES 0.00)</td>
+            </tr>
+            <tr class="bg-slate-50/80 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-700 font-bold">
+              <td class="px-4 py-2.5 text-slate-900 dark:text-white">Net Cash Flow from Financing Activities</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">III</td>
+              <td id="cf-fin-net" class="px-4 py-2.5 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Net Increase in Cash -->
+            <tr class="bg-slate-100/80 dark:bg-slate-900/90 border-t-2 border-b border-slate-300 dark:border-slate-600 font-bold">
+              <td class="px-4 py-3 uppercase tracking-wider text-slate-900 dark:text-white">Net Increase / (Decrease) in Cash and Cash Equivalents</td>
+              <td class="px-4 py-3 text-[11px] font-mono text-slate-600 dark:text-slate-400 hidden sm:table-cell">I+II+III</td>
+              <td id="cf-net-change" class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-slate-900 dark:text-white">KES 0.00</td>
+            </tr>
+
+            <!-- Cash at Beginning of Period -->
+            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-2.5 pl-7 text-slate-700 dark:text-slate-300">Cash and Cash Equivalents at Beginning of Period</td>
+              <td class="px-4 py-2.5 text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:table-cell">CF.14</td>
+              <td id="cf-opening-cash" class="px-4 py-2.5 text-right font-mono tabular-nums font-medium text-slate-900 dark:text-slate-200">KES 0.00</td>
+            </tr>
+
+            <!-- Cash at End of Period -->
+            <tr class="bg-teal-50/70 dark:bg-teal-950/40 border-t border-slate-300 dark:border-slate-600 border-b-4 border-double border-b-teal-700 dark:border-b-teal-400 font-bold">
+              <td class="px-4 py-3 uppercase tracking-wider text-teal-900 dark:text-teal-300">Cash and Cash Equivalents at End of Period</td>
+              <td class="px-4 py-3 text-[11px] font-mono text-teal-700 dark:text-teal-400 hidden sm:table-cell">CF.15</td>
+              <td id="cf-closing-cash" class="px-4 py-3 text-right font-mono tabular-nums text-sm font-extrabold text-teal-900 dark:text-teal-200">KES 0.00</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Audit Reconciliation Footer Bar -->
+      <div id="cf-reconcile-footer" class="px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs font-mono tabular-nums text-slate-700 dark:text-slate-300">
+        <span>Closing Cash &amp; Equivalents: <span id="cf-foot-stmt">KES 0.00</span> &nbsp;|&nbsp; Balance Sheet Liquid Cash: <span id="cf-foot-bs">KES 0.00</span> &nbsp;|&nbsp; Variance: <span id="cf-foot-variance" class="font-bold text-emerald-600 dark:text-emerald-400">KES 0.00 (Zero Variance Verified)</span></span>
+      </div>
+    </div>
     <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-5 sm:p-6 shadow-sm space-y-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
         <div class="flex items-start gap-3">
@@ -2877,6 +3311,12 @@
     window.renderSasraAging(data);
     window.renderBalanceSheet(data);
     window.renderIncomeStatement(data);
+    if (typeof window.renderEquityStatement === 'function') {
+      window.renderEquityStatement(data);
+    }
+    if (typeof window.renderCashFlowStatement === 'function') {
+      window.renderCashFlowStatement(data);
+    }
   }
 
   const homeBsKesFormatter = new Intl.NumberFormat('en-KE', {
@@ -3648,6 +4088,460 @@
 
     if (typeof showNotification === 'function') {
       showNotification('Income Statement (P&L) exported to CSV.', 'success');
+    }
+    return csvContent;
+  };
+
+  function buildEquityStatementModel_(sourceData) {
+    const safe = sourceData || {};
+    const eq = (safe.equityStatement && typeof safe.equityStatement === 'object') ? safe.equityStatement : null;
+    const bsModel = safe.balanceSheet ? buildBalanceSheetModel_(safe) : (window.latestBalanceSheetModel || null);
+    const pnlModel = safe.incomeStatement ? buildIncomeStatementModel_(safe) : (window.latestIncomeStatementModel || null);
+
+    const range = (eq && eq.range) || safe.range || 'year';
+    const periodLabel = (eq && eq.period) || (eq && eq.periodStart && eq.periodEnd ? (eq.periodStart + ' \u2013 ' + eq.periodEnd) : 'Current Fiscal Period');
+
+    const op = (eq && (eq.openingBalances || eq.opening)) || {};
+    const cl = (eq && (eq.closingBalances || eq.closing)) || {};
+    const mv = (eq && eq.movements) || {};
+    const rec = (eq && eq.reconciliation) || {};
+
+    const closingSavings = cl.memberSavings !== undefined
+      ? Number(cl.memberSavings) || 0
+      : (bsModel ? bsModel.equity.memberSavings : (Number(safe.savings) || 0));
+    const closingReserve = cl.statutoryReserve !== undefined
+      ? Number(cl.statutoryReserve) || 0
+      : (bsModel ? bsModel.equity.statutoryReserve : 0);
+    const closingRetained = (cl.retainedSurplus !== undefined ? cl.retainedSurplus : cl.retainedEarnings) !== undefined
+      ? Number(cl.retainedSurplus !== undefined ? cl.retainedSurplus : cl.retainedEarnings) || 0
+      : (bsModel ? bsModel.equity.retainedSurplus : 0);
+    const closingTotal = (cl.total !== undefined ? cl.total : cl.totalEquity) !== undefined
+      ? Number(cl.total !== undefined ? cl.total : cl.totalEquity) || 0
+      : (closingSavings + closingReserve + closingRetained);
+
+    const netSurplus = (mv.netOperatingSurplus !== undefined ? mv.netOperatingSurplus : eq?.netSurplus) !== undefined
+      ? Number(mv.netOperatingSurplus !== undefined ? mv.netOperatingSurplus : eq?.netSurplus) || 0
+      : (pnlModel ? pnlModel.netOperatingSurplus : 0);
+    const statutoryAllocation = (mv.statutoryAllocation !== undefined ? mv.statutoryAllocation : eq?.statutoryAllocation) !== undefined
+      ? Number(mv.statutoryAllocation !== undefined ? mv.statutoryAllocation : eq?.statutoryAllocation) || 0
+      : (pnlModel ? pnlModel.appropriations.statutoryReserveTransfer : (netSurplus > 0 ? netSurplus * 0.2 : 0));
+    const distributableAllocation = (mv.distributableAllocation !== undefined ? mv.distributableAllocation : eq?.distributableSurplus) !== undefined
+      ? Number(mv.distributableAllocation !== undefined ? mv.distributableAllocation : eq?.distributableSurplus) || 0
+      : (pnlModel ? pnlModel.appropriations.distributableMemberPool : (netSurplus > 0 ? netSurplus * 0.8 : 0));
+
+    const contributions = (mv.contributions !== undefined ? mv.contributions : eq?.contributionsReceived) !== undefined
+      ? Number(mv.contributions !== undefined ? mv.contributions : eq?.contributionsReceived) || 0
+      : 0;
+    const refunds = Math.abs(Number(mv.refunds) || 0);
+    const dividends = (mv.dividends !== undefined ? mv.dividends : eq?.dividendsPaid) !== undefined
+      ? Math.abs(Number(mv.dividends !== undefined ? mv.dividends : eq?.dividendsPaid) || 0)
+      : 0;
+
+    const openingSavings = op.memberSavings !== undefined
+      ? Number(op.memberSavings) || 0
+      : Math.max(0, closingSavings - (contributions - refunds));
+    const openingReserve = op.statutoryReserve !== undefined
+      ? Number(op.statutoryReserve) || 0
+      : Math.max(0, closingReserve - statutoryAllocation);
+    const openingRetained = (op.retainedSurplus !== undefined ? op.retainedSurplus : op.retainedEarnings) !== undefined
+      ? Number(op.retainedSurplus !== undefined ? op.retainedSurplus : op.retainedEarnings) || 0
+      : Math.max(0, closingRetained - distributableAllocation + dividends);
+    const openingTotal = (op.total !== undefined ? op.total : op.totalEquity) !== undefined
+      ? Number(op.total !== undefined ? op.total : op.totalEquity) || 0
+      : (openingSavings + openingReserve + openingRetained);
+
+    const bsTotalEquity = rec.balanceSheetTotalEquity !== undefined
+      ? Number(rec.balanceSheetTotalEquity) || 0
+      : (bsModel ? bsModel.equity.subtotal : closingTotal);
+
+    const variance = rec.variance !== undefined
+      ? Number(rec.variance) || 0
+      : Math.round((closingTotal - bsTotalEquity) * 100) / 100;
+    const isBalanced = rec.isReconciled !== undefined
+      ? Boolean(rec.isReconciled)
+      : (rec.isBalanced !== undefined ? Boolean(rec.isBalanced) : Math.abs(variance) < 0.01);
+
+    return {
+      range: range,
+      periodLabel: periodLabel,
+      periodStart: eq && eq.periodStart,
+      periodEnd: eq && eq.periodEnd,
+      opening: {
+        memberSavings: openingSavings,
+        statutoryReserve: openingReserve,
+        retainedSurplus: openingRetained,
+        total: openingTotal
+      },
+      movements: {
+        contributions: contributions,
+        refunds: refunds,
+        netOperatingSurplus: netSurplus,
+        statutoryAllocation: statutoryAllocation,
+        distributableAllocation: distributableAllocation,
+        dividends: dividends
+      },
+      closing: {
+        memberSavings: closingSavings,
+        statutoryReserve: closingReserve,
+        retainedSurplus: closingRetained,
+        total: closingTotal
+      },
+      reconciliation: {
+        balanceSheetTotalEquity: bsTotalEquity,
+        statementClosingEquity: closingTotal,
+        variance: variance,
+        isBalanced: isBalanced
+      },
+      isBalanced: isBalanced,
+      variance: variance
+    };
+  }
+
+  window.renderEquityStatement = function (data) {
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildEquityStatementModel_(sourceData);
+    window.latestEquityStatementModel = m;
+
+    const setTxt = function (id, txt) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+
+    setTxt('eq-period-label', m.periodLabel);
+    setTxt('eq-kpi-opening', formatBsKes_(m.opening.total));
+    setTxt('eq-kpi-surplus', formatBsKes_(m.movements.netOperatingSurplus));
+    setTxt('eq-kpi-closing', formatBsKes_(m.closing.total));
+
+    const statEl = document.getElementById('eq-kpi-status');
+    if (statEl) {
+      statEl.textContent = m.isBalanced ? 'Balanced \u00B1 0.00' : ('Variance: ' + formatBsKes_(m.variance));
+      statEl.className = m.isBalanced
+        ? 'text-sm sm:text-base font-bold text-emerald-700 dark:text-emerald-400 tracking-tight'
+        : 'text-sm sm:text-base font-bold text-amber-700 dark:text-amber-400 tracking-tight';
+    }
+    setTxt('eq-kpi-variance', m.isBalanced ? 'Zero Variance vs Balance Sheet' : ('Variance: ' + formatBsKes_(m.variance)));
+
+    // Row 1: Opening Balances
+    setTxt('eq-row1-savings', formatBsKes_(m.opening.memberSavings));
+    setTxt('eq-row1-reserve', formatBsKes_(m.opening.statutoryReserve));
+    setTxt('eq-row1-retained', formatBsKes_(m.opening.retainedSurplus));
+    setTxt('eq-row1-total', formatBsKes_(m.opening.total));
+
+    // Row 2: Contributions
+    setTxt('eq-row2-savings', formatBsKes_(m.movements.contributions));
+    setTxt('eq-row2-total', formatBsKes_(m.movements.contributions));
+
+    // Row 3: Refunds
+    const refTxt = m.movements.refunds > 0 ? ('(' + formatBsKes_(m.movements.refunds) + ')') : 'KES 0.00';
+    setTxt('eq-row3-savings', refTxt);
+    setTxt('eq-row3-total', refTxt);
+
+    // Row 4: Net Operating Surplus
+    setTxt('eq-row4-reserve', formatBsKes_(m.movements.statutoryAllocation));
+    setTxt('eq-row4-retained', formatBsKes_(m.movements.distributableAllocation));
+    setTxt('eq-row4-total', formatBsKes_(m.movements.netOperatingSurplus));
+
+    // Row 5: 20% Statutory Reserve Transfer
+    setTxt('eq-row5-reserve', formatBsKes_(m.movements.statutoryAllocation));
+    setTxt('eq-row5-total', formatBsKes_(m.movements.statutoryAllocation));
+
+    // Row 6: 80% Distributable Member Surplus Allocation
+    setTxt('eq-row6-retained', formatBsKes_(m.movements.distributableAllocation));
+    setTxt('eq-row6-total', formatBsKes_(m.movements.distributableAllocation));
+
+    // Row 7: Dividends
+    const divTxt = m.movements.dividends > 0 ? ('(' + formatBsKes_(m.movements.dividends) + ')') : 'KES 0.00';
+    setTxt('eq-row7-retained', divTxt);
+    setTxt('eq-row7-total', divTxt);
+
+    // Row 8: Closing Balances
+    setTxt('eq-row8-savings', formatBsKes_(m.closing.memberSavings));
+    setTxt('eq-row8-reserve', formatBsKes_(m.closing.statutoryReserve));
+    setTxt('eq-row8-retained', formatBsKes_(m.closing.retainedSurplus));
+    setTxt('eq-row8-total', formatBsKes_(m.closing.total));
+
+    // Audit footer
+    setTxt('eq-foot-bs', formatBsKes_(m.reconciliation.balanceSheetTotalEquity));
+    setTxt('eq-foot-stmt', formatBsKes_(m.closing.total));
+    const footVarEl = document.getElementById('eq-foot-variance');
+    if (footVarEl) {
+      footVarEl.textContent = m.isBalanced ? 'KES 0.00 (Balanced)' : (formatBsKes_(m.variance) + ' (Variance Detected)');
+      footVarEl.className = m.isBalanced
+        ? 'font-bold text-emerald-600 dark:text-emerald-400'
+        : 'font-bold text-amber-600 dark:text-amber-400';
+    }
+  };
+
+  window.exportEquityStatementCSV = function () {
+    const m = window.latestEquityStatementModel || buildEquityStatementModel_(window.latestHomeAnalyticsData || {});
+    const periodLabel = (document.getElementById('eq-period-label') || {}).textContent || (m.range || 'FY');
+    const rows = [
+      ['Movement / Component', 'Member Savings (Share Capital)', 'Statutory Reserve (20%)', 'Retained Distributable Surplus', "Total Members' Equity (KES)", 'Period'],
+      ['Balance as at Beginning of Period (Opening Balances)', m.opening.memberSavings.toFixed(2), m.opening.statutoryReserve.toFixed(2), m.opening.retainedSurplus.toFixed(2), m.opening.total.toFixed(2), periodLabel],
+      ['Add: Member Contributions & Savings Inflows', m.movements.contributions.toFixed(2), '0.00', '0.00', m.movements.contributions.toFixed(2), periodLabel],
+      ['Less: Approved Member Refunds / Exits', (-Math.abs(m.movements.refunds)).toFixed(2), '0.00', '0.00', (-Math.abs(m.movements.refunds)).toFixed(2), periodLabel],
+      ['Net Operating Surplus for the Period', '0.00', m.movements.statutoryAllocation.toFixed(2), m.movements.distributableAllocation.toFixed(2), m.movements.netOperatingSurplus.toFixed(2), periodLabel],
+      ['Transfer to Statutory Reserve Fund (20% SASRA Sec 51(1))', '0.00', m.movements.statutoryAllocation.toFixed(2), '0.00', m.movements.statutoryAllocation.toFixed(2), periodLabel],
+      ['Allocation to Retained Distributable Surplus (80%)', '0.00', '0.00', m.movements.distributableAllocation.toFixed(2), m.movements.distributableAllocation.toFixed(2), periodLabel],
+      ['Less: Dividends & Surplus Distributions Declared / Paid', '0.00', '0.00', (-Math.abs(m.movements.dividends)).toFixed(2), (-Math.abs(m.movements.dividends)).toFixed(2), periodLabel],
+      ['Balance as at End of Period (Closing Balances)', m.closing.memberSavings.toFixed(2), m.closing.statutoryReserve.toFixed(2), m.closing.retainedSurplus.toFixed(2), m.closing.total.toFixed(2), periodLabel]
+    ];
+
+    const csvContent = rows.map(function (r) {
+      return r.map(bsCsvCell_).join(',');
+    }).join('\r\n');
+
+    if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'brightlife_equity_statement_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 500);
+    }
+
+    if (typeof showNotification === 'function') {
+      showNotification('Statement of Changes in Equity exported to CSV.', 'success');
+    }
+    return csvContent;
+  };
+
+  function buildCashFlowStatementModel_(sourceData) {
+    const safe = sourceData || {};
+    const cf = (safe.cashFlowStatement && typeof safe.cashFlowStatement === 'object') ? safe.cashFlowStatement : null;
+    const bsModel = safe.balanceSheet ? buildBalanceSheetModel_(safe) : (window.latestBalanceSheetModel || null);
+
+    const range = (cf && cf.range) || safe.range || 'year';
+    const periodLabel = (cf && cf.period) || (cf && cf.periodStart && cf.periodEnd ? (cf.periodStart + ' \u2013 ' + cf.periodEnd) : 'Current Fiscal Period');
+
+    const op = (cf && cf.operatingActivities) || {};
+    const inv = (cf && cf.investingActivities) || {};
+    const fin = (cf && cf.financingActivities) || {};
+    const rec = (cf && (cf.reconciliation || cf.summary)) || {};
+
+    // Operating items
+    const contributionsReceipts = op.contributionsReceipts !== undefined
+      ? Number(op.contributionsReceipts) || 0
+      : (Number(op.interestReceived) || 0);
+    const loanRepaymentsReceipts = Number(op.loanRepaymentsReceipts) || 0;
+    const loanFeesAndFinesReceipts = op.loanFeesAndFinesReceipts !== undefined
+      ? Number(op.loanFeesAndFinesReceipts) || 0
+      : ((Number(op.loanProcessingFees) || 0) + (Number(op.finesAndPenalties) || 0));
+    const liquidFundYieldsReceipts = op.liquidFundYieldsReceipts !== undefined
+      ? Number(op.liquidFundYieldsReceipts) || 0
+      : (Number(op.otherIncome) || 0);
+    const loansDisbursed = Number(op.loansDisbursed) || 0;
+    const operatingExpensesPaid = op.operatingExpensesPaid !== undefined
+      ? Number(op.operatingExpensesPaid) || 0
+      : ((Number(op.administrativeExpenses) || 0) + (Number(op.bankCharges) || 0) + (Number(op.softwareHostingFees) || 0) + (Number(op.meetingExpenses) || 0) + (Number(op.otherExpenses) || 0));
+
+    const totalInflows = (op.totalInflows !== undefined ? Number(op.totalInflows) : (contributionsReceipts + loanRepaymentsReceipts + loanFeesAndFinesReceipts + liquidFundYieldsReceipts)) || 0;
+    const totalOutflows = (op.totalOutflows !== undefined ? Number(op.totalOutflows) : (loansDisbursed + operatingExpensesPaid)) || 0;
+    const netOperating = op.netOperatingCashFlow !== undefined
+      ? Number(op.netOperatingCashFlow) || 0
+      : (totalInflows - totalOutflows);
+
+    // Investing items
+    const capitalInjectedProjects = Number(inv.capitalInjectedProjects) || 0;
+    const capitalInjectedExternal = Number(inv.capitalInjectedExternal) || 0;
+    const projectInflows = Number(inv.projectInflows) || 0;
+    const investmentLiquidationAndYields = Number(inv.investmentLiquidationAndYields) || 0;
+    const netInvesting = inv.netInvestingCashFlow !== undefined
+      ? Number(inv.netInvestingCashFlow) || 0
+      : ((projectInflows + investmentLiquidationAndYields + (Number(inv.loanPrincipalRecoveries) || 0)) - (capitalInjectedProjects + capitalInjectedExternal + (Number(inv.loanDisbursements) || 0)));
+
+    // Financing items
+    const registrationAndWelfareFees = fin.registrationAndWelfareFees !== undefined
+      ? Number(fin.registrationAndWelfareFees) || 0
+      : ((Number(fin.memberMonthlyContributions) || 0) + (Number(fin.memberRegistrationFees) || 0));
+    const memberRefundsPaid = Math.abs(Number(fin.memberRefundsPaid) || 0);
+    const dividendsPaid = (fin.dividendsPaid !== undefined ? fin.dividendsPaid : fin.dividendsHonorariaPaid) !== undefined
+      ? Math.abs(Number(fin.dividendsPaid !== undefined ? fin.dividendsPaid : fin.dividendsHonorariaPaid) || 0)
+      : 0;
+    const netFinancing = fin.netFinancingCashFlow !== undefined
+      ? Number(fin.netFinancingCashFlow) || 0
+      : (registrationAndWelfareFees - (memberRefundsPaid + dividendsPaid));
+
+    // Net Increase
+    const netChangeInCash = (rec.netIncreaseInCash !== undefined ? rec.netIncreaseInCash : rec.netChangeInCash) !== undefined
+      ? Number(rec.netIncreaseInCash !== undefined ? rec.netIncreaseInCash : rec.netChangeInCash) || 0
+      : (netOperating + netInvesting + netFinancing);
+
+    const closingCash = (rec.closingCash !== undefined ? rec.closingCash : rec.closingCashAndEquivalents) !== undefined
+      ? Number(rec.closingCash !== undefined ? rec.closingCash : rec.closingCashAndEquivalents) || 0
+      : (bsModel ? bsModel.assets.current.subtotal : (Number(safe.cash) || 0));
+
+    const openingCash = (rec.openingCash !== undefined ? rec.openingCash : rec.openingCashAndEquivalents) !== undefined
+      ? Number(rec.openingCash !== undefined ? rec.openingCash : rec.openingCashAndEquivalents) || 0
+      : Math.max(0, closingCash - netChangeInCash);
+
+    const bsCash = rec.balanceSheetCash !== undefined
+      ? Number(rec.balanceSheetCash) || 0
+      : (bsModel ? bsModel.assets.current.subtotal : closingCash);
+
+    const variance = rec.variance !== undefined
+      ? Number(rec.variance) || 0
+      : Math.round((closingCash - bsCash) * 100) / 100;
+
+    const isReconciled = rec.isReconciled !== undefined
+      ? Boolean(rec.isReconciled)
+      : (rec.isBalanced !== undefined ? Boolean(rec.isBalanced) : Math.abs(variance) < 0.01);
+
+    return {
+      range: range,
+      periodLabel: periodLabel,
+      periodStart: cf && cf.periodStart,
+      periodEnd: cf && cf.periodEnd,
+      operatingActivities: {
+        contributionsReceipts: contributionsReceipts,
+        loanRepaymentsReceipts: loanRepaymentsReceipts,
+        loanFeesAndFinesReceipts: loanFeesAndFinesReceipts,
+        liquidFundYieldsReceipts: liquidFundYieldsReceipts,
+        loansDisbursed: loansDisbursed,
+        operatingExpensesPaid: operatingExpensesPaid,
+        totalInflows: totalInflows,
+        totalOutflows: totalOutflows,
+        netOperatingCashFlow: netOperating
+      },
+      investingActivities: {
+        capitalInjectedProjects: capitalInjectedProjects,
+        capitalInjectedExternal: capitalInjectedExternal,
+        projectInflows: projectInflows,
+        investmentLiquidationAndYields: investmentLiquidationAndYields,
+        netInvestingCashFlow: netInvesting
+      },
+      financingActivities: {
+        registrationAndWelfareFees: registrationAndWelfareFees,
+        memberRefundsPaid: memberRefundsPaid,
+        dividendsPaid: dividendsPaid,
+        netFinancingCashFlow: netFinancing
+      },
+      summary: {
+        netOperating: netOperating,
+        netInvesting: netInvesting,
+        netFinancing: netFinancing,
+        netIncreaseInCash: netChangeInCash,
+        openingCash: openingCash,
+        closingCash: closingCash,
+        balanceSheetCash: bsCash,
+        variance: variance,
+        isReconciled: isReconciled
+      },
+      isBalanced: isReconciled,
+      variance: variance
+    };
+  }
+
+  window.renderCashFlowStatement = function (data) {
+    const sourceData = data || window.latestHomeAnalyticsData || {};
+    const m = buildCashFlowStatementModel_(sourceData);
+    window.latestCashFlowStatementModel = m;
+
+    const setTxt = function (id, txt) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = txt;
+    };
+
+    setTxt('cf-period-label', m.periodLabel);
+    setTxt('cf-kpi-operating', formatBsKes_(m.operatingActivities.netOperatingCashFlow));
+    setTxt('cf-kpi-investing', formatBsKes_(m.investingActivities.netInvestingCashFlow));
+    setTxt('cf-kpi-financing', formatBsKes_(m.financingActivities.netFinancingCashFlow));
+    setTxt('cf-kpi-closing', formatBsKes_(m.summary.closingCash));
+
+    const statEl = document.getElementById('cf-kpi-status');
+    if (statEl) {
+      statEl.textContent = m.isBalanced ? 'Zero Variance \u00B1 0.00' : ('Variance: ' + formatBsKes_(m.variance));
+      statEl.className = m.isBalanced
+        ? 'text-[10px] font-mono tabular-nums text-slate-500 dark:text-slate-400 mt-0.5 truncate'
+        : 'text-[10px] font-mono tabular-nums text-amber-500 dark:text-amber-400 mt-0.5 truncate font-bold';
+    }
+
+    // Section I: Operating Activities
+    setTxt('cf-op-contributions', formatBsKes_(m.operatingActivities.contributionsReceipts));
+    setTxt('cf-op-repayments', formatBsKes_(m.operatingActivities.loanRepaymentsReceipts));
+    setTxt('cf-op-fees', formatBsKes_(m.operatingActivities.loanFeesAndFinesReceipts));
+    setTxt('cf-op-yields', formatBsKes_(m.operatingActivities.liquidFundYieldsReceipts));
+    setTxt('cf-op-disbursements', m.operatingActivities.loansDisbursed > 0 ? ('(' + formatBsKes_(m.operatingActivities.loansDisbursed) + ')') : 'KES 0.00');
+    setTxt('cf-op-expenses', m.operatingActivities.operatingExpensesPaid > 0 ? ('(' + formatBsKes_(m.operatingActivities.operatingExpensesPaid) + ')') : 'KES 0.00');
+    setTxt('cf-op-net', formatBsKes_(m.operatingActivities.netOperatingCashFlow));
+
+    // Section II: Investing Activities
+    setTxt('cf-inv-projects-in', formatBsKes_(m.investingActivities.projectInflows));
+    setTxt('cf-inv-liquidations', formatBsKes_(m.investingActivities.investmentLiquidationAndYields));
+    setTxt('cf-inv-projects-out', m.investingActivities.capitalInjectedProjects > 0 ? ('(' + formatBsKes_(m.investingActivities.capitalInjectedProjects) + ')') : 'KES 0.00');
+    setTxt('cf-inv-external-out', m.investingActivities.capitalInjectedExternal > 0 ? ('(' + formatBsKes_(m.investingActivities.capitalInjectedExternal) + ')') : 'KES 0.00');
+    setTxt('cf-inv-net', formatBsKes_(m.investingActivities.netInvestingCashFlow));
+
+    // Section III: Financing Activities
+    setTxt('cf-fin-fees', formatBsKes_(m.financingActivities.registrationAndWelfareFees));
+    setTxt('cf-fin-refunds', m.financingActivities.memberRefundsPaid > 0 ? ('(' + formatBsKes_(m.financingActivities.memberRefundsPaid) + ')') : 'KES 0.00');
+    setTxt('cf-fin-dividends', m.financingActivities.dividendsPaid > 0 ? ('(' + formatBsKes_(m.financingActivities.dividendsPaid) + ')') : 'KES 0.00');
+    setTxt('cf-fin-net', formatBsKes_(m.financingActivities.netFinancingCashFlow));
+
+    // Summary lines
+    setTxt('cf-net-change', formatBsKes_(m.summary.netIncreaseInCash));
+    setTxt('cf-opening-cash', formatBsKes_(m.summary.openingCash));
+    setTxt('cf-closing-cash', formatBsKes_(m.summary.closingCash));
+
+    // Audit footer
+    setTxt('cf-foot-stmt', formatBsKes_(m.summary.closingCash));
+    setTxt('cf-foot-bs', formatBsKes_(m.summary.balanceSheetCash));
+    const footVarEl = document.getElementById('cf-foot-variance');
+    if (footVarEl) {
+      footVarEl.textContent = m.isBalanced ? 'KES 0.00 (Zero Variance Verified)' : (formatBsKes_(m.variance) + ' (Variance Detected)');
+      footVarEl.className = m.isBalanced
+        ? 'font-bold text-emerald-600 dark:text-emerald-400'
+        : 'font-bold text-amber-600 dark:text-amber-400';
+    }
+  };
+
+  window.exportCashFlowStatementCSV = function () {
+    const m = window.latestCashFlowStatementModel || buildCashFlowStatementModel_(window.latestHomeAnalyticsData || {});
+    const periodLabel = (document.getElementById('cf-period-label') || {}).textContent || (m.range || 'FY');
+    const rows = [
+      ['Activity / Classification', 'Note', 'Line Item', 'Inflow (KES)', 'Outflow (KES)', 'Net Amount (KES)', 'Period'],
+      ['Section I: Operating Activities', 'CF.1', 'Cash Receipts from Member Contributions', m.operatingActivities.contributionsReceipts.toFixed(2), '0.00', m.operatingActivities.contributionsReceipts.toFixed(2), periodLabel],
+      ['Section I: Operating Activities', 'CF.2', 'Cash Receipts from Loan Repayments (Principal & Interest)', m.operatingActivities.loanRepaymentsReceipts.toFixed(2), '0.00', m.operatingActivities.loanRepaymentsReceipts.toFixed(2), periodLabel],
+      ['Section I: Operating Activities', 'CF.3', 'Cash Receipts from Loan Processing Fees & Fines', m.operatingActivities.loanFeesAndFinesReceipts.toFixed(2), '0.00', m.operatingActivities.loanFeesAndFinesReceipts.toFixed(2), periodLabel],
+      ['Section I: Operating Activities', 'CF.4', 'Cash Receipts from Liquid Investment Yields (CIC MMF Yield)', m.operatingActivities.liquidFundYieldsReceipts.toFixed(2), '0.00', m.operatingActivities.liquidFundYieldsReceipts.toFixed(2), periodLabel],
+      ['Section I: Operating Activities', 'CF.5', 'Cash Disbursed for Member Loans', '0.00', (-Math.abs(m.operatingActivities.loansDisbursed)).toFixed(2), (-Math.abs(m.operatingActivities.loansDisbursed)).toFixed(2), periodLabel],
+      ['Section I: Operating Activities', 'CF.6', 'Cash Paid for Operating Expenses & Bank Charges', '0.00', (-Math.abs(m.operatingActivities.operatingExpensesPaid)).toFixed(2), (-Math.abs(m.operatingActivities.operatingExpensesPaid)).toFixed(2), periodLabel],
+      ['Section I: Operating Activities', 'I', 'Net Cash Flow from Operating Activities', '', '', m.operatingActivities.netOperatingCashFlow.toFixed(2), periodLabel],
+      ['Section II: Investing Activities', 'CF.7', 'Cash Inflows from Tangible Capital Projects (Honey Sales, etc.)', m.investingActivities.projectInflows.toFixed(2), '0.00', m.investingActivities.projectInflows.toFixed(2), periodLabel],
+      ['Section II: Investing Activities', 'CF.8', 'Cash Receipts from Investment Liquidations & Capital Yields', m.investingActivities.investmentLiquidationAndYields.toFixed(2), '0.00', m.investingActivities.investmentLiquidationAndYields.toFixed(2), periodLabel],
+      ['Section II: Investing Activities', 'CF.9', 'Capital Injected into Tangible Projects (Beekeeping, Land)', '0.00', (-Math.abs(m.investingActivities.capitalInjectedProjects)).toFixed(2), (-Math.abs(m.investingActivities.capitalInjectedProjects)).toFixed(2), periodLabel],
+      ['Section II: Investing Activities', 'CF.10', 'Capital Deployed into External Holdings (Mansa X, Treasury Bonds)', '0.00', (-Math.abs(m.investingActivities.capitalInjectedExternal)).toFixed(2), (-Math.abs(m.investingActivities.capitalInjectedExternal)).toFixed(2), periodLabel],
+      ['Section II: Investing Activities', 'II', 'Net Cash Flow from Investing Activities', '', '', m.investingActivities.netInvestingCashFlow.toFixed(2), periodLabel],
+      ['Section III: Financing Activities', 'CF.11', 'Cash Receipts from Member Registration & Welfare Fees', m.financingActivities.registrationAndWelfareFees.toFixed(2), '0.00', m.financingActivities.registrationAndWelfareFees.toFixed(2), periodLabel],
+      ['Section III: Financing Activities', 'CF.12', 'Approved Member Refunds / Exits Paid', '0.00', (-Math.abs(m.financingActivities.memberRefundsPaid)).toFixed(2), (-Math.abs(m.financingActivities.memberRefundsPaid)).toFixed(2), periodLabel],
+      ['Section III: Financing Activities', 'CF.13', 'Dividends & Surplus Distributions Paid to Members', '0.00', (-Math.abs(m.financingActivities.dividendsPaid)).toFixed(2), (-Math.abs(m.financingActivities.dividendsPaid)).toFixed(2), periodLabel],
+      ['Section III: Financing Activities', 'III', 'Net Cash Flow from Financing Activities', '', '', m.financingActivities.netFinancingCashFlow.toFixed(2), periodLabel],
+      ['Cash Summary', 'I+II+III', 'Net Increase / (Decrease) in Cash and Cash Equivalents', '', '', m.summary.netIncreaseInCash.toFixed(2), periodLabel],
+      ['Cash Summary', 'CF.14', 'Cash and Cash Equivalents at Beginning of Period', '', '', m.summary.openingCash.toFixed(2), periodLabel],
+      ['Cash Summary', 'CF.15', 'Cash and Cash Equivalents at End of Period', '', '', m.summary.closingCash.toFixed(2), periodLabel]
+    ];
+
+    const csvContent = rows.map(function (r) {
+      return r.map(bsCsvCell_).join(',');
+    }).join('\r\n');
+
+    if (typeof Blob !== 'undefined' && typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'brightlife_cash_flow_statement_' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { try { URL.revokeObjectURL(url); } catch (_) {} }, 500);
+    }
+
+    if (typeof showNotification === 'function') {
+      showNotification('Statement of Cash Flows (IAS 7) exported to CSV.', 'success');
     }
     return csvContent;
   };
