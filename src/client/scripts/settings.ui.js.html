@@ -36,6 +36,30 @@ const commSettingsState = {
   isSaving: false
 };
 
+const DEFAULT_AUDIT_SETTINGS = {
+  retentionDays: 365,
+  isInfinite: false
+};
+
+const auditIntegrityState = {
+  status: null,
+  retentionDays: 365,
+  lastVerifiedHash: "",
+  isLoading: false,
+  isVerifying: false,
+  isSaving: false
+};
+
+function normalizeAuditRetentionSettings_(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const days = parseInt(src.retentionDays !== undefined ? src.retentionDays : src, 10);
+  const resolvedDays = !isNaN(days) && days >= 0 ? days : 365;
+  return {
+    retentionDays: resolvedDays,
+    isInfinite: resolvedDays === 0
+  };
+}
+
 function normalizeNotificationSettings_(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const day = parseInt(src.autoStatementDay, 10);
@@ -78,6 +102,7 @@ function normalizeLoanPolicy_(raw) {
 
 function loadLoanPolicySettings(forceRefresh) {
   loadCommunicationSettings(forceRefresh);
+  loadAuditIntegrityStatus(forceRefresh);
   const cacheKey = "loan_policy_settings";
   const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
   const cached = entry ? entry.data : null;
@@ -343,6 +368,252 @@ async function triggerSettingsAutoDispatchNow() {
     .dispatchAutomatedMonthlyStatementsNow(true);
 }
 
+function loadAuditIntegrityStatus(forceRefresh) {
+  const cacheKey = "audit_integrity_status";
+  const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+  const cached = entry ? entry.data : null;
+  const hasCached = Boolean(cached);
+  const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+  if (hasCached) {
+    updateAuditIntegrityUI_(cached);
+    if (isFresh) return;
+  }
+
+  if (typeof google === "undefined" || !google.script || !google.script.run) {
+    return;
+  }
+
+  auditIntegrityState.isLoading = true;
+
+  // 1. Fetch Audit Integrity Status
+  google.script.run
+    .withSuccessHandler(function (res) {
+      auditIntegrityState.isLoading = false;
+      if (res && res.success) {
+        if (typeof cacheSet === "function") {
+          cacheSet(cacheKey, res, 60 * 1000);
+        }
+        updateAuditIntegrityUI_(res);
+      }
+    })
+    .withFailureHandler(function (err) {
+      auditIntegrityState.isLoading = false;
+      console.warn("Could not load audit integrity status:", err);
+    })
+    .getAuditIntegrityStatus(Boolean(forceRefresh));
+
+  // 2. Fetch Audit Retention Settings
+  google.script.run
+    .withSuccessHandler(function (res) {
+      const norm = normalizeAuditRetentionSettings_(res);
+      auditIntegrityState.retentionDays = norm.retentionDays;
+      const daysEl = document.getElementById("audit-retention-days");
+      if (daysEl) daysEl.value = String(norm.retentionDays);
+    })
+    .withFailureHandler(function (err) {
+      console.warn("Could not load audit retention settings:", err);
+    })
+    .getAuditRetentionSettings();
+}
+
+function updateAuditIntegrityUI_(status) {
+  if (!status || typeof status !== "object") return;
+  auditIntegrityState.status = status;
+
+  const isValid = Boolean(status.isValid && (!status.tamperedCount || status.tamperedCount === 0));
+  const totalEntries = Number(status.totalEntries) || 0;
+  const tamperedCount = Number(status.tamperedCount) || (Array.isArray(status.tamperedRows) ? status.tamperedRows.length : 0);
+  const lastHash = String(status.lastVerifiedHash || status.genesisHash || "").trim();
+  const checkedAt = status.checkedAt ? String(status.checkedAt) : new Date().toLocaleString();
+
+  auditIntegrityState.lastVerifiedHash = lastHash;
+
+  const pillEl = document.getElementById("audit-integrity-status-pill");
+  const liveBadgeEl = document.getElementById("audit-live-status-badge");
+  const totalEl = document.getElementById("audit-total-sealed-rows");
+  const hashEl = document.getElementById("audit-last-hash");
+  const timeEl = document.getElementById("audit-last-verified-at");
+  const alertBox = document.getElementById("audit-tamper-alert-box");
+  const anomaliesList = document.getElementById("audit-tamper-anomalies-list");
+
+  if (pillEl) {
+    if (isValid) {
+      pillEl.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30";
+      pillEl.innerHTML = '<i class="fas fa-shield-halved mr-1 text-[9px]"></i> IMMUTABLE &amp; VERIFIED';
+    } else {
+      pillEl.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 animate-pulse";
+      pillEl.innerHTML = '<i class="fas fa-triangle-exclamation mr-1 text-[9px]"></i> TAMPER DETECTED';
+    }
+  }
+
+  if (liveBadgeEl) {
+    if (isValid) {
+      liveBadgeEl.className = "font-bold text-emerald-700 dark:text-emerald-400";
+      liveBadgeEl.textContent = "IMMUTABLE & VERIFIED";
+    } else {
+      liveBadgeEl.className = "font-bold text-rose-600 dark:text-rose-400";
+      liveBadgeEl.textContent = "TAMPER DETECTED (" + tamperedCount + " anomalies)";
+    }
+  }
+
+  if (totalEl) {
+    totalEl.textContent = totalEntries.toLocaleString();
+  }
+
+  if (hashEl) {
+    if (lastHash) {
+      hashEl.title = "SHA-256 Seal Hash: " + lastHash;
+      if (lastHash.length > 16) {
+        hashEl.textContent = lastHash.substring(0, 6) + "..." + lastHash.substring(lastHash.length - 6);
+      } else {
+        hashEl.textContent = lastHash;
+      }
+    } else {
+      hashEl.textContent = "None";
+      hashEl.title = "No audit seal records found";
+    }
+  }
+
+  if (timeEl) {
+    timeEl.textContent = checkedAt;
+  }
+
+  if (alertBox) {
+    if (!isValid && tamperedCount > 0) {
+      alertBox.classList.remove("hidden");
+      if (anomaliesList) {
+        const rows = Array.isArray(status.tamperedRows) ? status.tamperedRows : [];
+        if (rows.length === 0) {
+          anomaliesList.innerHTML = '<div class="py-1">Tampered records detected but individual row indices could not be resolved.</div>';
+        } else {
+          anomaliesList.innerHTML = rows.map(function (row) {
+            const rowNum = typeof row === "object" && row !== null ? (row.row || row.rowNumber || JSON.stringify(row)) : String(row);
+            const reason = typeof row === "object" && row !== null && row.reason ? (": " + String(row.reason)) : "";
+            const safeRow = String(rowNum).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const safeReason = String(reason).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            return '<div class="flex items-center gap-2"><i class="fas fa-xmark text-rose-500"></i><span>Row ' + safeRow + safeReason + '</span></div>';
+          }).join("");
+        }
+      }
+    } else {
+      alertBox.classList.add("hidden");
+      if (anomaliesList) anomaliesList.innerHTML = "";
+    }
+  }
+}
+
+function copyAuditLastHash_() {
+  const hash = auditIntegrityState.lastVerifiedHash;
+  if (!hash) {
+    if (typeof showNotification === "function") {
+      showNotification("No seal hash available to copy.", "info");
+    }
+    return;
+  }
+  if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(hash).then(function () {
+      if (typeof showNotification === "function") {
+        showNotification("SHA-256 seal hash copied to clipboard.", "success");
+      }
+    }).catch(function () {
+      fallbackCopyText_(hash);
+    });
+  } else {
+    fallbackCopyText_(hash);
+  }
+}
+
+function fallbackCopyText_(text) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (typeof showNotification === "function") {
+      showNotification("SHA-256 seal hash copied to clipboard.", "success");
+    }
+  } catch (e) {
+    if (typeof showNotification === "function") {
+      showNotification("Unable to copy hash automatically: " + text, "warning");
+    }
+  }
+}
+
+function runManualAuditIntegrityVerification() {
+  if (auditIntegrityState.isVerifying) return;
+
+  const btn = document.getElementById("btn-verify-audit-integrity");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Verifying Ledger...</span>';
+  }
+
+  auditIntegrityState.isVerifying = true;
+
+  if (typeof google === "undefined" || !google.script || !google.script.run) {
+    auditIntegrityState.isVerifying = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-shield-halved text-emerald-600 dark:text-emerald-400 text-xs"></i> <span>Verify Ledger Integrity Now</span>';
+    }
+    if (typeof showNotification === "function") {
+      showNotification("Google Apps Script environment not detected.", "warning");
+    }
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      auditIntegrityState.isVerifying = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-shield-halved text-emerald-600 dark:text-emerald-400 text-xs"></i> <span>Verify Ledger Integrity Now</span>';
+      }
+
+      if (res && res.success) {
+        if (typeof cacheSet === "function") {
+          cacheSet("audit_integrity_status", res, 60 * 1000);
+        }
+        updateAuditIntegrityUI_(res);
+
+        if (res.isValid) {
+          const verified = res.verifiedEntries !== undefined ? res.verifiedEntries : (res.totalEntries || 0);
+          if (typeof showNotification === "function") {
+            showNotification("Ledger verification complete: " + verified + " entries cryptographically verified with 0 anomalies.", "success", 6000);
+          }
+        } else {
+          const count = res.tamperedCount || (res.tamperedRows ? res.tamperedRows.length : 1);
+          if (typeof showNotification === "function") {
+            showNotification("Audit ledger integrity check failed: " + count + " tampered row(s) detected!", "error", 8000);
+          }
+        }
+      } else {
+        const err = (res && res.error) || "Integrity verification failed.";
+        if (typeof showNotification === "function") {
+          showNotification(err, "error", 7000);
+        }
+      }
+    })
+    .withFailureHandler(function (err) {
+      auditIntegrityState.isVerifying = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-shield-halved text-emerald-600 dark:text-emerald-400 text-xs"></i> <span>Verify Ledger Integrity Now</span>';
+      }
+      if (typeof handleErr === "function") {
+        handleErr(err);
+      } else if (typeof showNotification === "function") {
+        showNotification("Verification scan error: " + ((err && err.message) || err), "error", 7000);
+      }
+    })
+    .verifyLedgerIntegrity();
+}
+
 function syncMultiplierPresetButtons_(val) {
   const baseCls = "min-h-[38px] px-3 py-1.5 rounded-lg text-xs font-mono tabular-nums border transition-colors ";
   const activeCls = "font-semibold bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100";
@@ -450,7 +721,7 @@ function removeLoanTenorTier(idx) {
 }
 
 function saveLoanPolicySettings() {
-  if (loanPolicyState.isSaving || commSettingsState.isSaving) return;
+  if (loanPolicyState.isSaving || commSettingsState.isSaving || auditIntegrityState.isSaving) return;
 
   const mult = Number(document.getElementById("policy-savings-multiplier")?.value);
   const rate = Number(document.getElementById("policy-interest-rate")?.value);
@@ -495,6 +766,11 @@ function saveLoanPolicySettings() {
     return;
   }
 
+  // Validate audit retention policy
+  const inpRetention = document.getElementById("audit-retention-days");
+  const rawRetention = inpRetention ? parseInt(inpRetention.value, 10) : auditIntegrityState.retentionDays;
+  const auditRetentionDays = !isNaN(rawRetention) && rawRetention >= 0 ? rawRetention : 365;
+
   tiers.sort(function (a, b) { return Number(a.maxAmount) - Number(b.maxAmount); });
 
   const loanPayload = {
@@ -516,6 +792,7 @@ function saveLoanPolicySettings() {
 
   loanPolicyState.isSaving = true;
   commSettingsState.isSaving = true;
+  auditIntegrityState.isSaving = true;
 
   const saveBtns = [
     document.getElementById("btn-save-loan-policy"),
@@ -532,6 +809,7 @@ function saveLoanPolicySettings() {
   if (typeof google === "undefined" || !google.script || !google.script.run) {
     loanPolicyState.isSaving = false;
     commSettingsState.isSaving = false;
+    auditIntegrityState.isSaving = false;
     if (typeof stopAppLoader === "function") stopAppLoader();
     saveBtns.forEach(function (btn) {
       btn.disabled = false;
@@ -543,13 +821,17 @@ function saveLoanPolicySettings() {
 
   let loanResult = null;
   let commResult = null;
+  let auditResult = null;
   let loanError = null;
   let commError = null;
+  let auditError = null;
   let completedCount = 0;
+  const totalCalls = 3;
 
   function finalizeSave_() {
     loanPolicyState.isSaving = false;
     commSettingsState.isSaving = false;
+    auditIntegrityState.isSaving = false;
     if (typeof stopAppLoader === "function") stopAppLoader();
 
     saveBtns.forEach(function (btn) {
@@ -559,10 +841,12 @@ function saveLoanPolicySettings() {
 
     const isLoanOk = loanResult && loanResult.ok !== false && loanResult.success !== false;
     const isCommOk = commResult && commResult.ok !== false && commResult.success !== false;
+    const isAuditOk = auditResult && auditResult.ok !== false && auditResult.success !== false;
 
-    if (isLoanOk && isCommOk) {
+    if (isLoanOk && isCommOk && isAuditOk) {
       const savedLoan = normalizeLoanPolicy_((loanResult && (loanResult.settings || loanResult.policy)) || loanPayload);
       const savedComm = normalizeNotificationSettings_((commResult && commResult.settings) || commPayload);
+      const savedAudit = normalizeAuditRetentionSettings_((auditResult && auditResult.retentionDays !== undefined) ? auditResult : auditRetentionDays);
 
       if (typeof cacheSet === "function") {
         cacheSet("loan_policy_settings", savedLoan, 5 * 60 * 1000);
@@ -574,30 +858,39 @@ function saveLoanPolicySettings() {
 
       populateLoanPolicyForm_(savedLoan);
       populateCommunicationSettingsForm_(savedComm);
+      auditIntegrityState.retentionDays = savedAudit.retentionDays;
+      const daysEl = document.getElementById("audit-retention-days");
+      if (daysEl) daysEl.value = String(savedAudit.retentionDays);
 
       if (typeof showNotification === "function") {
-        showNotification("Policy settings saved successfully! Loan policy and automated communication settings are updated.", "success");
-      }
-    } else if (isLoanOk && !isCommOk) {
-      const savedLoan = normalizeLoanPolicy_((loanResult && (loanResult.settings || loanResult.policy)) || loanPayload);
-      if (typeof cacheSet === "function") cacheSet("loan_policy_settings", savedLoan, 5 * 60 * 1000);
-      populateLoanPolicyForm_(savedLoan);
-      const errMsg = commError || (commResult && commResult.error) || "Failed to save communication policy.";
-      if (typeof showNotification === "function") {
-        showNotification("Loan policy saved, but communication policy failed: " + errMsg, "warning", 7000);
-      }
-    } else if (!isLoanOk && isCommOk) {
-      const savedComm = normalizeNotificationSettings_((commResult && commResult.settings) || commPayload);
-      if (typeof cacheSet === "function") cacheSet("notification_settings", savedComm, 5 * 60 * 1000);
-      populateCommunicationSettingsForm_(savedComm);
-      const errMsg = loanError || (loanResult && loanResult.error) || "Failed to save loan policy.";
-      if (typeof showNotification === "function") {
-        showNotification("Communication settings saved, but loan policy failed: " + errMsg, "warning", 7000);
+        showNotification("Policy settings saved successfully! Loan policy, communications, and audit retention policies are updated.", "success");
       }
     } else {
-      const errCombined = [loanError || (loanResult && loanResult.error), commError || (commResult && commResult.error)].filter(Boolean).join(" | ");
+      const errors = [
+        (!isLoanOk ? (loanError || (loanResult && loanResult.error) || "Loan policy failed") : null),
+        (!isCommOk ? (commError || (commResult && commResult.error) || "Communication policy failed") : null),
+        (!isAuditOk ? (auditError || (auditResult && auditResult.error) || "Audit retention policy failed") : null)
+      ].filter(Boolean);
+
+      if (isLoanOk) {
+        const savedLoan = normalizeLoanPolicy_((loanResult && (loanResult.settings || loanResult.policy)) || loanPayload);
+        if (typeof cacheSet === "function") cacheSet("loan_policy_settings", savedLoan, 5 * 60 * 1000);
+        populateLoanPolicyForm_(savedLoan);
+      }
+      if (isCommOk) {
+        const savedComm = normalizeNotificationSettings_((commResult && commResult.settings) || commPayload);
+        if (typeof cacheSet === "function") cacheSet("notification_settings", savedComm, 5 * 60 * 1000);
+        populateCommunicationSettingsForm_(savedComm);
+      }
+      if (isAuditOk) {
+        const savedAudit = normalizeAuditRetentionSettings_((auditResult && auditResult.retentionDays !== undefined) ? auditResult : auditRetentionDays);
+        auditIntegrityState.retentionDays = savedAudit.retentionDays;
+        const daysEl = document.getElementById("audit-retention-days");
+        if (daysEl) daysEl.value = String(savedAudit.retentionDays);
+      }
+
       if (typeof showNotification === "function") {
-        showNotification("Failed to save settings: " + (errCombined || "Unknown error"), "error", 7000);
+        showNotification("Partial save warning: " + errors.join(" | "), "warning", 8000);
       }
     }
   }
@@ -607,12 +900,12 @@ function saveLoanPolicySettings() {
     .withSuccessHandler(function (res) {
       loanResult = res || { ok: false, error: "Empty response" };
       completedCount++;
-      if (completedCount === 2) finalizeSave_();
+      if (completedCount === totalCalls) finalizeSave_();
     })
     .withFailureHandler(function (err) {
       loanError = (err && err.message) || String(err) || "Loan policy request failed";
       completedCount++;
-      if (completedCount === 2) finalizeSave_();
+      if (completedCount === totalCalls) finalizeSave_();
     })
     .saveLoanPolicySettings(loanPayload);
 
@@ -621,14 +914,28 @@ function saveLoanPolicySettings() {
     .withSuccessHandler(function (res) {
       commResult = res || { ok: false, error: "Empty response" };
       completedCount++;
-      if (completedCount === 2) finalizeSave_();
+      if (completedCount === totalCalls) finalizeSave_();
     })
     .withFailureHandler(function (err) {
       commError = (err && err.message) || String(err) || "Notification settings request failed";
       completedCount++;
-      if (completedCount === 2) finalizeSave_();
+      if (completedCount === totalCalls) finalizeSave_();
     })
     .saveNotificationSettings(commPayload);
+
+  // 3. Save Audit Retention Settings
+  google.script.run
+    .withSuccessHandler(function (res) {
+      auditResult = res || { ok: false, error: "Empty response" };
+      completedCount++;
+      if (completedCount === totalCalls) finalizeSave_();
+    })
+    .withFailureHandler(function (err) {
+      auditError = (err && err.message) || String(err) || "Audit retention policy request failed";
+      completedCount++;
+      if (completedCount === totalCalls) finalizeSave_();
+    })
+    .saveAuditRetentionSettings(auditRetentionDays);
 }
 
 // Global aliases and exports
@@ -636,5 +943,10 @@ window.loadCommunicationSettings = loadCommunicationSettings;
 window.populateCommunicationSettingsForm_ = populateCommunicationSettingsForm_;
 window.syncCommActiveBadge_ = syncCommActiveBadge_;
 window.triggerSettingsAutoDispatchNow = triggerSettingsAutoDispatchNow;
+window.loadAuditIntegrityStatus = loadAuditIntegrityStatus;
+window.runManualAuditIntegrityVerification = runManualAuditIntegrityVerification;
+window.updateAuditIntegrityUI_ = updateAuditIntegrityUI_;
+window.copyAuditLastHash_ = copyAuditLastHash_;
+window.normalizeAuditRetentionSettings_ = normalizeAuditRetentionSettings_;
 window.saveAllSettings = saveLoanPolicySettings;
 </script>

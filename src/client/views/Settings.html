@@ -316,12 +316,143 @@
           </div>
         </div>
       </div>
+
+      <!-- Card 6: Cryptographic Ledger Integrity & Tamper-Evident Audit Trail -->
+      <div class="lg:col-span-2 bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-4">
+        <!-- Header & Action Row -->
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+          <div class="flex items-start gap-3">
+            <span class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs shrink-0 mt-0.5">
+              <i class="fas fa-shield-halved"></i>
+            </span>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Cryptographic Ledger Integrity &amp; Tamper-Evident Audit Trail</h3>
+                <span id="audit-integrity-status-pill" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  Checking integrity...
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Transactions and audit trails are sealed sequentially with SHA-256 rolling cryptographic hashes to guarantee immutability against direct spreadsheet tampering.
+              </p>
+            </div>
+          </div>
+
+          <button type="button" id="btn-verify-audit-integrity" onclick="runManualAuditIntegrityVerification()"
+            class="min-h-[38px] whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors shrink-0">
+            <i class="fas fa-shield-halved text-emerald-600 dark:text-emerald-400 text-xs"></i>
+            <span>Verify Ledger Integrity Now</span>
+          </button>
+        </div>
+
+        <!-- Status Ribbon: Telemetry & Verification Info -->
+        <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Live Status:</span>
+              <span id="audit-live-status-badge" class="font-bold text-slate-600 dark:text-slate-400">Checking...</span>
+            </div>
+            <span class="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Sealed Rows:</span>
+              <span id="audit-total-sealed-rows" class="font-mono tabular-nums font-bold text-slate-900 dark:text-white">0</span>
+            </div>
+            <span class="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Last Verified Seal Hash:</span>
+              <div class="inline-flex items-center gap-1.5">
+                <code id="audit-last-hash" class="font-mono text-[11px] px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300" title="Genesis block or latest rolling hash">None</code>
+                <button type="button" id="btn-copy-audit-hash" onclick="copyAuditLastHash_()" title="Copy seal hash to clipboard"
+                  class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                  <i class="fas fa-copy text-xs"></i>
+                </button>
+              </div>
+            </div>
+            <span class="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Last Verified:</span>
+              <span id="audit-last-verified-at" class="font-mono tabular-nums text-slate-700 dark:text-slate-300">Never</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0">
+            <i class="fas fa-link text-emerald-600 dark:text-emerald-400"></i>
+            <span>SHA-256 Rolling Chain</span>
+          </div>
+        </div>
+
+        <!-- Tamper Anomaly Warning Alert Box (hidden by default) -->
+        <div id="audit-tamper-alert-box" class="hidden p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-800 dark:text-rose-200 space-y-2">
+          <div class="flex items-center gap-2 font-bold text-xs text-rose-700 dark:text-rose-400">
+            <i class="fas fa-triangle-exclamation text-sm"></i>
+            <span>CRITICAL: Cryptographic Chain Broken / Ledger Tampering Detected</span>
+          </div>
+          <p class="text-[11px] text-rose-600 dark:text-rose-300 leading-relaxed">
+            One or more audit trail rows have been modified, deleted, or inserted directly outside authorized dashboard RPCs. The hash chain linkage is compromised at the following records:
+          </p>
+          <div id="audit-tamper-anomalies-list" class="max-h-40 overflow-y-auto font-mono text-[11px] bg-white/80 dark:bg-slate-900/80 p-2.5 rounded-lg border border-rose-200/80 dark:border-rose-900/50 space-y-1 text-rose-900 dark:text-rose-200">
+          </div>
+        </div>
+
+        <!-- 2-Column Controls Grid: Retention & Architecture -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Left Column: Retention Policy -->
+          <div class="p-3.5 sm:p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 space-y-3.5 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div>
+                <label for="audit-retention-days" class="block font-bold text-xs text-slate-900 dark:text-white">
+                  Audit Log Retention Period (Days)
+                </label>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                  Entries older than this period are systematically archived to annual sheets with a preserved cryptographic checkpoint hash bridge.
+                </p>
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="relative flex items-center max-w-[200px]">
+                  <input type="number" id="audit-retention-days" min="0" max="3650" value="365"
+                    class="min-h-[38px] w-full pl-3 pr-14 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-bold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+                  <span class="absolute right-3 text-xs font-mono font-medium text-slate-500 dark:text-slate-400 pointer-events-none">days</span>
+                </div>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400">
+                  Default: <span class="font-mono tabular-nums font-semibold">365 days</span>. Enter <span class="font-mono tabular-nums font-semibold">0</span> for permanent/infinite retention.
+                </p>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-white/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700/60 text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
+              <i class="fas fa-box-archive text-slate-500 dark:text-slate-400 shrink-0"></i>
+              <span>Archival retains chain continuity via script property checkpoint bridges.</span>
+            </div>
+          </div>
+
+          <!-- Right Column: Tamper-Evident Security Architecture -->
+          <div class="p-3.5 sm:p-4 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 space-y-3.5 flex flex-col justify-between">
+            <div class="space-y-2.5">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-shield-check text-emerald-600 dark:text-emerald-400 text-xs"></i>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Cryptographic Tamper-Evidence Guarantee</h4>
+              </div>
+              <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                Every transaction, member modification, and policy change calculates a sequential rolling SHA-256 seal:
+                <code class="block font-mono text-[10px] bg-emerald-100/60 dark:bg-emerald-900/40 text-emerald-950 dark:text-emerald-200 p-1.5 rounded mt-1.5 border border-emerald-200/60 dark:border-emerald-800/60 break-all">
+                  Hash_n = SHA-256(Hash_(n-1) | ts | actor | action | entity | id | summary | payload)
+                </code>
+              </p>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-white/70 dark:bg-slate-900/70 border border-emerald-100 dark:border-emerald-900/30 text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
+              <i class="fas fa-lock text-emerald-600 dark:text-emerald-400 shrink-0"></i>
+              <span>Direct cell alterations immediately rupture the hash chain on next verification scan.</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Bottom Action Bar -->
     <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 px-4 py-3.5 sm:px-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <p class="text-[11px] text-slate-500 dark:text-slate-400">
-        Changes apply immediately to dynamic credit rules, member receipt notifications, and automated statement schedules.
+        Changes apply immediately to dynamic credit rules, member communications, and cryptographic audit retention policies.
       </p>
       <button type="submit" id="btn-save-loan-policy"
         class="min-h-[38px] whitespace-nowrap inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">
