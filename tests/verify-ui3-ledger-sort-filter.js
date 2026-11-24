@@ -12,8 +12,16 @@ console.log("=================================================================")
 console.log("=== VERIFYING TASK UI-3: ADVANCED LEDGER MULTI-SORT & PRESETS ===");
 console.log("=================================================================\n");
 
+const rootDir = path.resolve(__dirname, "..");
+
+function resolveRepoPath(relPath) {
+  const clean = relPath.replace(/^group-dashboard[\\\/]/, "");
+  return path.join(rootDir, clean);
+}
+
 function extractScript(filePath) {
-  const content = fs.readFileSync(filePath, "utf8");
+  const full = resolveRepoPath(filePath);
+  const content = fs.readFileSync(full, "utf8");
   return content.replace(/<script[^>]*>/, "").replace(/<\/script>/, "");
 }
 
@@ -22,9 +30,9 @@ function extractScript(filePath) {
 // -------------------------------------------------------------
 console.log("--- TEST 1: Client Script Syntax Validation ---");
 const clientScripts = [
-  "group-dashboard/src/client/scripts/contributions.ui.js.html",
-  "group-dashboard/src/client/scripts/loans.ui.js.html",
-  "group-dashboard/src/client/scripts/members.ui.js.html"
+  "src/client/scripts/contributions.ui.js.html",
+  "src/client/scripts/loans.ui.js.html",
+  "src/client/scripts/members.ui.js.html"
 ];
 
 clientScripts.forEach((file) => {
@@ -40,9 +48,9 @@ clientScripts.forEach((file) => {
 // -------------------------------------------------------------
 console.log("\n--- TEST 2: HTML View Template Markup Checks ---");
 
-const contribHtml = fs.readFileSync("group-dashboard/src/client/views/Contributions.html", "utf8");
-const loansHtml = fs.readFileSync("group-dashboard/src/client/views/Loans.html", "utf8");
-const membersHtml = fs.readFileSync("group-dashboard/src/client/views/Members.html", "utf8");
+const contribHtml = fs.readFileSync(resolveRepoPath("src/client/views/Contributions.html"), "utf8");
+const loansHtml = fs.readFileSync(resolveRepoPath("src/client/views/Loans.html"), "utf8");
+const membersHtml = fs.readFileSync(resolveRepoPath("src/client/views/Members.html"), "utf8");
 
 // Contributions checks
 assert(contribHtml.includes("exportContributionsCSV()"), "Contributions.html must contain exportContributionsCSV()");
