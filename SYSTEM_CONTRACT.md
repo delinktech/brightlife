@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v143` (Google Apps Script Build `@144`)
+- **Current Live Version:** `v144` (Google Apps Script Build `@145`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -84,6 +84,10 @@ Client-server contracts called via `google.script.run`:
   - **Returns**: `{ success: boolean, data: { loan: {...}, repayments: [...], guarantors: [...], verificationRef: string, printedAt: string, printedBy: string }, error?: string }`
 * **`getDividendsData()`**
   - **Returns**: Net distributable pool, loan interest earnings, investment gains, proposed reserve ratio, member payout matrix.
+* **`runFormLoansMigration(options)`**
+  - **Payload**: `{ dryRun?: boolean, deprecateTab?: boolean }`
+  - **Returns**: `{ success: boolean, dryRun: boolean, ingestedLoans: number, skippedLoans: number, ingestedGuarantors: number, tabArchived: boolean, deprecationResult?: string, errors: string[] }`
+  - **RBAC**: Protected by `requirePermission_('isAdmin')`. Executes historical loan ingestion and Form Loan Requests tab deprecation.
 
 ---
 
@@ -101,6 +105,12 @@ Client-server contracts called via `google.script.run`:
   - **Named Range:** `EquityStatement_ClosingBalance` registered and linked to `Accounts` statement balance.
   - **Statement Ref:** `EQ-STMT-DEC-2021` (Dec 2021: 8 M-Pesa deposits `33,750.00`, 1 Cheque #000016 `40,000.00`, 1 Inward clearing fee `60.00`).
   - **Reconciliation Status:** `Balanced`.
+* **Batch 3 — Historical Executed Loans Ingestion & Google Form Deprecation (Task MIG-3 - Active / Completed)**:
+  - **Authoritative Source (`migrateLoansTableToLedger_`):** Primary source `Loans_table` ingested into canonical `Loans` ledger, strictly preserving historical Loan IDs (e.g. `BL-LN-001`, `LN-002`) without alteration, while normalizing Member No. to `BLM-XX` format.
+  - **Guarantor Cross-Referencing:** Cross-references `Form Loan Requests` (matched on timestamp, borrower name, and requested amount) to extract and ingest guarantor commitments into canonical `Guarantors` ledger table.
+  - **Formula Safety & Row 2 Spill Compatibility:** Strictly leaves calculated/formula columns blank (`""`) across both `Loans` (Columns I, J, K, L, M, N, P, Q, R) and `Guarantors` (Columns C, E, F, G) to safeguard native Row 2 `=MAP(...)` spill formulas against `#SPILL!` errors.
+  - **Tab Deprecation (`deprecateFormLoanRequestsTab_`):** Safely archives legacy tab by renaming `Form Loan Requests` to `[ARCHIVED] Form Loan Requests`, setting tab color to `#94a3b8` (Slate-400), and logging an immutable audit record to `Audit Log`.
+  - **RPC & UI Integration:** Admin RPC `runFormLoansMigration(options)` with RBAC `isAdmin` validation, and interactive cutover migration modal on `Loans.html` (`openFormLoansMigrationModal`, `executeFormLoansMigration`) with dry-run support.
 
 ---
 
