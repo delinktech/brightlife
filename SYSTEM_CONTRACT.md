@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v146` (Google Apps Script Build `@147`, Deployed `@153`)
+- **Current Live Version:** `v147` (Google Apps Script Build `@148`, Deployed `@154`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -147,3 +147,13 @@ Client-server contracts called via `google.script.run`:
   - **Amortization Ledger & Running Accounting Totals:** Formats all historical repayments with itemized transaction breakdown, date ordering, running balance calculations, and accounting-standard double-underlined closing balance totals.
   - **Dual-Officer Certification Block:** Integrates official dual-officer credit compliance block featuring Credit Committee Chairperson and Group Treasurer verification signatures, date stamps, and deterministic audit verification codes (`BLG-LN-YYYYMMDD-LOANID`).
   - **Direct UI Actions (`Loans.html`):** Embedded direct `[Print Statement]` action button in loan records across all lifecycle statuses (`col-l-actions`), allowing 1-click launch of the loan statement modal.
+
+---
+
+## 7. Automated Monthly Member Statements & Dividend Projections (`@fixer`, `@messenger`, `@designer`, `@sentinel`)
+* **Task COM-2 Deliverables (Automated Statements Engine, Settings & Dividend Projections)**:
+  - **Automated Monthly Dispatch Engine (`runAutomatedMonthlyStatementDispatch_`):** Scheduled time-driven service that queries active group members with registered emails, renders comprehensive monthly statements, and dispatches them via GmailApp with month-level idempotency protection (`COMMS_LAST_STATEMENT_MONTH_DISPATCH`) to prevent duplicate runs.
+  - **Dividend Projection Engine (`getGroupDividendProjectionPool_`, `getMemberMonthlyStatementData`):** Aggregates total active group savings and project/loan interest returns to project net distributable surplus (80% retained surplus per Bylaws Rule 5.2), individual member capital weight, and projected annual dividend yield with contextual loan-offset priority guidance.
+  - **Branded Notification Templates:** Standardized HTML email and WhatsApp statement templates featuring high-contrast layout, group credentials (`brightlyfe@gmail.com`), monthly savings and loan KPI matrix, and projected year-end dividend cards.
+  - **Settings & Administration UI (`Settings.html` Card 5 & `Statements.html`):** Integrated admin controls for automated monthly statements toggle, dispatch day-of-month selector (days 1–28), and manual `[Run Dispatch Now]` instant trigger.
+  - **Trigger Lifecycle Management (`setupAutomatedStatementTrigger_`, `removeAutomatedStatementTrigger_`):** Background Apps Script time-driven triggers dynamically configured or retired based on setting toggles without manual Apps Script intervention.
