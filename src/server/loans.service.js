@@ -2557,3 +2557,24 @@ function getLoanStatementData(loanId) {
     verificationRef: verificationRef,
   };
 }
+
+/**
+ * Expose secure admin RPC for MIG-3 Google Form Loan Requests migration.
+ * Backfills historical loan requests into Loans and Guarantors ledgers.
+ *
+ * @param {Object} [options] Migration options ({ dryRun: boolean, deprecateTab: boolean })
+ * @return {Object} Migration summary
+ */
+function runFormLoansMigration(options) {
+  const session = requireAccess_();
+  const isStaff = session.permissions && (session.permissions.isAdmin === true || session.roleKey === ROLE_KEY.ADMIN || session.roleKey === ROLE_KEY.TREASURER);
+  if (!isStaff) {
+    throw new Error("Access denied: Administrative privileges required to run loan migration.");
+  }
+  const ss = getSpreadsheet_();
+  const loansTableSheet = getSheetByNameInsensitive_(ss, "Loans_table");
+  if (loansTableSheet && typeof migrateLoansTableToLedger_ === "function") {
+    return migrateLoansTableToLedger_(options);
+  }
+  return migrateFormLoanRequestsToLedger_(options);
+}

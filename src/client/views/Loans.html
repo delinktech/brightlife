@@ -41,6 +41,7 @@
       <button type="button" onclick="openPrintLoansReport()" class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-4 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
         <i class="fas fa-print text-slate-500 dark:text-slate-400"></i> <span>Print Report</span>
       </button>
+      <button type="button" onclick="openFormLoansMigrationModal()" data-require-perm="isAdmin" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 dark:text-amber-200 dark:border-amber-800/60 text-xs font-semibold rounded-lg shadow-2xs transition-colors"><i class="fas fa-file-import text-xs"></i> <span>Migrate Past Loans</span></button>
       <button type="button" onclick="openPayLoanModal()" data-require-perm="loanPayment" class="hidden inline-flex items-center gap-1.5 min-h-[38px] px-3.5 py-1.5 sm:px-4 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-lg shadow-sm transition-colors">
         <i class="fas fa-hand-holding-dollar text-xs"></i> <span>Pay Loan</span>
       </button>

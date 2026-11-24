@@ -2110,4 +2110,127 @@
   window.submitGovReview = submitGovReview;
   window.submitGovAuthorize = submitGovAuthorize;
   window.submitGovReject = submitGovReject;
+
+  /**
+   * Opens the confirmation dialog for Google Form Loan Requests backfill (MIG-3).
+   * Verifies administrative privileges before presenting the workflow.
+   */
+  async function openFormLoansMigrationModal() {
+    const isStaff = window.APP_PERMS && (window.APP_PERMS.isAdmin === true || window.APP_PERMS.role === "admin" || window.APP_PERMS.role === "treasurer");
+    if (!isStaff) {
+      showNotification("Administrative privileges required to run loan migration.", "warning");
+      return;
+    }
+
+    const confirmed = await showConfirmDialog({
+      title: "Migrate Google Form Loan Requests",
+      message: "Backfill historical loan requests from the 'Form Loan Requests' tab into the 'Loans' and 'Guarantors' ledgers idempotently, and archive the Google Form tab.",
+      detailsHtml: '<div class="space-y-2 text-xs text-slate-600 dark:text-slate-300">' +
+        '<p class="font-medium text-slate-800 dark:text-slate-200">Migration Directives (Task MIG-3):</p>' +
+        '<ul class="list-disc pl-4 space-y-1">' +
+        '<li>Deterministic canonical ID format: <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">BLLN-YYYYMMDD-RXXXX</code></li>' +
+        '<li>Checks both BLLN and legacy LN prefixes for 100% idempotency</li>' +
+        '<li>Row 2 spill formula safety (raw input columns only, calculated cells remain blank)</li>' +
+        '<li>Safe tab deprecation: Renames tab to <code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded text-[11px] font-mono">[ARCHIVED] Form Loan Requests</code> and marks gray</li>' +
+        '</ul>' +
+        '</div>',
+      confirmText: "Preview (Dry Run)",
+      cancelText: "Cancel",
+      confirmClass: "bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-slate-950",
+      iconType: "info"
+    });
+
+    if (!confirmed) return;
+    executeFormLoansMigration(true);
+  }
+
+  /**
+   * Executes Google Form Loan Requests migration (dryRun simulation or live batch commit).
+   * Displays clean confirmation dialog showing processed, guarantors added, and skipped counts.
+   *
+   * @param {boolean} dryRun If true, simulates migration without modifying sheets
+   */
+  function executeFormLoansMigration(dryRun) {
+    startAppLoader();
+    google.script.run
+      .withSuccessHandler(async function (res) {
+        stopAppLoader();
+        if (!res || !res.success) {
+          handleErr(res && res.error ? { message: res.error } : { message: "Failed to execute loan requests migration." });
+          return;
+        }
+
+        const loansProcessed = res.processedCount !== undefined ? res.processedCount : (res.loansAppended || res.loansCount || 0);
+        const guarantorsCount = res.guarantorsCount !== undefined ? res.guarantorsCount : (res.guarantorsAppended || 0);
+        const skipped = res.skippedCount || 0;
+        const exceptionsCount = (res.exceptions && res.exceptions.length) || 0;
+
+        if (dryRun) {
+          const proceed = await showConfirmDialog({
+            title: "Dry Run Simulation Complete",
+            message: "Dry run completed successfully. No ledger rows were modified. Review the simulation results below before applying permanent ledger changes:",
+            detailsHtml: '<div class="space-y-3 text-xs">' +
+              '<div class="grid grid-cols-3 gap-2 text-center">' +
+              '<div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">' +
+              '<div class="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-semibold">To Process</div>' +
+              '<div class="text-base font-bold font-mono text-slate-800 dark:text-slate-100 mt-0.5">' + loansProcessed + '</div>' +
+              '</div>' +
+              '<div class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">' +
+              '<div class="text-[10px] uppercase text-emerald-600 dark:text-emerald-400 font-semibold">Guarantors</div>' +
+              '<div class="text-base font-bold font-mono text-emerald-700 dark:text-emerald-300 mt-0.5">' + guarantorsCount + '</div>' +
+              '</div>' +
+              '<div class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60">' +
+              '<div class="text-[10px] uppercase text-amber-600 dark:text-amber-400 font-semibold">Skipped (Dupes)</div>' +
+              '<div class="text-base font-bold font-mono text-amber-700 dark:text-amber-300 mt-0.5">' + skipped + '</div>' +
+              '</div>' +
+              '</div>' +
+              (exceptionsCount > 0 ? '<div class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-300 text-[11px]"><i class="fas fa-exclamation-triangle mr-1"></i> ' + exceptionsCount + ' record(s) with unmapped borrower data flagged for review.</div>' : '') +
+              '<p class="text-slate-600 dark:text-slate-400 text-[11px]">Proceed with writing these records to the live ledgers and deprecating the Google Form tab?</p>' +
+              '</div>',
+            confirmText: "Apply Live Migration & Deprecate Tab",
+            cancelText: "Cancel",
+            confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white",
+            iconType: "warning"
+          });
+
+          if (proceed) {
+            executeFormLoansMigration(false);
+          }
+        } else {
+          // Live migration executed!
+          if (typeof cacheClear === "function") {
+            cacheClear("loans_");
+            cacheClear("loan_repayments_");
+            cacheClear("home_analytics");
+          }
+          loadLoans(1, true);
+          if (typeof refreshDashboard === "function") refreshDashboard(true);
+
+          await showConfirmDialog({
+            title: "Migration Successful",
+            message: "Historical Google Form loan requests have been backfilled into the Loans and Guarantors ledgers, and the Form tab has been archived.",
+            detailsHtml: '<div class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs text-emerald-800 dark:text-emerald-200 space-y-1.5">' +
+              '<div><strong>Loans Appended:</strong> ' + loansProcessed + '</div>' +
+              '<div><strong>Guarantors Linked:</strong> ' + guarantorsCount + '</div>' +
+              '<div><strong>Skipped (Already Existed):</strong> ' + skipped + '</div>' +
+              '<div><strong>Tab Status:</strong> [ARCHIVED] Form Loan Requests (Gray #94a3b8)</div>' +
+              '</div>',
+            confirmText: "Done",
+            cancelText: "Close",
+            confirmClass: "bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white",
+            iconType: "success"
+          });
+
+          showNotification("Loan migration complete: " + loansProcessed + " loans added, " + skipped + " skipped.", "success", 6000);
+        }
+      })
+      .withFailureHandler(function (err) {
+        stopAppLoader();
+        handleErr(err);
+      })
+      .runFormLoansMigration({ dryRun: dryRun, deprecateTab: !dryRun });
+  }
+
+  window.openFormLoansMigrationModal = openFormLoansMigrationModal;
+  window.executeFormLoansMigration = executeFormLoansMigration;
 </script>

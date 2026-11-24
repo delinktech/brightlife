@@ -1,12 +1,33 @@
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
-  var isDebugAction = Boolean(params.fix || params.backfillCic || params.testReconciliation || params.diagnose || params.migrate || params.setupWorkbook);
+  var isDebugAction = Boolean(params.fix || params.backfillCic || params.testReconciliation || params.diagnose || params.migrate || params.setupWorkbook || params.migrateFormLoans);
 
   // Security Gate (@sentinel): Block unauthorized access to diagnostic and maintenance endpoints
   if (isDebugAction) {
     if (!isDiagnosticAuthorized_(e)) {
       return ContentService.createTextOutput("403_FORBIDDEN: Administrative authorization required to access diagnostic endpoints.")
         .setMimeType(ContentService.MimeType.TEXT);
+    }
+  }
+
+  // MIG-3: Google Form Loan Requests backfill & form deprecation
+  if (params.migrateFormLoans === "1") {
+    try {
+      const dryRun = params.dryRun === "1";
+      const deprecate = params.deprecate === "1";
+      const ss = getSpreadsheet_();
+      const hasLoansTable = Boolean(getSheetByNameInsensitive_(ss, "Loans_table"));
+      let res;
+      if (hasLoansTable && typeof migrateLoansTableToLedger_ === "function") {
+        res = migrateLoansTableToLedger_({ dryRun: dryRun, deprecateTab: deprecate });
+      } else if (typeof migrateFormLoanRequestsToLedger_ === "function") {
+        res = migrateFormLoanRequestsToLedger_({ dryRun: dryRun, deprecateTab: deprecate });
+      } else {
+        res = { error: "migrateFormLoanRequestsToLedger_ function unavailable" };
+      }
+      return ContentService.createTextOutput("MIGRATE_FORM_LOANS_RESULT:\n" + JSON.stringify(res, null, 2));
+    } catch (err) {
+      return ContentService.createTextOutput("MIGRATE_FORM_LOANS_ERROR: " + err.message + "\n" + (err.stack || ""));
     }
   }
 
