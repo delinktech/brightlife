@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v145`** (Google Apps Script Build `@146`) |
-| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-4`–`UI-7`, `COM-3`–`COM-6`, `RPT-5`, `SET-1`, `MIG-3` & `RPT-3`) |
+| **Current Live Release** | **`v146`** (Google Apps Script Build `@147`, deployed `@153`) |
+| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-3`–`UI-7`, `COM-3`–`COM-6`, `RPT-3`, `RPT-5`, `SET-1`, `MIG-3`) |
 | **Completed & Shipped (`[DONE]`)** | **37 Tasks (94.9%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
 | **Prioritized Backlog (`[BACKLOG]`)** | **2 Tasks (5.1%)** (plus MIG-2 full historical backfill pending statements) |
-| **Current Sprint Focus** | `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (Awaiting Statements) / `COM-2: End-of-Month Automated Member Statements & Dividend Projections` (P2) |
+| **Current Sprint Focus** | `COM-2: End-of-Month Automated Member Statements & Dividend Projections` (P2) / `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention` (P2) / `MIG-2: Equity Bank Statement Ingestion` (Awaiting Statements) |
 
 ---
 
@@ -64,7 +64,7 @@
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
 > [!NOTE]
-> **MIG-3 Shipped in Production (`v144` / `@145`):** Historical loans backfill from `Loans_table` and `Form Loan Requests` deprecation is complete and live. Next sprint focus is `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement` (P2) and pending historical statements for `MIG-2`.
+> **UI-3 Shipped in Production (`v146` / `@147`):** Advanced ledger multi-sort, filter presets & RFC-4180 CSV export across Contributions, Loans, and Members tables is complete and live. Next sprint focus is `COM-2: End-of-Month Automated Member Statements & Dividend Projections` (P2), `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention` (P2), and awaiting historical bank statements for `MIG-2`.
 
 The remaining prioritized tasks and deferred backfills are categorized below in strict execution priority:
 
@@ -85,21 +85,14 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 
 ### Tier 3: Advanced Intelligence, Financial Reporting & Platform Hardening (`P2`)
 
-#### 2. `RPT-3: Statement of Changes in Equity & Direct Cash Flow Statement` *(Shipped in v145)*
-* **Priority:** `P2 (Medium)`
-* **Domain:** Financial Reporting (`@analyst` $\to$ `@fixer` $\to$ `@designer`)
-* **Location:** `Reports` tab
-* **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
-* **Dependencies:** RPT-1, RPT-2.
-
-#### 3. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 2. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 4. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 3. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
