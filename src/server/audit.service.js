@@ -626,7 +626,9 @@ function getAuditIntegrityStatus(force) {
  * @return {Object}
  */
 function verifyLedgerIntegrity() {
-  if (typeof requireAccess_ === "function") {
+  if (typeof requireRole_ === "function") {
+    requireRole_([ROLE_KEY.ADMIN, ROLE_KEY.TREASURER]);
+  } else if (typeof requireAccess_ === "function") {
     requireAccess_();
   }
   return getAuditIntegrityStatus(true);

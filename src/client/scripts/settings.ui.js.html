@@ -490,8 +490,8 @@ function updateAuditIntegrityUI_(status) {
           anomaliesList.innerHTML = rows.map(function (row) {
             const rowNum = typeof row === "object" && row !== null ? (row.row || row.rowNumber || JSON.stringify(row)) : String(row);
             const reason = typeof row === "object" && row !== null && row.reason ? (": " + String(row.reason)) : "";
-            const safeRow = String(rowNum).replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            const safeReason = String(reason).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const safeRow = String(rowNum).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+            const safeReason = String(reason).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
             return '<div class="flex items-center gap-2"><i class="fas fa-xmark text-rose-500"></i><span>Row ' + safeRow + safeReason + '</span></div>';
           }).join("");
         }

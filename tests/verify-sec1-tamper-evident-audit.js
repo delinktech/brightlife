@@ -712,6 +712,10 @@ check("verifyLedgerIntegrity RPC bypasses cache and enforces access control", ()
   const res = env.verifyLedgerIntegrity();
   assert.strictEqual(res.success, true);
   assert.strictEqual(res.isValid, true);
+
+  // Non-privileged member should be rejected
+  env.setMockUser("guest@member.org", "member");
+  assert.throws(() => env.verifyLedgerIntegrity(), /Permission denied/);
 });
 
 // =========================================================================
