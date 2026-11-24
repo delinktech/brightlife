@@ -7,9 +7,12 @@
         <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
           Dynamic Credit Engine
         </span>
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+          Automated Statements
+        </span>
       </div>
       <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-        Configure dynamic lending policies, savings multiplier, interest rates, and loan tenor tiers.
+        Configure dynamic lending policies, savings multiplier, interest rates, tenor tiers, and automated member statement dispatches.
       </p>
     </div>
 
@@ -18,7 +21,7 @@
         class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
         <i class="fas fa-rotate text-slate-500 dark:text-slate-400"></i> <span>Refresh</span>
       </button>
-      <button type="button" onclick="saveLoanPolicySettings()"
+      <button type="button" id="btn-save-settings-top" onclick="saveLoanPolicySettings()"
         class="min-h-[38px] whitespace-nowrap inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">
         <i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>
       </button>
@@ -179,12 +182,146 @@
           Guarantors pledge available savings to cover borrower default risk in accordance with Brightlife SHG credit bylaws.
         </div>
       </div>
+
+      <!-- Card 5: Automated Member Statements & Communications Policy -->
+      <div class="lg:col-span-2 bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 p-4 sm:p-5 shadow-sm space-y-4">
+        <!-- Header & Action Row -->
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+          <div class="flex items-start gap-3">
+            <span class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs shrink-0 mt-0.5">
+              <i class="fas fa-paper-plane"></i>
+            </span>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">Automated Member Statements &amp; Communications Policy</h3>
+                <span id="comm-policy-status-pill" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                  Checking status...
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Configure scheduled monthly financial statement dispatches, projected dividend yield summaries, and instant payment receipt delivery.
+              </p>
+            </div>
+          </div>
+
+          <button type="button" id="btn-dispatch-test-statements" onclick="triggerSettingsAutoDispatchNow()"
+            class="min-h-[38px] whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors shrink-0">
+            <i class="fas fa-paper-plane text-blue-600 dark:text-blue-400 text-xs"></i>
+            <span>Dispatch Test / Run Now</span>
+          </button>
+        </div>
+
+        <!-- Status Ribbon: Telemetry & Schedule -->
+        <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Automated Dispatch:</span>
+              <span id="comm-active-state-text" class="font-semibold text-slate-700 dark:text-slate-300">Disabled</span>
+            </div>
+            <span class="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Last Dispatch Month:</span>
+              <span id="comm-last-month-text" class="font-mono tabular-nums font-semibold text-slate-900 dark:text-white">None</span>
+            </div>
+            <span class="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Timestamp:</span>
+              <span id="comm-last-timestamp-text" class="font-mono tabular-nums text-slate-700 dark:text-slate-300">Never</span>
+            </div>
+            <span class="hidden md:inline text-slate-300 dark:text-slate-700">|</span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Volume:</span>
+              <span id="comm-last-count-text" class="font-mono tabular-nums font-bold text-emerald-700 dark:text-emerald-400">0 sent</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0">
+            <i class="fas fa-clock text-slate-400 dark:text-slate-500"></i>
+            <span>Triggered automatically at 08:00 EAT</span>
+          </div>
+        </div>
+
+        <!-- 2-Column Controls Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Left Column: Automated Monthly Statements & Dispatch Day -->
+          <div class="p-3.5 sm:p-4 rounded-xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 space-y-3.5 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <input type="checkbox" id="comm-auto-monthly-statements" onchange="syncCommActiveBadge_()"
+                  class="mt-1 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer h-4 w-4 shrink-0" />
+                <div>
+                  <label for="comm-auto-monthly-statements" class="block font-bold text-xs text-slate-900 dark:text-white cursor-pointer">
+                    Enable Automated End-of-Month Member Statements (Email)
+                  </label>
+                  <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    Compiles and emails monthly statements with member savings, active loan status, and projected dividend earnings to all active members on the scheduled dispatch date.
+                  </p>
+                </div>
+              </div>
+
+              <div class="pl-7 pt-1 space-y-1.5">
+                <label for="comm-auto-statement-day" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Dispatch Day of Month
+                </label>
+                <div class="relative flex items-center max-w-[180px]">
+                  <input type="number" id="comm-auto-statement-day" min="1" max="28" value="1" oninput="syncCommActiveBadge_()"
+                    class="min-h-[38px] w-full pl-3 pr-14 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-mono tabular-nums font-bold outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+                  <span class="absolute right-3 text-xs font-mono font-medium text-slate-500 dark:text-slate-400 pointer-events-none">of month</span>
+                </div>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400">
+                  Accepted range: <span class="font-mono tabular-nums font-semibold">1 to 28</span> (ensures reliable dispatch across all calendar months).
+                </p>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-white/70 dark:bg-slate-900/70 border border-blue-100 dark:border-blue-900/30 text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
+              <i class="fas fa-shield-halved text-blue-600 dark:text-blue-400 shrink-0"></i>
+              <span>Idempotent: prevents duplicate emails within the same month unless manually forced.</span>
+            </div>
+          </div>
+
+          <!-- Right Column: Instant Approval Receipts & Archival BCC -->
+          <div class="p-3.5 sm:p-4 rounded-xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 space-y-3.5 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <input type="checkbox" id="comm-auto-email-receipts"
+                  class="mt-1 rounded border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500 cursor-pointer h-4 w-4 shrink-0" />
+                <div>
+                  <label for="comm-auto-email-receipts" class="block font-bold text-xs text-slate-900 dark:text-white cursor-pointer">
+                    Auto-Email Receipts on Approval
+                  </label>
+                  <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    Automatically emails an official branded payment receipt to the contributing member the moment their savings deposit is approved by the Treasurer.
+                  </p>
+                </div>
+              </div>
+
+              <div class="pt-1 space-y-1.5">
+                <label for="comm-notification-bcc" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Treasury Archival BCC Email (Optional)
+                </label>
+                <div class="relative flex items-center">
+                  <input type="email" id="comm-notification-bcc" placeholder="e.g. brightlyfe@gmail.com"
+                    class="min-h-[38px] w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 rounded-lg text-xs outline-none focus:ring-2 focus:ring-slate-900/15 dark:focus:ring-slate-100/20" />
+                </div>
+                <p class="text-[10px] text-slate-500 dark:text-slate-400">
+                  Receives an archival copy of all outgoing receipts and automated monthly member statements.
+                </p>
+              </div>
+            </div>
+
+            <div class="p-2.5 rounded-lg bg-slate-100/70 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-[11px] text-slate-600 dark:text-slate-300 flex items-center gap-2">
+              <i class="fas fa-envelope-circle-check text-emerald-600 dark:text-emerald-400 shrink-0"></i>
+              <span>Branded email dispatches use authenticated Brightlife SHG mail relays.</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Bottom Action Bar -->
     <div class="bg-white dark:bg-[#0b1320] rounded-xl border border-slate-200 dark:border-slate-700/80 px-4 py-3.5 sm:px-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <p class="text-[11px] text-slate-500 dark:text-slate-400">
-        Changes apply immediately to new loan eligibility checks and repayment schedules.
+        Changes apply immediately to dynamic credit rules, member receipt notifications, and automated statement schedules.
       </p>
       <button type="submit" id="btn-save-loan-policy"
         class="min-h-[38px] whitespace-nowrap inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-950 text-xs font-semibold rounded-xl shadow-sm transition-colors">

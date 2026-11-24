@@ -20,6 +20,37 @@ const loanPolicyState = {
   isSaving: false
 };
 
+const DEFAULT_COMM_SETTINGS = {
+  autoEmailReceipts: true,
+  autoMonthlyStatements: false,
+  autoStatementDay: 1,
+  notificationBcc: "",
+  lastAutoDispatchMonth: "",
+  lastAutoDispatchTimestamp: "",
+  lastAutoDispatchCount: 0
+};
+
+const commSettingsState = {
+  settings: JSON.parse(JSON.stringify(DEFAULT_COMM_SETTINGS)),
+  isLoading: false,
+  isSaving: false
+};
+
+function normalizeNotificationSettings_(raw) {
+  const src = raw && typeof raw === "object" ? raw : {};
+  const day = parseInt(src.autoStatementDay, 10);
+  const count = parseInt(src.lastAutoDispatchCount, 10);
+  return {
+    autoEmailReceipts: src.autoEmailReceipts === undefined ? true : Boolean(src.autoEmailReceipts),
+    autoMonthlyStatements: Boolean(src.autoMonthlyStatements),
+    autoStatementDay: !isNaN(day) && day >= 1 && day <= 28 ? day : 1,
+    notificationBcc: String(src.notificationBcc || "").trim(),
+    lastAutoDispatchMonth: String(src.lastAutoDispatchMonth || "").trim(),
+    lastAutoDispatchTimestamp: String(src.lastAutoDispatchTimestamp || "").trim(),
+    lastAutoDispatchCount: !isNaN(count) && count >= 0 ? count : 0
+  };
+}
+
 function normalizeLoanPolicy_(raw) {
   const src = raw && typeof raw === "object" ? raw : {};
   const rawMult = src.borrowerMultiplier !== undefined ? src.borrowerMultiplier : src.savingsMultiplier;
@@ -46,6 +77,7 @@ function normalizeLoanPolicy_(raw) {
 }
 
 function loadLoanPolicySettings(forceRefresh) {
+  loadCommunicationSettings(forceRefresh);
   const cacheKey = "loan_policy_settings";
   const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
   const cached = entry ? entry.data : null;
@@ -116,6 +148,199 @@ function populateLoanPolicyForm_(rawPolicy) {
 
   renderLoanTenorTiers_();
   updateLoanPolicyPreviews();
+}
+
+function loadCommunicationSettings(forceRefresh) {
+  const cacheKey = "notification_settings";
+  const entry = (!forceRefresh && typeof cacheGetEntry === "function") ? cacheGetEntry(cacheKey) : null;
+  const cached = entry ? entry.data : null;
+  const hasCached = Boolean(cached);
+  const isFresh = Boolean(entry && entry.timestamp && (Date.now() - Number(entry.timestamp) < 60000));
+
+  if (hasCached) {
+    populateCommunicationSettingsForm_(cached);
+    if (isFresh) return;
+  } else {
+    populateCommunicationSettingsForm_(DEFAULT_COMM_SETTINGS);
+  }
+
+  if (typeof google === "undefined" || !google.script || !google.script.run) {
+    return;
+  }
+
+  commSettingsState.isLoading = true;
+  google.script.run
+    .withSuccessHandler(function (res) {
+      commSettingsState.isLoading = false;
+      const rawSettings = (res && res.settings) ? res.settings : res;
+      if (rawSettings && typeof rawSettings === "object") {
+        const normalized = normalizeNotificationSettings_(rawSettings);
+        if (typeof cacheSet === "function") {
+          cacheSet(cacheKey, normalized, 5 * 60 * 1000);
+        }
+        populateCommunicationSettingsForm_(normalized);
+      }
+    })
+    .withFailureHandler(function (err) {
+      commSettingsState.isLoading = false;
+      console.warn("Could not load communication settings:", err);
+    })
+    .getNotificationSettings();
+}
+
+function populateCommunicationSettingsForm_(rawSettings) {
+  const s = normalizeNotificationSettings_(rawSettings);
+  commSettingsState.settings = s;
+
+  const chkMonthly = document.getElementById("comm-auto-monthly-statements");
+  const inpDay = document.getElementById("comm-auto-statement-day");
+  const chkReceipts = document.getElementById("comm-auto-email-receipts");
+  const inpBcc = document.getElementById("comm-notification-bcc");
+
+  if (chkMonthly) chkMonthly.checked = Boolean(s.autoMonthlyStatements);
+  if (inpDay) inpDay.value = String(s.autoStatementDay || 1);
+  if (chkReceipts) chkReceipts.checked = Boolean(s.autoEmailReceipts);
+  if (inpBcc) inpBcc.value = s.notificationBcc || "";
+
+  const pillEl = document.getElementById("comm-policy-status-pill");
+  const activeTextEl = document.getElementById("comm-active-state-text");
+  const monthEl = document.getElementById("comm-last-month-text");
+  const tsEl = document.getElementById("comm-last-timestamp-text");
+  const countEl = document.getElementById("comm-last-count-text");
+
+  if (pillEl) {
+    if (s.autoMonthlyStatements) {
+      pillEl.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30";
+      pillEl.innerHTML = '<i class="fas fa-check-circle mr-1 text-[9px]"></i> ACTIVE (DAY ' + (s.autoStatementDay || 1) + ')';
+    } else {
+      pillEl.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700";
+      pillEl.innerHTML = '<i class="fas fa-pause-circle mr-1 text-[9px]"></i> DISABLED';
+    }
+  }
+
+  if (activeTextEl) {
+    if (s.autoMonthlyStatements) {
+      activeTextEl.className = "font-bold text-emerald-700 dark:text-emerald-400";
+      activeTextEl.textContent = "Active (Day " + (s.autoStatementDay || 1) + " at 08:00 EAT)";
+    } else {
+      activeTextEl.className = "font-semibold text-slate-500 dark:text-slate-400";
+      activeTextEl.textContent = "Disabled (Off)";
+    }
+  }
+
+  if (monthEl) {
+    monthEl.textContent = s.lastAutoDispatchMonth ? s.lastAutoDispatchMonth : "None";
+  }
+
+  if (tsEl) {
+    tsEl.textContent = s.lastAutoDispatchTimestamp ? s.lastAutoDispatchTimestamp : "Never";
+  }
+
+  if (countEl) {
+    countEl.textContent = (s.lastAutoDispatchCount || 0) + " sent";
+  }
+}
+
+function syncCommActiveBadge_() {
+  const chkMonthly = document.getElementById("comm-auto-monthly-statements");
+  const inpDay = document.getElementById("comm-auto-statement-day");
+  const pillEl = document.getElementById("comm-policy-status-pill");
+  const activeTextEl = document.getElementById("comm-active-state-text");
+  const isChecked = Boolean(chkMonthly && chkMonthly.checked);
+  const day = (inpDay && parseInt(inpDay.value, 10)) || 1;
+
+  if (pillEl) {
+    if (isChecked) {
+      pillEl.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30";
+      pillEl.innerHTML = '<i class="fas fa-circle-dot mr-1 text-[9px]"></i> ENABLED (UNSAVED)';
+    } else {
+      pillEl.className = "text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700";
+      pillEl.innerHTML = '<i class="fas fa-pause-circle mr-1 text-[9px]"></i> DISABLED';
+    }
+  }
+
+  if (activeTextEl) {
+    if (isChecked) {
+      activeTextEl.className = "font-bold text-blue-700 dark:text-blue-400";
+      activeTextEl.textContent = "Scheduled (Day " + day + " at 08:00 EAT)";
+    } else {
+      activeTextEl.className = "font-semibold text-slate-500 dark:text-slate-400";
+      activeTextEl.textContent = "Disabled (Off)";
+    }
+  }
+}
+
+async function triggerSettingsAutoDispatchNow() {
+  let confirmed = false;
+  if (typeof showConfirmDialog === "function") {
+    confirmed = await showConfirmDialog({
+      title: "Dispatch Automated Monthly Statements",
+      message: "Are you sure you want to trigger automated statement dispatch now for all active members with email?",
+      confirmText: "Dispatch Now",
+      iconType: "info"
+    });
+  } else {
+    confirmed = confirm("Are you sure you want to trigger automated statement dispatch now for all active members?");
+  }
+
+  if (!confirmed) return;
+
+  const btn = document.getElementById("btn-dispatch-test-statements");
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Dispatching...</span>';
+  }
+
+  if (typeof google === "undefined" || !google.script || !google.script.run) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-paper-plane text-blue-600 dark:text-blue-400 text-xs"></i> <span>Dispatch Test / Run Now</span>';
+    }
+    if (typeof showNotification === "function") {
+      showNotification("Google Apps Script environment not detected.", "warning");
+    }
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function (res) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane text-blue-600 dark:text-blue-400 text-xs"></i> <span>Dispatch Test / Run Now</span>';
+      }
+
+      if (res && res.success) {
+        if (typeof showNotification === "function") {
+          showNotification("Dispatched statements to " + (res.sent || 0) + " members (" + (res.skippedNoEmail || 0) + " skipped, no email).", "success", 7000);
+        }
+        if (typeof cacheClear === "function") {
+          cacheClear("statements_overview_");
+          cacheClear("notification_settings");
+        }
+        loadCommunicationSettings(true);
+      } else if (res && res.skipped) {
+        if (typeof showNotification === "function") {
+          showNotification("Dispatch skipped: " + (res.reason || "Already sent for this month"), "info", 6000);
+        }
+      } else {
+        const err = (res && res.error) || "Failed to dispatch automated statements.";
+        if (typeof showNotification === "function") {
+          showNotification(err, "error", 7000);
+        }
+      }
+    })
+    .withFailureHandler(function (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-paper-plane text-blue-600 dark:text-blue-400 text-xs"></i> <span>Dispatch Test / Run Now</span>';
+      }
+      if (typeof handleErr === "function") {
+        handleErr(err);
+      } else if (typeof showNotification === "function") {
+        showNotification("Dispatch failed: " + ((err && err.message) || err), "error", 7000);
+      }
+    })
+    .dispatchAutomatedMonthlyStatementsNow(true);
 }
 
 function syncMultiplierPresetButtons_(val) {
@@ -225,13 +450,14 @@ function removeLoanTenorTier(idx) {
 }
 
 function saveLoanPolicySettings() {
-  if (loanPolicyState.isSaving) return;
+  if (loanPolicyState.isSaving || commSettingsState.isSaving) return;
 
   const mult = Number(document.getElementById("policy-savings-multiplier")?.value);
   const rate = Number(document.getElementById("policy-interest-rate")?.value);
   const guar = Number(document.getElementById("policy-min-guarantors")?.value);
   const tiers = (loanPolicyState.policy.tenorTiers || []).slice();
 
+  // Validate loan policy
   if (!Number.isFinite(mult) || mult <= 0) {
     if (typeof showNotification === "function") showNotification("Savings multiplier must be greater than 0.", "warning");
     return;
@@ -249,9 +475,29 @@ function saveLoanPolicySettings() {
     return;
   }
 
+  // Validate comm policy
+  const chkAutoMonthly = document.getElementById("comm-auto-monthly-statements");
+  const inpAutoDay = document.getElementById("comm-auto-statement-day");
+  const chkAutoReceipts = document.getElementById("comm-auto-email-receipts");
+  const inpBcc = document.getElementById("comm-notification-bcc");
+
+  const autoMonthly = chkAutoMonthly ? chkAutoMonthly.checked : commSettingsState.settings.autoMonthlyStatements;
+  const autoDayVal = inpAutoDay ? parseInt(inpAutoDay.value, 10) : commSettingsState.settings.autoStatementDay;
+  const autoReceipts = chkAutoReceipts ? chkAutoReceipts.checked : commSettingsState.settings.autoEmailReceipts;
+  const bccVal = inpBcc ? inpBcc.value.trim() : (commSettingsState.settings.notificationBcc || "");
+
+  if (isNaN(autoDayVal) || autoDayVal < 1 || autoDayVal > 28) {
+    if (typeof showNotification === "function") showNotification("Automated statement dispatch day must be between 1 and 28.", "warning");
+    return;
+  }
+  if (bccVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bccVal)) {
+    if (typeof showNotification === "function") showNotification("Please enter a valid email address for Treasury Archival BCC.", "warning");
+    return;
+  }
+
   tiers.sort(function (a, b) { return Number(a.maxAmount) - Number(b.maxAmount); });
 
-  const payload = {
+  const loanPayload = {
     borrowerMultiplier: mult,
     savingsMultiplier: mult,
     interestRatePct: rate,
@@ -261,49 +507,134 @@ function saveLoanPolicySettings() {
     })
   };
 
+  const commPayload = {
+    autoEmailReceipts: Boolean(autoReceipts),
+    autoMonthlyStatements: Boolean(autoMonthly),
+    autoStatementDay: autoDayVal,
+    notificationBcc: bccVal
+  };
+
   loanPolicyState.isSaving = true;
-  const saveBtn = document.getElementById("btn-save-loan-policy");
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Saving...</span>';
-  }
+  commSettingsState.isSaving = true;
+
+  const saveBtns = [
+    document.getElementById("btn-save-loan-policy"),
+    document.getElementById("btn-save-settings-top")
+  ].filter(Boolean);
+
+  saveBtns.forEach(function (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> <span>Saving...</span>';
+  });
+
   if (typeof startAppLoader === "function") startAppLoader();
 
+  if (typeof google === "undefined" || !google.script || !google.script.run) {
+    loanPolicyState.isSaving = false;
+    commSettingsState.isSaving = false;
+    if (typeof stopAppLoader === "function") stopAppLoader();
+    saveBtns.forEach(function (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>';
+    });
+    if (typeof showNotification === "function") showNotification("Google Apps Script environment not detected.", "warning");
+    return;
+  }
+
+  let loanResult = null;
+  let commResult = null;
+  let loanError = null;
+  let commError = null;
+  let completedCount = 0;
+
+  function finalizeSave_() {
+    loanPolicyState.isSaving = false;
+    commSettingsState.isSaving = false;
+    if (typeof stopAppLoader === "function") stopAppLoader();
+
+    saveBtns.forEach(function (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>';
+    });
+
+    const isLoanOk = loanResult && loanResult.ok !== false && loanResult.success !== false;
+    const isCommOk = commResult && commResult.ok !== false && commResult.success !== false;
+
+    if (isLoanOk && isCommOk) {
+      const savedLoan = normalizeLoanPolicy_((loanResult && (loanResult.settings || loanResult.policy)) || loanPayload);
+      const savedComm = normalizeNotificationSettings_((commResult && commResult.settings) || commPayload);
+
+      if (typeof cacheSet === "function") {
+        cacheSet("loan_policy_settings", savedLoan, 5 * 60 * 1000);
+        cacheSet("notification_settings", savedComm, 5 * 60 * 1000);
+      }
+      if (typeof cacheClear === "function") {
+        cacheClear("statements_overview_");
+      }
+
+      populateLoanPolicyForm_(savedLoan);
+      populateCommunicationSettingsForm_(savedComm);
+
+      if (typeof showNotification === "function") {
+        showNotification("Policy settings saved successfully! Loan policy and automated communication settings are updated.", "success");
+      }
+    } else if (isLoanOk && !isCommOk) {
+      const savedLoan = normalizeLoanPolicy_((loanResult && (loanResult.settings || loanResult.policy)) || loanPayload);
+      if (typeof cacheSet === "function") cacheSet("loan_policy_settings", savedLoan, 5 * 60 * 1000);
+      populateLoanPolicyForm_(savedLoan);
+      const errMsg = commError || (commResult && commResult.error) || "Failed to save communication policy.";
+      if (typeof showNotification === "function") {
+        showNotification("Loan policy saved, but communication policy failed: " + errMsg, "warning", 7000);
+      }
+    } else if (!isLoanOk && isCommOk) {
+      const savedComm = normalizeNotificationSettings_((commResult && commResult.settings) || commPayload);
+      if (typeof cacheSet === "function") cacheSet("notification_settings", savedComm, 5 * 60 * 1000);
+      populateCommunicationSettingsForm_(savedComm);
+      const errMsg = loanError || (loanResult && loanResult.error) || "Failed to save loan policy.";
+      if (typeof showNotification === "function") {
+        showNotification("Communication settings saved, but loan policy failed: " + errMsg, "warning", 7000);
+      }
+    } else {
+      const errCombined = [loanError || (loanResult && loanResult.error), commError || (commResult && commResult.error)].filter(Boolean).join(" | ");
+      if (typeof showNotification === "function") {
+        showNotification("Failed to save settings: " + (errCombined || "Unknown error"), "error", 7000);
+      }
+    }
+  }
+
+  // 1. Save Loan Policy
   google.script.run
     .withSuccessHandler(function (res) {
-      loanPolicyState.isSaving = false;
-      if (typeof stopAppLoader === "function") stopAppLoader();
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>';
-      }
-
-      if (!res || res.ok === false || res.success === false) {
-        if (typeof showNotification === "function") {
-          showNotification("Failed to save loan policy: " + ((res && res.error) || "Unknown error"), "error", 6000);
-        }
-        return;
-      }
-
-      const savedSettings = (res && (res.settings || res.policy)) || payload;
-      const savedPolicy = normalizeLoanPolicy_(savedSettings);
-      if (typeof cacheSet === "function") {
-        cacheSet("loan_policy_settings", savedPolicy, 5 * 60 * 1000);
-      }
-      populateLoanPolicyForm_(savedPolicy);
-      if (typeof showNotification === "function") {
-        showNotification("Loan policy settings saved successfully.", "success");
-      }
+      loanResult = res || { ok: false, error: "Empty response" };
+      completedCount++;
+      if (completedCount === 2) finalizeSave_();
     })
     .withFailureHandler(function (err) {
-      loanPolicyState.isSaving = false;
-      if (typeof stopAppLoader === "function") stopAppLoader();
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="fas fa-floppy-disk text-xs"></i> <span>Save Policy Settings</span>';
-      }
-      if (typeof handleErr === "function") handleErr(err);
+      loanError = (err && err.message) || String(err) || "Loan policy request failed";
+      completedCount++;
+      if (completedCount === 2) finalizeSave_();
     })
-    .saveLoanPolicySettings(payload);
+    .saveLoanPolicySettings(loanPayload);
+
+  // 2. Save Notification Settings
+  google.script.run
+    .withSuccessHandler(function (res) {
+      commResult = res || { ok: false, error: "Empty response" };
+      completedCount++;
+      if (completedCount === 2) finalizeSave_();
+    })
+    .withFailureHandler(function (err) {
+      commError = (err && err.message) || String(err) || "Notification settings request failed";
+      completedCount++;
+      if (completedCount === 2) finalizeSave_();
+    })
+    .saveNotificationSettings(commPayload);
 }
+
+// Global aliases and exports
+window.loadCommunicationSettings = loadCommunicationSettings;
+window.populateCommunicationSettingsForm_ = populateCommunicationSettingsForm_;
+window.syncCommActiveBadge_ = syncCommActiveBadge_;
+window.triggerSettingsAutoDispatchNow = triggerSettingsAutoDispatchNow;
+window.saveAllSettings = saveLoanPolicySettings;
 </script>
