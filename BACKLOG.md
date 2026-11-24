@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v146`** (Google Apps Script Build `@147`, deployed `@153`) |
-| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-3`–`UI-7`, `COM-3`–`COM-6`, `RPT-3`, `RPT-5`, `SET-1`, `MIG-3`) |
-| **Completed & Shipped (`[DONE]`)** | **37 Tasks (94.9%)** |
+| **Current Live Release** | **`v147`** (Google Apps Script Build `@148`, deployed `@154`) |
+| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-3`–`UI-7`, `COM-3`–`COM-6`, `COM-2`, `RPT-3`, `RPT-5`, `SET-1`, `MIG-3`) |
+| **Completed & Shipped (`[DONE]`)** | **38 Tasks (97.4%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **2 Tasks (5.1%)** (plus MIG-2 full historical backfill pending statements) |
-| **Current Sprint Focus** | `COM-2: End-of-Month Automated Member Statements & Dividend Projections` (P2) / `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention` (P2) / `MIG-2: Equity Bank Statement Ingestion` (Awaiting Statements) |
+| **Prioritized Backlog (`[BACKLOG]`)** | **1 Task (2.6%)** (plus MIG-2 full historical backfill pending statements) |
+| **Current Sprint Focus** | `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention` (P2) / `MIG-2: Equity Bank Statement Ingestion` (Awaiting Statements) |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`COM-2`** | Member Communications & Financial Intelligence | **End-of-Month Automated Member Statements & Dividend Projections with Settings**: Implemented automated monthly statement dispatch engine (`runAutomatedMonthlyStatementDispatch_`, `dispatchAutomatedMonthlyStatementsNow`) with time-driven triggers (`setupAutomatedStatementTrigger_`, `removeAutomatedStatementTrigger_`), day-of-month scheduling (Day 1–28 at 08:00 Nairobi time), strict month-level idempotency protection, and Treasurer/Admin settings (`autoMonthlyStatements`, `autoStatementDay`, `lastAutoDispatchMonth/Timestamp/Count`). Integrated SASRA/IFRS dividend projection engine (`getGroupDividendProjectionPool_`) calculating qualifying savings weight, 20% statutory reserve deduction, annualized net distributable surplus, projected dividend (KES), annualized ROI yield (%), capital pool share (%), and smart payout priority routing (Rule 5.2 loan offset vs. savings capitalization) in rich responsive dark-mode HTML email and WhatsApp templates. | `@fixer` | **`v147`** (`@148`) | 2026-11-24 |
 | **`UI-3`** | UI/UX & Frontend Performance | **Advanced Ledger Multi-Sort & Filter Presets**: Interactive column header sorting (Ascending ➔ Descending ➔ Neutral) across dates, numeric amounts, and alphanumeric labels with dynamic SVG/FontAwesome sort indicators; 1-click segmented filter chip presets (`This Month`, `Savings/Deposits`, `Loan Repayments`, `Unallocated/Suspense`, `Large (≥ KES 10,000)` on Contributions; `Active/Disbursed`, `Overdue/In Arrears`, `Fully Repaid`, `Pending Review` on Loans; `Active Members`, `Borrowers`, `Committee/Officers`, `Inactive/Dormant` on Members) with live record counters; and RFC-4180 formula-injection-safe CSV export (`exportContributionsCSV()`, `exportLoansCSV()`, `exportMembersCSV()`) delivering the active filtered and sorted dataset. | `@designer` | **`v146`** (`@147`) | 2026-11-24 |
 | **`RPT-3`** | Financial Reporting & Operations | **Statement of Changes in Equity & Direct Cash Flow Statement**: Added IFRS 4-column Equity Statement (Member Savings, 20% Statutory Reserve, 80% Retained Distributable Surplus, Total Equity with zero-variance balance sheet reconciliation), IAS 7 Direct Method Statement of Cash Flows (Operating, Investing, Financing activities with zero-variance cash reconciliation against bank & liquid accounts), standalone print engines (`openPrintEquityStatementReport()`, `openPrintCashFlowStatementReport()`) with official BLG letterhead (`brightlyfe@gmail.com`) and 3-officer governance sign-offs, AGM Audit Pack expansion to 6 institutional sections, and formula-injection-safe CSV exporters (`exportEquityStatementCSV()`, `exportCashFlowStatementCSV()`). | `@fixer`, `@designer`, `@sentinel` | **`v145`** (`@146`) | 2026-11-24 |
 | **`MIG-3`** | Migration & Operations | **One-Time 'Form Loan Requests' Backfill & Google Form Deprecation**: Ingests historical executed loans from authoritative Loans_table preserving exact legacy Loan Ids, normalizes Member IDs (BLM-XX), cross-references Form Loan Requests for guarantor pledges, enforces strict Row 2 spill formula safety, provides safe tab archiving ([ARCHIVED] Form Loan Requests with tab color #94a3b8), logs complete audit trail to Audit Log, and adds admin migration modal to Loans.html. | `@migrator`, `@fixer`, `@sentinel` | **`v144`** (`@145`) | 2026-11-24 |
@@ -64,7 +65,7 @@
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
 > [!NOTE]
-> **UI-3 Shipped in Production (`v146` / `@147`):** Advanced ledger multi-sort, filter presets & RFC-4180 CSV export across Contributions, Loans, and Members tables is complete and live. Next sprint focus is `COM-2: End-of-Month Automated Member Statements & Dividend Projections` (P2), `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention` (P2), and awaiting historical bank statements for `MIG-2`.
+> **COM-2 Shipped in Production (`v147` / `@148`):** End-of-Month Automated Member Statements & Dividend Projections with Settings is complete and live. Next sprint focus is `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention` (P2), and awaiting historical bank statements for `MIG-2`.
 
 The remaining prioritized tasks and deferred backfills are categorized below in strict execution priority:
 
@@ -85,14 +86,7 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 
 ### Tier 3: Advanced Intelligence, Financial Reporting & Platform Hardening (`P2`)
 
-#### 2. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
-* **Priority:** `P2 (Medium)`
-* **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
-* **Location:** `server/comms.service.js`
-* **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
-* **Dependencies:** COM-1, RPT-2.
-
-#### 3. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 2. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
@@ -105,13 +99,14 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v146)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v147)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
         H["UI-HDR: Borderless Header & Sub-Nav"]
         V1["VIS-1: Cash Flow Waterfall"]
         V2["VIS-2: Savings vs. Loan Trajectory"]
+        C2["COM-2: Monthly Statements & Dividend Projections"]
         V3["VIS-3: SASRA Aging & Provision Matrix"]
         R1["RPT-1: Statement of Financial Position"]
         R2["RPT-2: Statement of Comprehensive Income"]
@@ -146,7 +141,6 @@ graph TD
     end
 
     subgraph Future_Enhancements ["Deferred & Backlog Enhancements (P2 Priorities)"]
-        C2["COM-2: Monthly Member Statements Dispatch"]
         S1["SEC-1: Tamper-Evident Ledger Hashing"]
     end
 
