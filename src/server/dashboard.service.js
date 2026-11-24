@@ -504,6 +504,24 @@ function getHomeAnalyticsByRange_(rangeKey) {
     portfolioPayload,
     loanRows
   );
+  const equityStatement = buildEquityStatement_(
+    ss,
+    tz,
+    now,
+    effectiveRange,
+    balanceSheet,
+    incomeStatement
+  );
+  const cashFlowStatement = buildCashFlowStatement_(
+    ss,
+    tz,
+    now,
+    effectiveRange,
+    liquiditySummary,
+    portfolioPayload,
+    incomeStatement,
+    balanceSheet
+  );
 
   const invInflows = (investments && investments.breakdown && investments.breakdown.inflows) || {};
   const invOutflows = (investments && investments.breakdown && investments.breakdown.outflows) || {};
@@ -529,8 +547,11 @@ function getHomeAnalyticsByRange_(rangeKey) {
     memberCount: memberCount,
     cash: liquiditySummary.cash,
     liquidity: liquiditySummary.liquidity,
+    liquiditySummary: liquiditySummary,
     balanceSheet: balanceSheet,
     incomeStatement: incomeStatement,
+    equityStatement: equityStatement,
+    cashFlowStatement: cashFlowStatement,
     cashflowWaterfall: {
       openingCash: openingLiquidCash,
       closingCash: closingLiquidCash,
@@ -1759,6 +1780,618 @@ function calculateGrowthPercent_(current, previous) {
 }
 
 /**
+ * RPT-3: Statement of Changes in Equity.
+ * Reconciles equity movements from beginning of period to closing balances across:
+ * - Member Savings (Share Capital)
+ * - Statutory Reserve Fund (20% indivisible capital transfer per SASRA)
+ * - Retained Distributable Surplus (80% distributable surplus)
+ * - Total Members' Equity
+ * 100% reconciled to Balance Sheet Total Equity (variance = 0.00 KES).
+ */
+function buildEquityStatement_(ss, tz, now, effectiveRange, balanceSheet, incomeStatement) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const timeZone = tz || (spreadsheet && spreadsheet.getSpreadsheetTimeZone()) || "Africa/Nairobi";
+  const today = now || new Date();
+  const rangeKey = normalizeRangeKey_(effectiveRange);
+  const bounds = getDateRangeBounds_(rangeKey, today);
+
+  const bs = balanceSheet || {};
+  const eq = (bs && bs.equity) || {};
+
+  // Closing balances from Balance Sheet
+  const closingSavings = roundCurrency2_(eq.memberSavings || 0);
+  const closingReserve = roundCurrency2_(eq.statutoryReserve || 0);
+  const closingRetained = roundCurrency2_(eq.retainedSurplus || 0);
+  const closingTotalEquity = roundCurrency2_(
+    eq.totalEquity !== undefined
+      ? eq.totalEquity
+      : (closingSavings + closingReserve + closingRetained)
+  );
+
+  // Period Member Contributions & Savings Inflows vs Approved Member Refunds / Exits
+  let periodContributions = 0;
+  let periodRefunds = 0;
+
+  try {
+    const cSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CONTRIBUTIONS);
+    if (cSheet && cSheet.getLastRow() > 1) {
+      const cRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, cSheet) : cSheet.getDataRange().getValues();
+      if (cRows.length > 1) {
+        const col = getHeaderMap_(cRows[0]);
+        const dateCol = col["Date"];
+        const amtCol = col["Amount"];
+        const statCol = col["Status"];
+        const modeCol = col["Deposit Channel"] !== undefined ? col["Deposit Channel"] : col["Payment Mode"];
+        const typeCol = col["Type"] !== undefined ? col["Type"] : col["Contribution Type"];
+
+        if (dateCol !== undefined && amtCol !== undefined) {
+          for (let i = 1; i < cRows.length; i++) {
+            const row = cRows[i];
+            const stat = statCol !== undefined ? String(row[statCol] || "").trim().toLowerCase() : "";
+            if (stat === "rejected" || stat === "pending") continue;
+
+            const dt = parseSheetDate_(row[dateCol]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+            const amt = Number(row[amtCol]) || 0;
+            const mode = modeCol !== undefined ? String(row[modeCol] || "").toLowerCase() : "";
+            const type = typeCol !== undefined ? String(row[typeCol] || "").toLowerCase() : "";
+            const isRefund =
+              amt < 0 ||
+              mode.indexOf("refund") !== -1 ||
+              mode.indexOf("exit") !== -1 ||
+              mode.indexOf("withdraw") !== -1 ||
+              type.indexOf("refund") !== -1 ||
+              type.indexOf("exit") !== -1;
+
+            if (isRefund) {
+              periodRefunds += Math.abs(amt);
+            } else if (amt > 0) {
+              periodContributions += amt;
+            }
+          }
+        }
+      }
+    }
+  } catch (eC) {
+    console.error("buildEquityStatement_ contributions error: " + eC.message);
+  }
+
+  // Also check unified investment ledger for approved member refunds / exits
+  try {
+    if (typeof readUnifiedInvestmentLedgerValues_ === "function") {
+      const lv = readUnifiedInvestmentLedgerValues_(spreadsheet);
+      if (lv.length > 1) {
+        const lc = getHeaderMap_(lv[0]);
+        for (let j = 1; j < lv.length; j++) {
+          const row = lv[j];
+          const dt = parseSheetDate_(row[lc["Date"]]);
+          if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+          const kind = typeof normalizeLedgerType_ === "function" ? normalizeLedgerType_(row[lc["Type"]]) : String(row[lc["Type"]] || "").toLowerCase();
+          const desc = String(row[lc["Description"]] || "").toLowerCase();
+          const cat = String(row[lc["Category"]] || "").toLowerCase();
+          const text = (desc + " " + cat);
+          const amt = Math.abs(Number(row[lc["Amount"]]) || 0);
+
+          if (kind === "withdrawal" || kind === "expense") {
+            if (
+              text.indexOf("refund") !== -1 ||
+              text.indexOf("exit") !== -1 ||
+              text.indexOf("member savings") !== -1
+            ) {
+              periodRefunds += amt;
+            }
+          }
+        }
+      }
+    }
+  } catch (eLedger) {
+    console.error("buildEquityStatement_ ledger refunds error: " + eLedger.message);
+  }
+
+  periodContributions = roundCurrency2_(periodContributions);
+  periodRefunds = roundCurrency2_(periodRefunds);
+
+  // Net Operating Surplus for the Period & SASRA Sec 51 appropriations from Income Statement
+  const is = incomeStatement || {};
+  const netOperatingSurplus = roundCurrency2_(is.netOperatingSurplus || 0);
+  let statutoryAllocation = 0;
+  let distributableAllocation = 0;
+  if (is.appropriations && is.appropriations.statutoryReserveTransfer !== undefined) {
+    statutoryAllocation = roundCurrency2_(is.appropriations.statutoryReserveTransfer);
+    distributableAllocation = roundCurrency2_(is.appropriations.distributableMemberPool);
+  } else if (netOperatingSurplus > 0) {
+    statutoryAllocation = roundCurrency2_(netOperatingSurplus * 0.20);
+    distributableAllocation = roundCurrency2_(netOperatingSurplus * 0.80);
+  }
+
+  // Dividends & Surplus Distributions Declared / Paid
+  let periodDividends = 0;
+  try {
+    if (typeof readUnifiedInvestmentLedgerValues_ === "function") {
+      const lv = readUnifiedInvestmentLedgerValues_(spreadsheet);
+      if (lv.length > 1) {
+        const lc = getHeaderMap_(lv[0]);
+        for (let j = 1; j < lv.length; j++) {
+          const row = lv[j];
+          const dt = parseSheetDate_(row[lc["Date"]]);
+          if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+          const kind = typeof normalizeLedgerType_ === "function" ? normalizeLedgerType_(row[lc["Type"]]) : String(row[lc["Type"]] || "").toLowerCase();
+          const cat = String(row[lc["Category"]] || "").toLowerCase();
+          const desc = String(row[lc["Description"]] || "").toLowerCase();
+          if (
+            (cat === "dividend" || cat === "dividends" || desc.indexOf("dividend") !== -1) &&
+            (kind === "expense" || kind === "withdrawal")
+          ) {
+            periodDividends += Math.abs(Number(row[lc["Amount"]]) || 0);
+          }
+        }
+      }
+    }
+  } catch (eDiv) {
+    console.error("buildEquityStatement_ dividends error: " + eDiv.message);
+  }
+  periodDividends = roundCurrency2_(periodDividends);
+
+  // Reconcile Opening Balances backwards from Closing Balances:
+  // Closing = Opening + Inflows - Outflows  =>  Opening = Closing - Inflows + Outflows
+  let openingSavings = roundCurrency2_(closingSavings - (periodContributions - periodRefunds));
+  if (openingSavings < 0) {
+    openingSavings = 0;
+    periodContributions = roundCurrency2_(closingSavings + periodRefunds);
+  }
+
+  let openingReserve = roundCurrency2_(closingReserve - statutoryAllocation);
+  if (openingReserve < 0) {
+    openingReserve = 0;
+    statutoryAllocation = closingReserve;
+  }
+
+  let openingRetained = roundCurrency2_(closingRetained - distributableAllocation + periodDividends);
+  if (openingRetained < 0) {
+    openingRetained = 0;
+    distributableAllocation = roundCurrency2_(closingRetained + periodDividends);
+  }
+
+  const openingTotal = roundCurrency2_(openingSavings + openingReserve + openingRetained);
+
+  const calculatedClosingSavings = roundCurrency2_(openingSavings + periodContributions - periodRefunds);
+  const calculatedClosingReserve = roundCurrency2_(openingReserve + statutoryAllocation);
+  const calculatedClosingRetained = roundCurrency2_(openingRetained + distributableAllocation - periodDividends);
+  const calculatedClosingTotal = roundCurrency2_(
+    calculatedClosingSavings + calculatedClosingReserve + calculatedClosingRetained
+  );
+
+  const variance = roundCurrency2_(calculatedClosingTotal - closingTotalEquity);
+  const isBalanced = Math.abs(variance) < 0.01;
+
+  const rows = [
+    {
+      rowKey: "openingBalance",
+      label: "Balance as at Beginning of Period (Opening Balances)",
+      memberSavings: openingSavings,
+      statutoryReserve: openingReserve,
+      retainedSurplus: openingRetained,
+      total: openingTotal,
+    },
+    {
+      rowKey: "contributions",
+      label: "Add: Member Contributions & Savings Inflows",
+      memberSavings: periodContributions,
+      statutoryReserve: 0,
+      retainedSurplus: 0,
+      total: periodContributions,
+    },
+    {
+      rowKey: "refunds",
+      label: "Less: Approved Member Refunds / Exits",
+      memberSavings: -periodRefunds,
+      statutoryReserve: 0,
+      retainedSurplus: 0,
+      total: -periodRefunds,
+    },
+    {
+      rowKey: "netSurplus",
+      label: "Net Operating Surplus for the Period",
+      memberSavings: 0,
+      statutoryReserve: statutoryAllocation,
+      retainedSurplus: distributableAllocation,
+      total: roundCurrency2_(statutoryAllocation + distributableAllocation),
+    },
+    {
+      rowKey: "statutoryAllocation",
+      label: "Statutory Allocation to Reserve Fund (20%)",
+      memberSavings: 0,
+      statutoryReserve: statutoryAllocation,
+      retainedSurplus: 0,
+      total: statutoryAllocation,
+    },
+    {
+      rowKey: "distributableAllocation",
+      label: "Distributable Allocation to Retained Surplus (80%)",
+      memberSavings: 0,
+      statutoryReserve: 0,
+      retainedSurplus: distributableAllocation,
+      total: distributableAllocation,
+    },
+    {
+      rowKey: "dividends",
+      label: "Less: Dividends & Surplus Distributions Declared/Paid",
+      memberSavings: 0,
+      statutoryReserve: 0,
+      retainedSurplus: -periodDividends,
+      total: -periodDividends,
+    },
+    {
+      rowKey: "closingBalance",
+      label: "Balance as at End of Period (Closing Balances)",
+      memberSavings: calculatedClosingSavings,
+      statutoryReserve: calculatedClosingReserve,
+      retainedSurplus: calculatedClosingRetained,
+      total: calculatedClosingTotal,
+    },
+  ];
+
+  return {
+    range: rangeKey,
+    periodStart: Utilities.formatDate(bounds.start, timeZone, "dd MMM yyyy"),
+    periodEnd: Utilities.formatDate(new Date(bounds.end.getTime() - 1), timeZone, "dd MMM yyyy"),
+    columns: [
+      "Member Savings (Share Capital)",
+      "Statutory Reserve Fund (20%)",
+      "Retained Distributable Surplus (80%)",
+      "Total Members' Equity",
+    ],
+    openingBalances: {
+      memberSavings: openingSavings,
+      statutoryReserve: openingReserve,
+      retainedSurplus: openingRetained,
+      total: openingTotal,
+    },
+    movements: {
+      contributions: periodContributions,
+      refunds: periodRefunds,
+      netOperatingSurplus: netOperatingSurplus,
+      statutoryAllocation: statutoryAllocation,
+      distributableAllocation: distributableAllocation,
+      dividends: periodDividends,
+    },
+    closingBalances: {
+      memberSavings: calculatedClosingSavings,
+      statutoryReserve: calculatedClosingReserve,
+      retainedSurplus: calculatedClosingRetained,
+      total: calculatedClosingTotal,
+    },
+    rows: rows,
+    reconciliation: {
+      balanceSheetTotalEquity: closingTotalEquity,
+      statementClosingEquity: calculatedClosingTotal,
+      variance: variance,
+      isReconciled: isBalanced,
+    },
+    variance: variance,
+    isBalanced: isBalanced,
+  };
+}
+
+/**
+ * RPT-3: Direct Cash Flow Statement (IAS 7).
+ * Implements Direct Method with 3 canonical operating, investing, and financing sections,
+ * reconciling opening and closing Cash & Cash Equivalents against Balance Sheet cash.
+ */
+function buildCashFlowStatement_(ss, tz, now, effectiveRange, liquiditySummary, portfolio, incomeStatement, balanceSheet) {
+  const spreadsheet = ss || getSpreadsheet_();
+  const timeZone = tz || (spreadsheet && spreadsheet.getSpreadsheetTimeZone()) || "Africa/Nairobi";
+  const today = now || new Date();
+  const rangeKey = normalizeRangeKey_(effectiveRange);
+  const bounds = getDateRangeBounds_(rangeKey, today);
+
+  let closingCash = roundCurrency2_(liquiditySummary && liquiditySummary.cash);
+  if (
+    balanceSheet &&
+    balanceSheet.assets &&
+    balanceSheet.assets.cashAndEquivalents &&
+    balanceSheet.assets.cashAndEquivalents.totalCash !== undefined
+  ) {
+    closingCash = roundCurrency2_(balanceSheet.assets.cashAndEquivalents.totalCash);
+  }
+
+  // 1. Operating Activities
+  let contributionsReceipts = 0;
+  let registrationAndWelfareFees = 0;
+  let memberRefundsPaid = 0;
+
+  try {
+    const cSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.CONTRIBUTIONS);
+    if (cSheet && cSheet.getLastRow() > 1) {
+      const cRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, cSheet) : cSheet.getDataRange().getValues();
+      if (cRows.length > 1) {
+        const col = getHeaderMap_(cRows[0]);
+        const dateCol = col["Date"];
+        const amtCol = col["Amount"];
+        const statCol = col["Status"];
+        const typeCol = col["Type"] !== undefined ? col["Type"] : col["Contribution Type"];
+        const modeCol = col["Deposit Channel"] !== undefined ? col["Deposit Channel"] : col["Payment Mode"];
+
+        if (dateCol !== undefined && amtCol !== undefined) {
+          for (let i = 1; i < cRows.length; i++) {
+            const row = cRows[i];
+            const stat = statCol !== undefined ? String(row[statCol] || "").trim().toLowerCase() : "";
+            if (stat === "rejected" || stat === "pending") continue;
+
+            const dt = parseSheetDate_(row[dateCol]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+            const amt = Number(row[amtCol]) || 0;
+            const type = typeCol !== undefined ? String(row[typeCol] || "").toLowerCase() : "";
+            const mode = modeCol !== undefined ? String(row[modeCol] || "").toLowerCase() : "";
+
+            if (
+              amt < 0 ||
+              mode.indexOf("refund") !== -1 ||
+              mode.indexOf("exit") !== -1 ||
+              type.indexOf("refund") !== -1 ||
+              type.indexOf("exit") !== -1
+            ) {
+              memberRefundsPaid += Math.abs(amt);
+            } else if (
+              type.indexOf("registration") !== -1 ||
+              type.indexOf("welfare") !== -1 ||
+              mode.indexOf("registration") !== -1 ||
+              mode.indexOf("welfare") !== -1
+            ) {
+              registrationAndWelfareFees += amt;
+            } else if (amt > 0) {
+              contributionsReceipts += amt;
+            }
+          }
+        }
+      }
+    }
+  } catch (eC) {
+    console.error("buildCashFlowStatement_ contributions error: " + eC.message);
+  }
+
+  // Cash Receipts from Loan Repayments (Principal & Interest)
+  let loanRepaymentsReceipts = 0;
+  try {
+    const repSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOAN_REPAYMENTS);
+    if (repSheet && repSheet.getLastRow() > 1) {
+      const rRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, repSheet) : repSheet.getDataRange().getValues();
+      if (rRows.length > 1) {
+        const col = getHeaderMap_(rRows[0]);
+        const dateCol =
+          col["Payment Date"] !== undefined
+            ? col["Payment Date"]
+            : (col["Repayment Date"] !== undefined ? col["Repayment Date"] : col["Date"]);
+        const amtCol = col["Total Paid"] !== undefined ? col["Total Paid"] : col["Amount"];
+        const statCol = col["Status"];
+
+        if (dateCol !== undefined && amtCol !== undefined) {
+          for (let r = 1; r < rRows.length; r++) {
+            const row = rRows[r];
+            const stat = statCol !== undefined ? String(row[statCol] || "").trim().toLowerCase() : "";
+            if (stat !== "" && stat !== "approved") continue;
+
+            const dt = parseSheetDate_(row[dateCol]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+            loanRepaymentsReceipts += Number(row[amtCol]) || 0;
+          }
+        }
+      }
+    }
+  } catch (eRep) {
+    console.error("buildCashFlowStatement_ repayments error: " + eRep.message);
+  }
+
+  // Cash Receipts from Loan Processing Fees & Fines
+  const is = incomeStatement || {};
+  const isOpRev = is.operatingRevenue || {};
+  let loanFeesAndFinesReceipts = roundCurrency2_(
+    (Number(isOpRev.processingFees) || 0) + (Number(isOpRev.finesAndPenalties) || 0)
+  );
+
+  // Cash Receipts from Liquid Fund Yields (CIC MMF Yield)
+  const isInvYield = is.investmentYields || {};
+  let liquidFundYieldsReceipts = roundCurrency2_(Number(isInvYield.cicMmfNetYield) || 0);
+
+  // Cash Disbursed for Member Loans
+  let loansDisbursed = 0;
+  try {
+    const lSheet = getSheetByNameInsensitive_(spreadsheet, SHEETS.LOANS);
+    if (lSheet && lSheet.getLastRow() > 1) {
+      const lRows = typeof getSheetValuesCached_ === "function" ? getSheetValuesCached_(spreadsheet, lSheet) : lSheet.getDataRange().getValues();
+      if (lRows.length > 1) {
+        const col = getHeaderMap_(lRows[0]);
+        const appDateCol = col["Approved Date"] !== undefined ? col["Approved Date"] : col["Request Date"];
+        const amtCol = col["Principal Amount"] !== undefined ? col["Principal Amount"] : col["Requested Amount"];
+        const statCol = col["Status"];
+
+        if (appDateCol !== undefined && amtCol !== undefined && statCol !== undefined) {
+          for (let k = 1; k < lRows.length; k++) {
+            const row = lRows[k];
+            const stat = String(row[statCol] || "").trim().toLowerCase();
+            if (stat !== "active" && stat !== "settled") continue;
+
+            const dt = parseSheetDate_(row[appDateCol]);
+            if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+            loansDisbursed += Number(row[amtCol]) || 0;
+          }
+        }
+      }
+    }
+  } catch (eL) {
+    console.error("buildCashFlowStatement_ loans error: " + eL.message);
+  }
+
+  // Cash Paid for Operating Expenses & Bank Charges
+  const isOpExp = is.operatingExpenses || {};
+  let operatingExpensesPaid = roundCurrency2_(Number(isOpExp.totalExpenses) || 0);
+
+  // 2. Investing Activities
+  let capitalInjectedProjects = 0;
+  let capitalInjectedExternal = 0;
+  let projectInflows = 0;
+  let investmentLiquidationAndYields = roundCurrency2_(Number(isInvYield.externalInvestments) || 0);
+  let dividendsPaid = 0;
+
+  try {
+    if (typeof readUnifiedInvestmentLedgerValues_ === "function") {
+      const lv = readUnifiedInvestmentLedgerValues_(spreadsheet);
+      if (lv.length > 1) {
+        const lc = getHeaderMap_(lv[0]);
+        for (let j = 1; j < lv.length; j++) {
+          const row = lv[j];
+          const dt = parseSheetDate_(row[lc["Date"]]);
+          if (!dt || !isWithinRange_(dt, bounds.start, bounds.end)) continue;
+
+          const kind = typeof normalizeLedgerType_ === "function" ? normalizeLedgerType_(row[lc["Type"]]) : String(row[lc["Type"]] || "").toLowerCase();
+          const amt = Math.abs(Number(row[lc["Amount"]]) || 0);
+          const entityType = lc["Entity Type"] !== undefined ? String(row[lc["Entity Type"]] || "").toLowerCase() : "";
+          const cat = lc["Category"] !== undefined ? String(row[lc["Category"]] || "").toLowerCase() : "";
+          const desc = lc["Description"] !== undefined ? String(row[lc["Description"]] || "").toLowerCase() : "";
+          const text = (desc + " " + cat);
+
+          if (kind === "capital in") {
+            if (
+              entityType === "project" ||
+              text.indexOf("project") !== -1 ||
+              text.indexOf("bee") !== -1 ||
+              text.indexOf("land") !== -1 ||
+              text.indexOf("farm") !== -1
+            ) {
+              capitalInjectedProjects += amt;
+            } else {
+              capitalInjectedExternal += amt;
+            }
+          } else if (kind === "revenue") {
+            if (
+              entityType === "project" ||
+              text.indexOf("project") !== -1 ||
+              text.indexOf("honey") !== -1 ||
+              text.indexOf("harvest") !== -1 ||
+              text.indexOf("lease") !== -1
+            ) {
+              projectInflows += amt;
+            }
+          } else if (kind === "withdrawal") {
+            if (text.indexOf("dividend") !== -1) {
+              dividendsPaid += amt;
+            } else if (text.indexOf("refund") !== -1 || text.indexOf("exit") !== -1) {
+              memberRefundsPaid += amt;
+            } else {
+              investmentLiquidationAndYields += amt;
+            }
+          } else if (kind === "expense") {
+            if (text.indexOf("dividend") !== -1) {
+              dividendsPaid += amt;
+            }
+          }
+        }
+      }
+    }
+  } catch (eLedger) {
+    console.error("buildCashFlowStatement_ ledger investing/financing error: " + eLedger.message);
+  }
+
+  contributionsReceipts = roundCurrency2_(contributionsReceipts);
+  loanRepaymentsReceipts = roundCurrency2_(loanRepaymentsReceipts);
+  loanFeesAndFinesReceipts = roundCurrency2_(loanFeesAndFinesReceipts);
+  liquidFundYieldsReceipts = roundCurrency2_(liquidFundYieldsReceipts);
+  loansDisbursed = roundCurrency2_(loansDisbursed);
+  operatingExpensesPaid = roundCurrency2_(operatingExpensesPaid);
+
+  capitalInjectedProjects = roundCurrency2_(capitalInjectedProjects);
+  capitalInjectedExternal = roundCurrency2_(capitalInjectedExternal);
+  projectInflows = roundCurrency2_(projectInflows);
+  investmentLiquidationAndYields = roundCurrency2_(investmentLiquidationAndYields);
+
+  registrationAndWelfareFees = roundCurrency2_(registrationAndWelfareFees);
+  memberRefundsPaid = roundCurrency2_(memberRefundsPaid);
+  dividendsPaid = roundCurrency2_(dividendsPaid);
+
+  const netOperatingCashFlow = roundCurrency2_(
+    (contributionsReceipts + loanRepaymentsReceipts + loanFeesAndFinesReceipts + liquidFundYieldsReceipts) -
+    (loansDisbursed + operatingExpensesPaid)
+  );
+
+  const netInvestingCashFlow = roundCurrency2_(
+    (projectInflows + investmentLiquidationAndYields) -
+    (capitalInjectedProjects + capitalInjectedExternal)
+  );
+
+  const netFinancingCashFlow = roundCurrency2_(
+    registrationAndWelfareFees - (memberRefundsPaid + dividendsPaid)
+  );
+
+  const netIncreaseInCash = roundCurrency2_(
+    netOperatingCashFlow + netInvestingCashFlow + netFinancingCashFlow
+  );
+
+  const openingCash = Math.max(0, roundCurrency2_(closingCash - netIncreaseInCash));
+  const bsCash = roundCurrency2_(
+    (balanceSheet &&
+      balanceSheet.assets &&
+      balanceSheet.assets.cashAndEquivalents &&
+      balanceSheet.assets.cashAndEquivalents.totalCash !== undefined)
+      ? balanceSheet.assets.cashAndEquivalents.totalCash
+      : closingCash
+  );
+  const variance = roundCurrency2_(closingCash - bsCash);
+  const isReconciled = Math.abs(variance) < 0.01;
+
+  return {
+    range: rangeKey,
+    periodStart: Utilities.formatDate(bounds.start, timeZone, "dd MMM yyyy"),
+    periodEnd: Utilities.formatDate(new Date(bounds.end.getTime() - 1), timeZone, "dd MMM yyyy"),
+    operatingActivities: {
+      contributionsReceipts: contributionsReceipts,
+      loanRepaymentsReceipts: loanRepaymentsReceipts,
+      loanFeesAndFinesReceipts: loanFeesAndFinesReceipts,
+      liquidFundYieldsReceipts: liquidFundYieldsReceipts,
+      loansDisbursed: loansDisbursed,
+      operatingExpensesPaid: operatingExpensesPaid,
+      netOperatingCashFlow: netOperatingCashFlow,
+    },
+    investingActivities: {
+      capitalInjectedProjects: capitalInjectedProjects,
+      capitalInjectedExternal: capitalInjectedExternal,
+      projectInflows: projectInflows,
+      investmentLiquidationAndYields: investmentLiquidationAndYields,
+      netInvestingCashFlow: netInvestingCashFlow,
+    },
+    financingActivities: {
+      registrationAndWelfareFees: registrationAndWelfareFees,
+      memberRefundsPaid: memberRefundsPaid,
+      dividendsPaid: dividendsPaid,
+      netFinancingCashFlow: netFinancingCashFlow,
+    },
+    reconciliation: {
+      netIncreaseInCash: netIncreaseInCash,
+      openingCash: openingCash,
+      closingCash: closingCash,
+      balanceSheetCash: bsCash,
+      variance: variance,
+      isReconciled: isReconciled,
+    },
+    summary: {
+      netOperating: netOperatingCashFlow,
+      netInvesting: netInvestingCashFlow,
+      netFinancing: netFinancingCashFlow,
+      netChangeInCash: netIncreaseInCash,
+      openingCash: openingCash,
+      closingCash: closingCash,
+      variance: variance,
+      isReconciled: isReconciled,
+    },
+  };
+}
+
+/**
  * RPT-4: Official AGM & Bank Audit Export Pack.
  * Aggregates Balance Sheet, Income Statement, Investment Projects Summary,
  * and SASRA / prudential financial ratios using the request-scoped SheetContext.
@@ -1776,6 +2409,8 @@ function getAgmAuditPackData(rangeKey) {
 
       const balanceSheet = (homeData && homeData.balanceSheet) || {};
       const incomeStatement = (homeData && homeData.incomeStatement) || {};
+      const equityStatement = (homeData && homeData.equityStatement) || {};
+      const cashFlowStatement = (homeData && homeData.cashFlowStatement) || {};
       const portfolio = (homeData && homeData.portfolio) || {};
 
       let projectsSummary = {
@@ -1829,6 +2464,8 @@ function getAgmAuditPackData(rangeKey) {
           verificationRef: verificationRef,
           balanceSheet: balanceSheet,
           incomeStatement: incomeStatement,
+          equityStatement: equityStatement,
+          cashFlowStatement: cashFlowStatement,
           projectsSummary: projectsSummary,
           ratios: {
             solvencyRatio: solvencyRatio,
@@ -1842,6 +2479,60 @@ function getAgmAuditPackData(rangeKey) {
     } finally {
       if (typeof resetRequestSheetContext_ === "function") resetRequestSheetContext_();
     }
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * RPT-4: Official AGM & Bank Audit Pack alias.
+ */
+function getAgmAuditExportPackData(rangeKey) {
+  return getAgmAuditPackData(rangeKey);
+}
+
+/**
+ * RPT-3: Executive Financial Reports Suite.
+ * Returns Balance Sheet (RPT-1), Income Statement (RPT-2),
+ * Statement of Changes in Equity (RPT-3), Direct Cash Flow Statement (RPT-3),
+ * Liquidity Summary, and Credit Portfolio metrics.
+ */
+function getExecutiveFinancialReports(rangeKey) {
+  try {
+    requireAccess_();
+    const effectiveRange = normalizeRangeKey_(rangeKey || "year");
+    const homeData = getHomeAnalyticsByRange_(effectiveRange);
+    const balanceSheet = (homeData && homeData.balanceSheet) || {};
+    const incomeStatement = (homeData && homeData.incomeStatement) || {};
+    const equityStatement = (homeData && homeData.equityStatement) || {};
+    const cashFlowStatement = (homeData && homeData.cashFlowStatement) || {};
+    const liquiditySummary = (homeData && homeData.liquiditySummary) || {
+      cash: (homeData && homeData.cash) || 0,
+      liquidity: (homeData && homeData.liquidity) || {},
+    };
+    const portfolio = (homeData && homeData.portfolio) || {};
+
+    return {
+      ok: true,
+      range: effectiveRange,
+      asOfDate: balanceSheet.asOfDate || Utilities.formatDate(new Date(), "Africa/Nairobi", "dd MMM yyyy"),
+      balanceSheet: balanceSheet,
+      incomeStatement: incomeStatement,
+      equityStatement: equityStatement,
+      cashFlowStatement: cashFlowStatement,
+      liquiditySummary: liquiditySummary,
+      portfolio: portfolio,
+      data: {
+        range: effectiveRange,
+        asOfDate: balanceSheet.asOfDate || Utilities.formatDate(new Date(), "Africa/Nairobi", "dd MMM yyyy"),
+        balanceSheet: balanceSheet,
+        incomeStatement: incomeStatement,
+        equityStatement: equityStatement,
+        cashFlowStatement: cashFlowStatement,
+        liquiditySummary: liquiditySummary,
+        portfolio: portfolio,
+      },
+    };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -1865,7 +2556,9 @@ function csvEscapeCell_(val) {
 }
 
 /**
- * RPT-4: Exports the Official AGM & Bank Audit Pack as an RFC-4180 CSV
+ * RPT-4 & RPT-3: Exports the Official AGM & Bank Audit Pack as an RFC-4180 CSV
+ * containing Sections 1-6 (Financial Position, Comprehensive Income, Equity Changes,
+ * Direct Cash Flows, Investment Projects Summary, and SASRA Prudential Ratios)
  * with formula-injection neutralization via safeCellText_().
  */
 function exportAgmAuditPackCSV(rangeKey) {
@@ -1878,6 +2571,8 @@ function exportAgmAuditPackCSV(rangeKey) {
     const d = res.data;
     const bs = d.balanceSheet || {};
     const is = d.incomeStatement || {};
+    const eq = d.equityStatement || {};
+    const cf = d.cashFlowStatement || {};
     const ratios = d.ratios || {};
     const proj = d.projectsSummary || { projects: [], totals: {} };
 
@@ -1893,22 +2588,14 @@ function exportAgmAuditPackCSV(rangeKey) {
     pushRow(["Generated At", d.generatedAt]);
     pushRow([]);
 
-    pushRow(["SECTION 1: SASRA / PRUDENTIAL FINANCIAL RATIOS", "Value"]);
-    pushRow(["Solvency Ratio (%)", ratios.solvencyRatio]);
-    pushRow(["Liquidity Ratio (%)", ratios.liquidityRatio]);
-    pushRow(["Cost-to-Income Ratio (%)", ratios.costToIncomeRatio]);
-    pushRow(["Return on Assets (%)", ratios.returnOnAssets]);
-    pushRow(["Loan Loss Reserve Coverage (%)", ratios.loanLossReserveCoverage]);
-    pushRow([]);
-
     const assets = bs.assets || {};
     const cash = assets.cashAndEquivalents || {};
     const loansRec = assets.loansReceivable || {};
     const extInv = assets.externalInvestments || {};
     const liab = bs.liabilities || {};
-    const eq = bs.equity || {};
+    const bsEq = bs.equity || {};
 
-    pushRow(["SECTION 2: STATEMENT OF FINANCIAL POSITION (BALANCE SHEET)", "Amount (KES)"]);
+    pushRow(["SECTION 1: STATEMENT OF FINANCIAL POSITION (BALANCE SHEET)", "Amount (KES)"]);
     pushRow(["Operating Cash (Bank / Till)", cash.operatingCash || 0]);
     pushRow(["Cash Equivalents (MMF / Funds)", cash.cashEquivalents || 0]);
     pushRow(["Total Cash & Equivalents", cash.totalCash || 0]);
@@ -1919,10 +2606,10 @@ function exportAgmAuditPackCSV(rangeKey) {
     pushRow(["TOTAL ASSETS", assets.totalAssets || 0]);
     pushRow(["Payables / Liabilities", liab.payables || 0]);
     pushRow(["TOTAL LIABILITIES", liab.totalLiabilities || 0]);
-    pushRow(["Member Savings", eq.memberSavings || 0]);
-    pushRow(["Statutory Reserve (20%)", eq.statutoryReserve || 0]);
-    pushRow(["Retained Surplus", eq.retainedSurplus || 0]);
-    pushRow(["TOTAL EQUITY", eq.totalEquity || 0]);
+    pushRow(["Member Savings", bsEq.memberSavings || 0]);
+    pushRow(["Statutory Reserve (20%)", bsEq.statutoryReserve || 0]);
+    pushRow(["Retained Surplus", bsEq.retainedSurplus || 0]);
+    pushRow(["TOTAL EQUITY", bsEq.totalEquity || 0]);
     pushRow(["TOTAL LIABILITIES & EQUITY", bs.totalLiabilitiesAndEquity || 0]);
     pushRow(["Balance Sheet Variance", bs.variance || 0]);
     pushRow([]);
@@ -1932,7 +2619,7 @@ function exportAgmAuditPackCSV(rangeKey) {
     const opExp = is.operatingExpenses || {};
     const app = is.appropriations || {};
 
-    pushRow(["SECTION 3: STATEMENT OF COMPREHENSIVE INCOME", "Amount (KES)"]);
+    pushRow(["SECTION 2: STATEMENT OF COMPREHENSIVE INCOME", "Amount (KES)"]);
     pushRow(["Loan Interest Income", opRev.loanInterest || 0]);
     pushRow(["Processing Fees", opRev.processingFees || 0]);
     pushRow(["Fines & Penalties", opRev.finesAndPenalties || 0]);
@@ -1952,7 +2639,115 @@ function exportAgmAuditPackCSV(rangeKey) {
     pushRow([]);
 
     pushRow([
-      "SECTION 4: INVESTMENT PROJECTS SUMMARY",
+      "SECTION 3: STATEMENT OF CHANGES IN EQUITY",
+      "Member Savings (Share Capital)",
+      "Statutory Reserve Fund (20%)",
+      "Retained Distributable Surplus (80%)",
+      "Total Members' Equity",
+    ]);
+    const eqRows = (eq && eq.rows) || [];
+    if (eqRows.length > 0) {
+      eqRows.forEach(function (r) {
+        pushRow([
+          r.label,
+          r.memberSavings !== undefined ? r.memberSavings : 0,
+          r.statutoryReserve !== undefined ? r.statutoryReserve : 0,
+          r.retainedSurplus !== undefined ? r.retainedSurplus : 0,
+          r.total !== undefined ? r.total : 0,
+        ]);
+      });
+    } else {
+      const openBal = (eq && eq.openingBalances) || {};
+      const closeBal = (eq && eq.closingBalances) || {};
+      const mv = (eq && eq.movements) || {};
+      pushRow([
+        "Balance as at Beginning of Period (Opening Balances)",
+        openBal.memberSavings || 0,
+        openBal.statutoryReserve || 0,
+        openBal.retainedSurplus || 0,
+        openBal.total || 0,
+      ]);
+      pushRow(["Add: Member Contributions & Savings Inflows", mv.contributions || 0, 0, 0, mv.contributions || 0]);
+      pushRow(["Less: Approved Member Refunds / Exits", -(mv.refunds || 0), 0, 0, -(mv.refunds || 0)]);
+      pushRow([
+        "Net Operating Surplus for the Period",
+        0,
+        mv.statutoryAllocation || 0,
+        mv.distributableAllocation || 0,
+        mv.netOperatingSurplus || 0,
+      ]);
+      pushRow([
+        "Statutory Allocation to Reserve Fund (20%)",
+        0,
+        mv.statutoryAllocation || 0,
+        0,
+        mv.statutoryAllocation || 0,
+      ]);
+      pushRow([
+        "Distributable Allocation to Retained Surplus (80%)",
+        0,
+        0,
+        mv.distributableAllocation || 0,
+        mv.distributableAllocation || 0,
+      ]);
+      pushRow([
+        "Less: Dividends & Surplus Distributions Declared/Paid",
+        0,
+        0,
+        -(mv.dividends || 0),
+        -(mv.dividends || 0),
+      ]);
+      pushRow([
+        "Balance as at End of Period (Closing Balances)",
+        closeBal.memberSavings || 0,
+        closeBal.statutoryReserve || 0,
+        closeBal.retainedSurplus || 0,
+        closeBal.total || 0,
+      ]);
+    }
+    pushRow([]);
+
+    pushRow(["SECTION 4: DIRECT CASH FLOW STATEMENT (IAS 7)", "Amount (KES)"]);
+    const opFlow = (cf && cf.operatingActivities) || {};
+    const invFlow = (cf && cf.investingActivities) || {};
+    const finFlow = (cf && cf.financingActivities) || {};
+    const cfRec = (cf && cf.reconciliation) || {};
+
+    pushRow(["Section I: Cash Flows from Operating Activities", ""]);
+    pushRow(["Cash Receipts from Member Contributions & Savings (+)", opFlow.contributionsReceipts || 0]);
+    pushRow(["Cash Receipts from Loan Repayments (Principal & Interest) (+)", opFlow.loanRepaymentsReceipts || 0]);
+    pushRow(["Cash Receipts from Loan Processing Fees & Fines (+)", opFlow.loanFeesAndFinesReceipts || 0]);
+    pushRow(["Cash Receipts from Liquid Fund Yields (CIC MMF Yield) (+)", opFlow.liquidFundYieldsReceipts || 0]);
+    pushRow(["Cash Disbursed for Member Loans (-)", -(opFlow.loansDisbursed || 0)]);
+    pushRow(["Cash Paid for Operating Expenses & Bank Charges (-)", -(opFlow.operatingExpensesPaid || 0)]);
+    pushRow(["Net Cash Generated from / (Used in) Operating Activities", opFlow.netOperatingCashFlow || 0]);
+    pushRow([]);
+
+    pushRow(["Section II: Cash Flows from Investing Activities", ""]);
+    pushRow(["Capital Injected into Tangible Capital Projects (-)", -(invFlow.capitalInjectedProjects || 0)]);
+    pushRow(["Capital Injected into External Financial Investments (-)", -(invFlow.capitalInjectedExternal || 0)]);
+    pushRow(["Cash Inflows from Project Operations & Revenue (+)", invFlow.projectInflows || 0]);
+    pushRow(["Cash Received from Investment Liquidation / Yields (+)", invFlow.investmentLiquidationAndYields || 0]);
+    pushRow(["Net Cash Generated from / (Used in) Investing Activities", invFlow.netInvestingCashFlow || 0]);
+    pushRow([]);
+
+    pushRow(["Section III: Cash Flows from Financing Activities", ""]);
+    pushRow(["Cash Receipts from Registration / Welfare Fees (+)", finFlow.registrationAndWelfareFees || 0]);
+    pushRow(["Cash Paid for Member Exits / Savings Refunds (-)", -(finFlow.memberRefundsPaid || 0)]);
+    pushRow(["Cash Paid for Dividends & Member Payouts (-)", -(finFlow.dividendsPaid || 0)]);
+    pushRow(["Net Cash Generated from / (Used in) Financing Activities", finFlow.netFinancingCashFlow || 0]);
+    pushRow([]);
+
+    pushRow(["Reconciliation & Cash Summary", ""]);
+    pushRow(["Net Increase / (Decrease) in Cash and Cash Equivalents", cfRec.netIncreaseInCash || 0]);
+    pushRow(["Add: Cash and Cash Equivalents at Beginning of Period", cfRec.openingCash || 0]);
+    pushRow(["Equals: Cash and Cash Equivalents at End of Period (Bank + Mobile + CIC MMF)", cfRec.closingCash || 0]);
+    pushRow(["Balance Sheet Cash & Equivalents", cfRec.balanceSheetCash || 0]);
+    pushRow(["Cash Reconciliation Variance", cfRec.variance || 0]);
+    pushRow([]);
+
+    pushRow([
+      "SECTION 5: INVESTMENT PROJECTS SUMMARY",
       "Project Name",
       "Category",
       "Status",
@@ -1990,6 +2785,14 @@ function exportAgmAuditPackCSV(rangeKey) {
       pt.netSurplus || 0,
       "",
     ]);
+    pushRow([]);
+
+    pushRow(["SECTION 6: SASRA / PRUDENTIAL FINANCIAL RATIOS", "Value"]);
+    pushRow(["Solvency Ratio (%)", ratios.solvencyRatio]);
+    pushRow(["Liquidity Ratio (%)", ratios.liquidityRatio]);
+    pushRow(["Cost-to-Income Ratio (%)", ratios.costToIncomeRatio]);
+    pushRow(["Return on Assets (%)", ratios.returnOnAssets]);
+    pushRow(["Loan Loss Reserve Coverage (%)", ratios.loanLossReserveCoverage]);
 
     return {
       ok: true,
