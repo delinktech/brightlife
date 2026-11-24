@@ -5,6 +5,9 @@
   let loadedContributions = [];
   let filteredContributions = [];
   let currentReceiptData = null;
+  let contributionSortColumn = null;
+  let contributionSortDirection = null; // 'asc' | 'desc' | null
+  let contributionPreset = "all";
 
   function renderStatusBadge(status) {
     if (typeof renderStatusPill === "function") {
@@ -295,6 +298,217 @@
     }
   }
 
+  function isContributionThisMonth(dateVal) {
+    if (!dateVal) return false;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }
+
+  function isContributionSavings(c) {
+    const t = String(c.type || "").toLowerCase();
+    return t.indexOf("loan") === -1;
+  }
+
+  function isContributionLoanRepayment(c) {
+    const t = String(c.type || "").toLowerCase();
+    return t.indexOf("loan") !== -1;
+  }
+
+  function isContributionUnallocated(c) {
+    const st = String(c.status || "").toLowerCase();
+    const name = String(c.name || "").toLowerCase();
+    const mid = String(c.memberId || "").toLowerCase();
+    return st === "pending" || st.indexOf("suspense") !== -1 || st.indexOf("unallocated") !== -1 ||
+      !mid || mid === "unknown" || name.indexOf("unallocated") !== -1 || name.indexOf("suspense") !== -1 || name.indexOf("unknown") !== -1;
+  }
+
+  function isContributionLarge(c) {
+    const amt = Number(c.amountRaw !== undefined ? c.amountRaw : String(c.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+    return amt >= 10000;
+  }
+
+  function updateContributionPresetCounts() {
+    const list = loadedContributions || [];
+    const allCount = list.length;
+    let thisMonthCount = 0;
+    let savingsCount = 0;
+    let loanRepayCount = 0;
+    let unallocatedCount = 0;
+    let largeCount = 0;
+
+    list.forEach(function (c) {
+      if (isContributionThisMonth(c.date)) thisMonthCount++;
+      if (isContributionSavings(c)) savingsCount++;
+      if (isContributionLoanRepayment(c)) loanRepayCount++;
+      if (isContributionUnallocated(c)) unallocatedCount++;
+      if (isContributionLarge(c)) largeCount++;
+    });
+
+    const elAll = document.getElementById("c-count-all");
+    const elMonth = document.getElementById("c-count-this_month");
+    const elSavings = document.getElementById("c-count-savings");
+    const elRepay = document.getElementById("c-count-loan_repayments");
+    const elUnalloc = document.getElementById("c-count-unallocated");
+    const elLarge = document.getElementById("c-count-large");
+
+    if (elAll) elAll.innerText = allCount;
+    if (elMonth) elMonth.innerText = thisMonthCount;
+    if (elSavings) elSavings.innerText = savingsCount;
+    if (elRepay) elRepay.innerText = loanRepayCount;
+    if (elUnalloc) elUnalloc.innerText = unallocatedCount;
+    if (elLarge) elLarge.innerText = largeCount;
+  }
+
+  function setContributionPreset(presetKey) {
+    contributionPreset = String(presetKey || "all").toLowerCase();
+    const pills = document.querySelectorAll(".c-preset-pill");
+    const activeClass = "c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100";
+    const inactiveClass = "c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700";
+
+    pills.forEach(function (btn) {
+      if (btn.id === "c-preset-" + contributionPreset) {
+        btn.className = activeClass;
+      } else {
+        btn.className = inactiveClass;
+      }
+    });
+
+    filterContributionsTable(1);
+  }
+  window.setContributionPreset = setContributionPreset;
+
+  function sortContributions(columnKey) {
+    if (contributionSortColumn === columnKey) {
+      if (contributionSortDirection === "asc") {
+        contributionSortDirection = "desc";
+      } else if (contributionSortDirection === "desc") {
+        contributionSortDirection = null;
+        contributionSortColumn = null;
+      } else {
+        contributionSortDirection = "asc";
+      }
+    } else {
+      contributionSortColumn = columnKey;
+      contributionSortDirection = "asc";
+    }
+    updateContributionSortHeaders();
+    filterContributionsTable(currentPage);
+  }
+  window.sortContributions = sortContributions;
+
+  function updateContributionSortHeaders() {
+    const cols = ["date", "name", "type", "amount", "mode", "status"];
+    cols.forEach(function (col) {
+      const th = document.getElementById("th-c-" + col);
+      if (!th) return;
+      const iconWrap = th.querySelector(".sort-icon");
+      if (contributionSortColumn === col && contributionSortDirection) {
+        th.setAttribute("aria-sort", contributionSortDirection === "asc" ? "ascending" : "descending");
+        if (iconWrap) {
+          iconWrap.innerHTML = contributionSortDirection === "asc"
+            ? '<i class="fas fa-sort-up text-emerald-600 dark:text-emerald-400"></i>'
+            : '<i class="fas fa-sort-down text-emerald-600 dark:text-emerald-400"></i>';
+        }
+      } else {
+        th.setAttribute("aria-sort", "none");
+        if (iconWrap) {
+          iconWrap.innerHTML = '<i class="fas fa-sort text-slate-300 dark:text-slate-600"></i>';
+        }
+      }
+    });
+  }
+
+  function getContributionSortValue(c, col) {
+    switch (col) {
+      case "date":
+        return c.date ? new Date(c.date).getTime() : 0;
+      case "name":
+        return String(c.name || "");
+      case "type":
+        return String(c.type || "");
+      case "amount":
+        return Number(c.amountRaw !== undefined ? c.amountRaw : String(c.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+      case "mode":
+        return String(c.mode || "");
+      case "status":
+        return String(c.status || "");
+      default:
+        return 0;
+    }
+  }
+
+  function sanitizeContributionCsvCell(val) {
+    let s = String(val === undefined || val === null ? "" : val);
+    if (/^[=+\-@\t\r]/.test(s)) {
+      s = "'" + s;
+    }
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function exportContributionsCSV() {
+    const dataset = filteredContributions || [];
+    if (!dataset.length) {
+      if (typeof showNotification === "function") {
+        showNotification("No contributions found matching current filter to export.", "warning");
+      }
+      return;
+    }
+
+    const headers = [
+      "Date",
+      "Member ID",
+      "Member Name",
+      "Transaction Type",
+      "Amount (KES)",
+      "Payment Channel",
+      "Transaction ID",
+      "Status",
+      "Verified By"
+    ];
+    const rows = [headers];
+
+    dataset.forEach(function (c) {
+      const amt = Number(c.amountRaw !== undefined ? c.amountRaw : String(c.amount || "").replace(/[^0-9.-]/g, "")) || 0;
+      rows.push([
+        c.date || "",
+        c.memberId || "",
+        c.name || "",
+        c.type || "",
+        amt.toFixed(2),
+        c.mode || "",
+        c.tid || "",
+        c.status || "Approved",
+        c.verifiedBy || ""
+      ]);
+    });
+
+    const csvContent = rows.map(function (row) {
+      return row.map(sanitizeContributionCsvCell).join(",");
+    }).join("\r\n");
+
+    if (typeof Blob !== "undefined" && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = "brightlife_contributions_" + dateStr + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+      }, 500);
+    }
+
+    if (typeof showNotification === "function") {
+      showNotification("Exported " + dataset.length + " contribution records to CSV.", "success");
+    }
+  }
+  window.exportContributionsCSV = exportContributionsCSV;
+
   function filterContributionsTable(targetPage) {
     const searchEl = document.getElementById("c-search-input");
     const statusEl = document.getElementById("c-status-filter");
@@ -316,8 +530,33 @@
         const ch = String(c.mode || "").toLowerCase().trim();
         if (ch !== channelFilter) return false;
       }
+      if (contributionPreset === "this_month") {
+        if (!isContributionThisMonth(c.date)) return false;
+      } else if (contributionPreset === "savings") {
+        if (!isContributionSavings(c)) return false;
+      } else if (contributionPreset === "loan_repayments") {
+        if (!isContributionLoanRepayment(c)) return false;
+      } else if (contributionPreset === "unallocated") {
+        if (!isContributionUnallocated(c)) return false;
+      } else if (contributionPreset === "large") {
+        if (!isContributionLarge(c)) return false;
+      }
       return true;
     });
+
+    if (contributionSortColumn && contributionSortDirection) {
+      filteredContributions.sort(function (a, b) {
+        const valA = getContributionSortValue(a, contributionSortColumn);
+        const valB = getContributionSortValue(b, contributionSortColumn);
+        let cmp = 0;
+        if (typeof valA === "number" && typeof valB === "number") {
+          cmp = valA - valB;
+        } else {
+          cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: "base" });
+        }
+        return contributionSortDirection === "asc" ? cmp : -cmp;
+      });
+    }
 
     const totalRows = filteredContributions.length;
     totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
@@ -326,6 +565,10 @@
 
     const startIdx = (currentPage - 1) * rowsPerPage;
     const pageRows = filteredContributions.slice(startIdx, startIdx + rowsPerPage);
+
+    window.filteredContributions = filteredContributions;
+    window.contributionSortDirection = contributionSortDirection;
+    window.contributionSortColumn = contributionSortColumn;
 
     renderContributionTable(pageRows);
     if (typeof renderTablePagination === "function") {
@@ -358,6 +601,8 @@
 
   function applyContributionsData(response) {
     loadedContributions = response.contributions || [];
+    updateContributionPresetCounts();
+    updateContributionSortHeaders();
     filterContributionsTable(currentPage);
   }
 

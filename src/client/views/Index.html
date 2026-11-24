@@ -790,6 +790,15 @@
       background: #475569;
     }
 
+    /* Scrollbar utility to hide bar for clean pill strips */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
     .blg-receipt-slip {
       border: 1.5px solid #0f172a !important;
       border-radius: 8px !important;

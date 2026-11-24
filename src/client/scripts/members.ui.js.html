@@ -1,5 +1,9 @@
 <script>
   let currentMembers = [];
+  let filteredMembers = [];
+  let memberSortColumn = null;
+  let memberSortDirection = null; // 'asc' | 'desc' | null
+  let memberPreset = "all";
 
   function getMemberInitialAvatar(name) {
     const clean = String(name || "U").trim();
@@ -70,6 +74,249 @@
   let membersPerPage = 10;
   let membersTotalPages = 1;
 
+  function isMemberActivePreset(m) {
+    const s = String(m.status || "Active").toLowerCase().trim();
+    return s === "active";
+  }
+
+  function isMemberBorrowerPreset(m) {
+    const bal = Number(m.loanBalance) || 0;
+    return bal > 0;
+  }
+
+  function isMemberOfficerPreset(m) {
+    const roles = (typeof currentRoles !== "undefined" && currentRoles && currentRoles.length)
+      ? currentRoles
+      : ((typeof cacheGetEntry === "function" && cacheGetEntry("roles_list") && cacheGetEntry("roles_list").data && cacheGetEntry("roles_list").data.roles)
+          ? cacheGetEntry("roles_list").data.roles
+          : []);
+    if (roles && roles.length) {
+      const match = roles.find(function (r) {
+        const midMatch = m.id && r.memberId && String(m.id).toLowerCase() === String(r.memberId).toLowerCase();
+        const emailMatch = m.email && r.email && String(m.email).toLowerCase() === String(r.email).toLowerCase();
+        const nameMatch = m.name && r.name && String(m.name).toLowerCase() === String(r.name).toLowerCase();
+        return midMatch || emailMatch || nameMatch;
+      });
+      if (match) {
+        const rk = String(match.roleKey || match.role || "").toLowerCase();
+        if (rk === "admin" || rk === "chairperson" || rk === "treasurer" || rk === "secretary" || rk === "officer" || rk === "committee") {
+          return true;
+        }
+      }
+    }
+    const s = String(m.status || "").toLowerCase();
+    const roleProp = String(m.role || m.roleKey || m.position || "").toLowerCase();
+    if (roleProp && roleProp !== "member") return true;
+    if (s.indexOf("admin") !== -1 || s.indexOf("officer") !== -1 || s.indexOf("committee") !== -1 || s.indexOf("treasurer") !== -1 || s.indexOf("secretary") !== -1 || s.indexOf("chair") !== -1) {
+      return true;
+    }
+    return false;
+  }
+
+  function isMemberDormantPreset(m) {
+    const s = String(m.status || "Active").toLowerCase().trim();
+    return s !== "active";
+  }
+
+  function updateMemberPresetCounts() {
+    const list = currentMembers || [];
+    const allCount = list.length;
+    let activeCount = 0;
+    let borrowerCount = 0;
+    let officerCount = 0;
+    let dormantCount = 0;
+
+    list.forEach(function (m) {
+      if (isMemberActivePreset(m)) activeCount++;
+      if (isMemberBorrowerPreset(m)) borrowerCount++;
+      if (isMemberOfficerPreset(m)) officerCount++;
+      if (isMemberDormantPreset(m)) dormantCount++;
+    });
+
+    const elAll = document.getElementById("m-count-all");
+    const elActive = document.getElementById("m-count-active");
+    const elBorrowers = document.getElementById("m-count-borrowers");
+    const elOfficers = document.getElementById("m-count-officers");
+    const elDormant = document.getElementById("m-count-dormant");
+
+    if (elAll) elAll.innerText = allCount;
+    if (elActive) elActive.innerText = activeCount;
+    if (elBorrowers) elBorrowers.innerText = borrowerCount;
+    if (elOfficers) elOfficers.innerText = officerCount;
+    if (elDormant) elDormant.innerText = dormantCount;
+  }
+
+  function setMemberPreset(presetKey) {
+    memberPreset = String(presetKey || "all").toLowerCase();
+    const pills = document.querySelectorAll(".m-preset-pill");
+    const activeClass = "m-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100";
+    const inactiveClass = "m-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700";
+
+    pills.forEach(function (btn) {
+      if (btn.id === "m-preset-" + memberPreset) {
+        btn.className = activeClass;
+      } else {
+        btn.className = inactiveClass;
+      }
+    });
+
+    filterMembersTable(1);
+  }
+  window.setMemberPreset = setMemberPreset;
+
+  function sortMembers(columnKey) {
+    if (memberSortColumn === columnKey) {
+      if (memberSortDirection === "asc") {
+        memberSortDirection = "desc";
+      } else if (memberSortDirection === "desc") {
+        memberSortDirection = null;
+        memberSortColumn = null;
+      } else {
+        memberSortDirection = "asc";
+      }
+    } else {
+      memberSortColumn = columnKey;
+      memberSortDirection = "asc";
+    }
+    updateMemberSortHeaders();
+    filterMembersTable(membersPage);
+  }
+  window.sortMembers = sortMembers;
+
+  function updateMemberSortHeaders() {
+    const cols = ["name", "savings", "shares", "taken", "balance", "guaranteed", "availguar", "maxloan", "loanstatus", "accountstatus"];
+    cols.forEach(function (col) {
+      const th = document.getElementById("th-m-" + col);
+      if (!th) return;
+      const iconWrap = th.querySelector(".sort-icon");
+      if (memberSortColumn === col && memberSortDirection) {
+        th.setAttribute("aria-sort", memberSortDirection === "asc" ? "ascending" : "descending");
+        if (iconWrap) {
+          iconWrap.innerHTML = memberSortDirection === "asc"
+            ? '<i class="fas fa-sort-up text-emerald-600 dark:text-emerald-400"></i>'
+            : '<i class="fas fa-sort-down text-emerald-600 dark:text-emerald-400"></i>';
+        }
+      } else {
+        th.setAttribute("aria-sort", "none");
+        if (iconWrap) {
+          iconWrap.innerHTML = '<i class="fas fa-sort text-slate-300 dark:text-slate-600"></i>';
+        }
+      }
+    });
+  }
+
+  function getMemberSortValue(m, col) {
+    switch (col) {
+      case "name":
+        return String(m.name || m.fullName || "");
+      case "savings":
+        return Number(m.savings) || 0;
+      case "shares":
+        return Number(m.sharesPercent) || 0;
+      case "taken":
+        return Number(m.totalLoanTaken) || 0;
+      case "balance":
+        return Number(m.loanBalance) || 0;
+      case "guaranteed":
+        return Number(m.guaranteed) || 0;
+      case "availguar":
+        return Number(m.availableToGuarantee) || 0;
+      case "maxloan":
+        return Number(m.maxLoanEligibility) || 0;
+      case "loanstatus":
+        return m.loanBalance > 0 ? "Active Loan" : (m.totalLoanTaken > 0 ? "Cleared" : "None");
+      case "accountstatus":
+        return String(m.status || "Active");
+      default:
+        return 0;
+    }
+  }
+
+  function sanitizeMemberCsvCell(val) {
+    let s = String(val === undefined || val === null ? "" : val);
+    if (/^[=+\-@\t\r]/.test(s)) {
+      s = "'" + s;
+    }
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function exportMembersCSV() {
+    const dataset = filteredMembers || [];
+    if (!dataset.length) {
+      if (typeof showNotification === "function") {
+        showNotification("No members found matching current filter to export.", "warning");
+      }
+      return;
+    }
+
+    const headers = [
+      "Member ID",
+      "Full Name",
+      "National ID",
+      "Phone Number",
+      "Email",
+      "Amount Saved (KES)",
+      "Shares (%)",
+      "Total Loan Taken (KES)",
+      "Loan Balance (KES)",
+      "Guaranteed Amount (KES)",
+      "Available to Guarantee (KES)",
+      "Max Loan Eligibility (KES)",
+      "Loan Status",
+      "Account Status"
+    ];
+    const rows = [headers];
+
+    dataset.forEach(function (m) {
+      const bal = Number(m.loanBalance) || 0;
+      const taken = Number(m.totalLoanTaken) || 0;
+      let loanStatus = "None";
+      if (bal > 0) loanStatus = "Active Loan";
+      else if (taken > 0) loanStatus = "Cleared";
+
+      rows.push([
+        m.id || "",
+        m.name || m.fullName || "",
+        m.nationalId || "",
+        m.phone || "",
+        m.email || "",
+        (Number(m.savings) || 0).toFixed(2),
+        (Number(m.sharesPercent) || 0).toFixed(2),
+        (Number(m.totalLoanTaken) || 0).toFixed(2),
+        bal.toFixed(2),
+        (Number(m.guaranteed) || 0).toFixed(2),
+        (Number(m.availableToGuarantee) || 0).toFixed(2),
+        (Number(m.maxLoanEligibility) || 0).toFixed(2),
+        loanStatus,
+        m.status || "Active"
+      ]);
+    });
+
+    const csvContent = rows.map(function (row) {
+      return row.map(sanitizeMemberCsvCell).join(",");
+    }).join("\r\n");
+
+    if (typeof Blob !== "undefined" && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = "brightlife_members_directory_" + dateStr + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+      }, 500);
+    }
+
+    if (typeof showNotification === "function") {
+      showNotification("Exported " + dataset.length + " member records to CSV.", "success");
+    }
+  }
+  window.exportMembersCSV = exportMembersCSV;
+
   function filterMembersTable(targetPage) {
     const searchVal = (document.getElementById("member-search-input") ? document.getElementById("member-search-input").value : "").toLowerCase().trim();
     const statusVal = document.getElementById("member-loan-status-filter") ? document.getElementById("member-loan-status-filter").value : "all";
@@ -80,19 +327,49 @@
         (m.nationalId || "").toLowerCase().indexOf(searchVal) !== -1;
 
       if (!nameMatch) return false;
-      if (statusVal === "all") return true;
 
-      const bal = Number(m.loanBalance) || 0;
-      const taken = Number(m.totalLoanTaken) || 0;
-      const sysStatus = String(m.status || "").toLowerCase();
+      if (statusVal !== "all") {
+        const bal = Number(m.loanBalance) || 0;
+        const taken = Number(m.totalLoanTaken) || 0;
+        const sysStatus = String(m.status || "").toLowerCase();
 
-      if (statusVal === "active") return bal > 0;
-      if (statusVal === "cleared") return taken > 0 && bal === 0;
-      if (statusVal === "none") return taken === 0 && bal === 0;
-      if (statusVal === "pending") return sysStatus === "pending";
+        if (statusVal === "active" && !(bal > 0)) return false;
+        if (statusVal === "cleared" && !(taken > 0 && bal === 0)) return false;
+        if (statusVal === "none" && !(taken === 0 && bal === 0)) return false;
+        if (statusVal === "pending" && sysStatus !== "pending") return false;
+      }
+
+      if (memberPreset === "active") {
+        if (!isMemberActivePreset(m)) return false;
+      } else if (memberPreset === "borrowers") {
+        if (!isMemberBorrowerPreset(m)) return false;
+      } else if (memberPreset === "officers") {
+        if (!isMemberOfficerPreset(m)) return false;
+      } else if (memberPreset === "dormant") {
+        if (!isMemberDormantPreset(m)) return false;
+      }
 
       return true;
     });
+
+    if (memberSortColumn && memberSortDirection) {
+      filtered.sort(function (a, b) {
+        const valA = getMemberSortValue(a, memberSortColumn);
+        const valB = getMemberSortValue(b, memberSortColumn);
+        let cmp = 0;
+        if (typeof valA === "number" && typeof valB === "number") {
+          cmp = valA - valB;
+        } else {
+          cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: "base" });
+        }
+        return memberSortDirection === "asc" ? cmp : -cmp;
+      });
+    }
+
+    filteredMembers = filtered;
+    window.filteredMembers = filteredMembers;
+    window.memberSortDirection = memberSortDirection;
+    window.memberSortColumn = memberSortColumn;
 
     const totalRows = filtered.length;
     membersTotalPages = Math.max(1, Math.ceil(totalRows / membersPerPage));
@@ -277,15 +554,22 @@
       .replace(/"/g, "&quot;");
   }
 
+  function applyMembersData(members) {
+    currentMembers = members || [];
+    updateLoanStatusFilterOptions(currentMembers);
+    updateMemberPresetCounts();
+    updateMemberSortHeaders();
+    filterMembersTable(membersPage);
+  }
+  window.applyMembersData = applyMembersData;
+
   function loadMembers(forceRefresh) {
     const container = document.getElementById("member-table-body");
     const cached = (!forceRefresh && typeof cacheGet === "function") ? cacheGet("members_list") : null;
     const hasCached = Array.isArray(cached) && cached.length > 0;
 
     if (hasCached) {
-      currentMembers = cached;
-      updateLoanStatusFilterOptions(currentMembers);
-      filterMembersTable();
+      applyMembersData(cached);
       if (typeof setHeaderSyncState === "function") {
         setHeaderSyncState("revalidating", "Syncing...");
       }
@@ -311,15 +595,26 @@
           return;
         }
 
-        currentMembers = response.members || [];
+        const members = response.members || [];
         if (typeof cacheSet === "function") {
-          cacheSet("members_list", currentMembers, 10 * 60 * 1000);
+          cacheSet("members_list", members, 10 * 60 * 1000);
         }
         if (typeof setHeaderSyncState === "function") {
           setHeaderSyncState("synced");
         }
-        updateLoanStatusFilterOptions(currentMembers);
-        filterMembersTable();
+        applyMembersData(members);
+
+        if (typeof cacheGetEntry === "function" && !cacheGetEntry("roles_list") && typeof google !== "undefined" && google.script && google.script.run && typeof google.script.run.getRolesData === "function") {
+          try {
+            google.script.run.withSuccessHandler(function (roleRes) {
+              if (roleRes && roleRes.success && roleRes.roles && typeof cacheSet === "function") {
+                cacheSet("roles_list", roleRes, 10 * 60 * 1000);
+                updateMemberPresetCounts();
+                if (memberPreset === "officers") filterMembersTable(membersPage);
+              }
+            }).getRolesData();
+          } catch (_) {}
+        }
       })
       .withFailureHandler((err) => {
         if (!hasCached) {

@@ -10,10 +10,10 @@
 | :--- | :--- |
 | **Current Live Release** | **`v145`** (Google Apps Script Build `@146`) |
 | **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-4`–`UI-7`, `COM-3`–`COM-6`, `RPT-5`, `SET-1`, `MIG-3` & `RPT-3`) |
-| **Completed & Shipped (`[DONE]`)** | **36 Tasks (92.3%)** |
+| **Completed & Shipped (`[DONE]`)** | **37 Tasks (94.9%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** (Ready for Sprint Commitment) |
-| **Prioritized Backlog (`[BACKLOG]`)** | **3 Tasks (7.7%)** (plus MIG-2 full historical backfill pending statements) |
-| **Current Sprint Focus** | `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (Awaiting Statements) / `UI-3: Advanced Ledger Multi-Sort & Filter Presets` (P2) |
+| **Prioritized Backlog (`[BACKLOG]`)** | **2 Tasks (5.1%)** (plus MIG-2 full historical backfill pending statements) |
+| **Current Sprint Focus** | `MIG-2: Equity Bank Statement Ingestion & Historical Account Reconciliation` (Awaiting Statements) / `COM-2: End-of-Month Automated Member Statements & Dividend Projections` (P2) |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`UI-3`** | UI/UX & Frontend Performance | **Advanced Ledger Multi-Sort & Filter Presets**: Interactive column header sorting (Ascending ➔ Descending ➔ Neutral) across dates, numeric amounts, and alphanumeric labels with dynamic SVG/FontAwesome sort indicators; 1-click segmented filter chip presets (`This Month`, `Savings/Deposits`, `Loan Repayments`, `Unallocated/Suspense`, `Large (≥ KES 10,000)` on Contributions; `Active/Disbursed`, `Overdue/In Arrears`, `Fully Repaid`, `Pending Review` on Loans; `Active Members`, `Borrowers`, `Committee/Officers`, `Inactive/Dormant` on Members) with live record counters; and RFC-4180 formula-injection-safe CSV export (`exportContributionsCSV()`, `exportLoansCSV()`, `exportMembersCSV()`) delivering the active filtered and sorted dataset. | `@designer` | **`v146`** (`@147`) | 2026-11-24 |
 | **`RPT-3`** | Financial Reporting & Operations | **Statement of Changes in Equity & Direct Cash Flow Statement**: Added IFRS 4-column Equity Statement (Member Savings, 20% Statutory Reserve, 80% Retained Distributable Surplus, Total Equity with zero-variance balance sheet reconciliation), IAS 7 Direct Method Statement of Cash Flows (Operating, Investing, Financing activities with zero-variance cash reconciliation against bank & liquid accounts), standalone print engines (`openPrintEquityStatementReport()`, `openPrintCashFlowStatementReport()`) with official BLG letterhead (`brightlyfe@gmail.com`) and 3-officer governance sign-offs, AGM Audit Pack expansion to 6 institutional sections, and formula-injection-safe CSV exporters (`exportEquityStatementCSV()`, `exportCashFlowStatementCSV()`). | `@fixer`, `@designer`, `@sentinel` | **`v145`** (`@146`) | 2026-11-24 |
 | **`MIG-3`** | Migration & Operations | **One-Time 'Form Loan Requests' Backfill & Google Form Deprecation**: Ingests historical executed loans from authoritative Loans_table preserving exact legacy Loan Ids, normalizes Member IDs (BLM-XX), cross-references Form Loan Requests for guarantor pledges, enforces strict Row 2 spill formula safety, provides safe tab archiving ([ARCHIVED] Form Loan Requests with tab color #94a3b8), logs complete audit trail to Audit Log, and adds admin migration modal to Loans.html. | `@migrator`, `@fixer`, `@sentinel` | **`v144`** (`@145`) | 2026-11-24 |
 | **`RPT-5`** | Financial Reporting & Credit Operations | **Individual Loan Statement & Amortization Schedule**: Added print statement action buttons to every loan record in Loans.html, implemented getLoanStatementData server RPC with strict RBAC IDOR isolation, and built openPrintLoanStatement in print.ui.js.html rendering official BLG letterhead, 4-up loan KPI cards, facility parameters matrix, guarantor security schedule, itemized repayment ledger with principal & interest breakdown, double-underlined accounting totals, and Dual-Officer Credit Committee & Treasurer certification block. | `@fixer`, `@designer`, `@sentinel` | **`v143`** (`@144`) | 2026-11-23 |
@@ -91,21 +92,14 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 * **Objective:** Full multi-year capital progression tracking and IAS 7 direct cash flows (Operating, Investing, Financing).
 * **Dependencies:** RPT-1, RPT-2.
 
-#### 3. `UI-3: Advanced Ledger Multi-Sort & Filter Presets`
-* **Priority:** `P2 (Medium)`
-* **Domain:** UI/UX (`@designer`)
-* **Location:** `Contributions.html`, `Loans.html`, `Members.html`
-* **Objective:** Column header click-to-sort (Asc/Desc), saved filter presets (e.g. "Overdue Only", "Unallocated"), and multi-column export.
-* **Dependencies:** UI-1A.
-
-#### 4. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
+#### 3. `COM-2: End-of-Month Automated Member Statements & Dividend Projections`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Member Communications (`@messenger` $\to$ `@fixer`)
 * **Location:** `server/comms.service.js`
 * **Objective:** Scheduled monthly batch delivery of individual member financial summaries, showing personal savings balance, active loan installments due, and projected year-end dividend yield.
 * **Dependencies:** COM-1, RPT-2.
 
-#### 5. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
+#### 4. `SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`
 * **Priority:** `P2 (Medium)`
 * **Domain:** Security & Compliance (`@sentinel` $\to$ `@fixer`)
 * **Location:** `server/audit.service.js`
@@ -118,7 +112,7 @@ The remaining prioritized tasks and deferred backfills are categorized below in 
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v145)"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v146)"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -140,6 +134,7 @@ graph TD
         C6["COM-6: Official 1/3-Page Member Contribution Slip"]
         R5["RPT-5: Individual Loan Statement & Amortization Schedule"]
         M3["MIG-3: Form Loan Requests Backfill & Form Deprecation"]
+        U3["UI-3: Advanced Ledger Multi-Sort & Filter Presets"]
     end
 
     subgraph Architectural_Modernization ["Architectural Modernization Sprint (Active Focus)"]
@@ -158,7 +153,6 @@ graph TD
     end
 
     subgraph Future_Enhancements ["Deferred & Backlog Enhancements (P2 Priorities)"]
-        U3["UI-3: Column Sorting & Filter Presets"]
         C2["COM-2: Monthly Member Statements Dispatch"]
         S1["SEC-1: Tamper-Evident Ledger Hashing"]
     end

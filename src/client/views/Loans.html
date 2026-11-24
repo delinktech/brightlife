@@ -38,6 +38,9 @@
         </div>
       </div>
 
+      <button type="button" onclick="exportLoansCSV()" class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-3.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors" title="Export filtered and sorted loans portfolio to CSV">
+        <i class="fas fa-file-csv text-slate-500 dark:text-slate-400"></i> <span>Export CSV</span>
+      </button>
       <button type="button" onclick="openPrintLoansReport()" class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-4 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
         <i class="fas fa-print text-slate-500 dark:text-slate-400"></i> <span>Print Report</span>
       </button>
@@ -73,20 +76,96 @@
         </select>
       </div>
     </div>
+    <!-- Quick Filter Presets Segmented Chip Bar -->
+    <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar" id="loans-preset-bar">
+      <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+        <i class="fas fa-bolt text-amber-500 text-[10px]"></i> Presets:
+      </span>
+      <button type="button" onclick="setLoanPreset('all')" id="l-preset-all"
+        class="l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100">
+        <span>All</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="l-count-all"></span>
+      </button>
+      <button type="button" onclick="setLoanPreset('active')" id="l-preset-active"
+        class="l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Active / Disbursed</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="l-count-active"></span>
+      </button>
+      <button type="button" onclick="setLoanPreset('overdue')" id="l-preset-overdue"
+        class="l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Overdue / In Arrears</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="l-count-overdue"></span>
+      </button>
+      <button type="button" onclick="setLoanPreset('settled')" id="l-preset-settled"
+        class="l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Fully Repaid</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="l-count-settled"></span>
+      </button>
+      <button type="button" onclick="setLoanPreset('pending')" id="l-preset-pending"
+        class="l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Pending Review</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="l-count-pending"></span>
+      </button>
+    </div>
     <div class="overflow-x-auto">
       <table id="loans-table" class="shadcn-table">
         <thead>
           <tr>
-            <th class="col-l-id">ID</th>
-            <th class="col-l-borrower">Borrower</th>
-            <th class="col-l-reqdate">Requested Date</th>
-            <th class="col-l-appdate">Approved Date</th>
-            <th class="col-l-requested text-right">Requested</th>
-            <th class="col-l-repayment text-right">Repayment</th>
-            <th class="col-l-paid text-right">Paid</th>
-            <th class="col-l-breakdown text-right">Principal / Interest</th>
-            <th class="col-l-balance text-right">Balance</th>
-            <th class="col-l-status text-center">Status</th>
+            <th class="col-l-id cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('id')" id="th-l-id" title="Click to sort by Loan ID (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>ID</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-borrower cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('borrower')" id="th-l-borrower" title="Click to sort by borrower (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>Borrower</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-reqdate cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('date')" id="th-l-date" title="Click to sort by requested date (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>Requested Date</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-appdate cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('approveddate')" id="th-l-appdate" title="Click to sort by approved date (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>Approved Date</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-requested text-right cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('requested')" id="th-l-requested" title="Click to sort by requested amount (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                <span>Requested</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-repayment text-right cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('repayment')" id="th-l-repayment" title="Click to sort by repayment (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                <span>Repayment</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-paid text-right cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('paid')" id="th-l-paid" title="Click to sort by paid amount (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                <span>Paid</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-breakdown text-right cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('principal_interest')" id="th-l-principal_interest" title="Click to sort by principal / interest (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                <span>Principal / Interest</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-balance text-right cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('balance')" id="th-l-balance" title="Click to sort by balance (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                <span>Balance</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-l-status text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortLoans('status')" id="th-l-status" title="Click to sort by status (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-center gap-1.5 w-full">
+                <span>Status</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
             <th class="col-l-actions text-center">Actions</th>
           </tr>
         </thead>

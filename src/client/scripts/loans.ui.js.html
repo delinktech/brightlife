@@ -9,6 +9,9 @@
   let filteredLoans = [];
   let loadedRepayments = [];
   let filteredRepayments = [];
+  let loanSortColumn = null;
+  let loanSortDirection = null; // 'asc' | 'desc' | null
+  let loanPreset = "all";
 
   function renderRepaymentStatusBadge(status) {
     if (typeof renderStatusPill === "function") {
@@ -458,6 +461,236 @@
   window.renderLoanTable = renderLoanTable;
   window.renderLoansTable = renderLoanTable;
 
+  function isLoanActivePreset(l) {
+    const bal = Number(l.balance) || 0;
+    const st = String(l.status || "").toLowerCase().trim();
+    return bal > 0 && (st === "active" || st === "disbursed" || st === "approved");
+  }
+
+  function isLoanOverduePreset(l) {
+    const bal = Number(l.balance) || 0;
+    if (bal <= 0) return false;
+    const st = String(l.status || "").toLowerCase().trim();
+    if (st.indexOf("arrear") !== -1 || st.indexOf("overdue") !== -1 || st.indexOf("default") !== -1) {
+      return true;
+    }
+    const refDate = l.approveddate || l.date;
+    if (refDate) {
+      const start = new Date(refDate);
+      if (!isNaN(start.getTime())) {
+        const tenor = Number(l.tenorMonths) || 12;
+        const dueDate = new Date(start);
+        dueDate.setMonth(dueDate.getMonth() + tenor);
+        if (dueDate < new Date()) return true;
+      }
+    }
+    return false;
+  }
+
+  function isLoanFullyRepaidPreset(l) {
+    const bal = Number(l.balance) || 0;
+    const st = String(l.status || "").toLowerCase().trim();
+    return bal <= 0 || st === "settled" || st === "cleared" || st === "repaid";
+  }
+
+  function isLoanPendingPreset(l) {
+    const st = String(l.status || "").toLowerCase().trim();
+    return st === "pending" || st === "pending review" || st === "under review" || st === "applied";
+  }
+
+  function updateLoanPresetCounts() {
+    const list = loadedLoans || [];
+    const allCount = list.length;
+    let activeCount = 0;
+    let overdueCount = 0;
+    let settledCount = 0;
+    let pendingCount = 0;
+
+    list.forEach(function (l) {
+      if (isLoanActivePreset(l)) activeCount++;
+      if (isLoanOverduePreset(l)) overdueCount++;
+      if (isLoanFullyRepaidPreset(l)) settledCount++;
+      if (isLoanPendingPreset(l)) pendingCount++;
+    });
+
+    const elAll = document.getElementById("l-count-all");
+    const elActive = document.getElementById("l-count-active");
+    const elOverdue = document.getElementById("l-count-overdue");
+    const elSettled = document.getElementById("l-count-settled");
+    const elPending = document.getElementById("l-count-pending");
+
+    if (elAll) elAll.innerText = allCount;
+    if (elActive) elActive.innerText = activeCount;
+    if (elOverdue) elOverdue.innerText = overdueCount;
+    if (elSettled) elSettled.innerText = settledCount;
+    if (elPending) elPending.innerText = pendingCount;
+  }
+
+  function setLoanPreset(presetKey) {
+    loanPreset = String(presetKey || "all").toLowerCase();
+    const pills = document.querySelectorAll(".l-preset-pill");
+    const activeClass = "l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100";
+    const inactiveClass = "l-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700";
+
+    pills.forEach(function (btn) {
+      if (btn.id === "l-preset-" + loanPreset) {
+        btn.className = activeClass;
+      } else {
+        btn.className = inactiveClass;
+      }
+    });
+
+    filterLoansTable(1);
+  }
+  window.setLoanPreset = setLoanPreset;
+
+  function sortLoans(columnKey) {
+    if (loanSortColumn === columnKey) {
+      if (loanSortDirection === "asc") {
+        loanSortDirection = "desc";
+      } else if (loanSortDirection === "desc") {
+        loanSortDirection = null;
+        loanSortColumn = null;
+      } else {
+        loanSortDirection = "asc";
+      }
+    } else {
+      loanSortColumn = columnKey;
+      loanSortDirection = "asc";
+    }
+    updateLoanSortHeaders();
+    filterLoansTable(loanPage);
+  }
+  window.sortLoans = sortLoans;
+
+  function updateLoanSortHeaders() {
+    const cols = ["id", "borrower", "date", "approveddate", "requested", "repayment", "paid", "principal_interest", "balance", "status"];
+    cols.forEach(function (col) {
+      const th = document.getElementById("th-l-" + col);
+      if (!th) return;
+      const iconWrap = th.querySelector(".sort-icon");
+      if (loanSortColumn === col && loanSortDirection) {
+        th.setAttribute("aria-sort", loanSortDirection === "asc" ? "ascending" : "descending");
+        if (iconWrap) {
+          iconWrap.innerHTML = loanSortDirection === "asc"
+            ? '<i class="fas fa-sort-up text-emerald-600 dark:text-emerald-400"></i>'
+            : '<i class="fas fa-sort-down text-emerald-600 dark:text-emerald-400"></i>';
+        }
+      } else {
+        th.setAttribute("aria-sort", "none");
+        if (iconWrap) {
+          iconWrap.innerHTML = '<i class="fas fa-sort text-slate-300 dark:text-slate-600"></i>';
+        }
+      }
+    });
+  }
+
+  function getLoanSortValue(loan, col) {
+    switch (col) {
+      case "id":
+        return String(loan.id || "");
+      case "borrower":
+        return String(loan.borrower || "");
+      case "date":
+        return loan.date ? new Date(loan.date).getTime() : 0;
+      case "approveddate":
+        return loan.approveddate ? new Date(loan.approveddate).getTime() : 0;
+      case "requested":
+        return Number(loan.requested) || 0;
+      case "repayment":
+        return Number(loan.repayment) || 0;
+      case "paid":
+        return Number(loan.paid) || 0;
+      case "principal_interest":
+        return (Number(loan.principalPaid) || 0) + (Number(loan.interestPaid) || 0);
+      case "balance":
+        return Number(loan.balance) || 0;
+      case "status":
+        return String(loan.status || "");
+      default:
+        return 0;
+    }
+  }
+
+  function sanitizeLoanCsvCell(val) {
+    let s = String(val === undefined || val === null ? "" : val);
+    if (/^[=+\-@\t\r]/.test(s)) {
+      s = "'" + s;
+    }
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+
+  function exportLoansCSV() {
+    const dataset = filteredLoans || [];
+    if (!dataset.length) {
+      if (typeof showNotification === "function") {
+        showNotification("No loans found matching current filter to export.", "warning");
+      }
+      return;
+    }
+
+    const headers = [
+      "Loan ID",
+      "Borrower Name",
+      "Member ID",
+      "Requested Date",
+      "Approved Date",
+      "Requested Amount (KES)",
+      "Repayment Amount (KES)",
+      "Total Paid (KES)",
+      "Principal Paid (KES)",
+      "Interest Paid (KES)",
+      "Balance (KES)",
+      "Status",
+      "Tenor (Months)",
+      "Purpose"
+    ];
+    const rows = [headers];
+
+    dataset.forEach(function (loan) {
+      rows.push([
+        loan.id || "",
+        loan.borrower || "",
+        loan.memberId || "",
+        loan.date || "",
+        loan.approveddate || "",
+        (Number(loan.requested) || 0).toFixed(2),
+        (Number(loan.repayment) || 0).toFixed(2),
+        (Number(loan.paid) || 0).toFixed(2),
+        (Number(loan.principalPaid) || 0).toFixed(2),
+        (Number(loan.interestPaid) || 0).toFixed(2),
+        (Number(loan.balance) || 0).toFixed(2),
+        loan.status || "",
+        loan.tenorMonths || 12,
+        loan.purpose || "Business"
+      ]);
+    });
+
+    const csvContent = rows.map(function (row) {
+      return row.map(sanitizeLoanCsvCell).join(",");
+    }).join("\r\n");
+
+    if (typeof Blob !== "undefined" && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const dateStr = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = "brightlife_loans_portfolio_" + dateStr + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+      }, 500);
+    }
+
+    if (typeof showNotification === "function") {
+      showNotification("Exported " + dataset.length + " loan records to CSV.", "success");
+    }
+  }
+  window.exportLoansCSV = exportLoansCSV;
+
   function filterLoansTable(targetPage) {
     const searchEl = document.getElementById("loan-search-input");
     const statusEl = document.getElementById("loan-status-filter");
@@ -481,8 +714,31 @@
           return false;
         }
       }
+      if (loanPreset === "active") {
+        if (!isLoanActivePreset(loan)) return false;
+      } else if (loanPreset === "overdue") {
+        if (!isLoanOverduePreset(loan)) return false;
+      } else if (loanPreset === "settled") {
+        if (!isLoanFullyRepaidPreset(loan)) return false;
+      } else if (loanPreset === "pending") {
+        if (!isLoanPendingPreset(loan)) return false;
+      }
       return true;
     });
+
+    if (loanSortColumn && loanSortDirection) {
+      filteredLoans.sort(function (a, b) {
+        const valA = getLoanSortValue(a, loanSortColumn);
+        const valB = getLoanSortValue(b, loanSortColumn);
+        let cmp = 0;
+        if (typeof valA === "number" && typeof valB === "number") {
+          cmp = valA - valB;
+        } else {
+          cmp = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: "base" });
+        }
+        return loanSortDirection === "asc" ? cmp : -cmp;
+      });
+    }
 
     const totalRows = filteredLoans.length;
     loanTotalPages = Math.max(1, Math.ceil(totalRows / loansPerPage));
@@ -491,6 +747,10 @@
 
     const startIdx = (loanPage - 1) * loansPerPage;
     const pageRows = filteredLoans.slice(startIdx, startIdx + loansPerPage);
+
+    window.filteredLoans = filteredLoans;
+    window.loanSortDirection = loanSortDirection;
+    window.loanSortColumn = loanSortColumn;
 
     renderLoanTable(pageRows);
     if (typeof renderTablePagination === "function") {
@@ -523,6 +783,8 @@
 
   function applyLoansData(res) {
     loadedLoans = res.loans || [];
+    updateLoanPresetCounts();
+    updateLoanSortHeaders();
     filterLoansTable(loanPage);
   }
 

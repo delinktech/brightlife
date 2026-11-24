@@ -23,6 +23,9 @@
         </div>
       </div>
 
+      <button type="button" onclick="exportContributionsCSV()" class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-3.5 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors" title="Export filtered and sorted contributions to CSV">
+        <i class="fas fa-file-csv text-slate-500 dark:text-slate-400"></i> <span>Export CSV</span>
+      </button>
       <button type="button" onclick="openPrintContributionsReport()" class="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 sm:px-4 bg-white dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 shadow-2xs transition-colors">
         <i class="fas fa-print text-slate-500 dark:text-slate-400"></i> <span>Print Report</span>
       </button>
@@ -62,16 +65,76 @@
         </select>
       </div>
     </div>
+    <!-- Quick Filter Presets Segmented Chip Bar -->
+    <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-900/40 flex items-center gap-1.5 overflow-x-auto no-scrollbar" id="contributions-preset-bar">
+      <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+        <i class="fas fa-bolt text-amber-500 text-[10px]"></i> Presets:
+      </span>
+      <button type="button" onclick="setContributionPreset('all')" id="c-preset-all"
+        class="c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-slate-900 hover:bg-slate-800 text-white border-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-950 dark:border-slate-100">
+        <span>All</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="c-count-all"></span>
+      </button>
+      <button type="button" onclick="setContributionPreset('this_month')" id="c-preset-this_month"
+        class="c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>This Month</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="c-count-this_month"></span>
+      </button>
+      <button type="button" onclick="setContributionPreset('savings')" id="c-preset-savings"
+        class="c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Savings / Deposits</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="c-count-savings"></span>
+      </button>
+      <button type="button" onclick="setContributionPreset('loan_repayments')" id="c-preset-loan_repayments"
+        class="c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Loan Repayments</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="c-count-loan_repayments"></span>
+      </button>
+      <button type="button" onclick="setContributionPreset('unallocated')" id="c-preset-unallocated"
+        class="c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Unallocated / Suspense</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="c-count-unallocated"></span>
+      </button>
+      <button type="button" onclick="setContributionPreset('large')" id="c-preset-large"
+        class="c-preset-pill inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors shadow-2xs cursor-pointer whitespace-nowrap bg-white hover:bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+        <span>Large (≥ KES 10,000)</span> <span class="preset-count text-[10px] opacity-75 font-mono tabular-nums" id="c-count-large"></span>
+      </button>
+    </div>
     <div class="overflow-x-auto">
       <table id="contributions-table" class="shadcn-table">
         <thead>
           <tr>
-            <th class="col-c-date">Date</th>
-            <th class="col-c-member">Member</th>
-            <th class="col-c-type">Type</th>
-            <th class="col-c-amount text-right">Amount</th>
-            <th class="col-c-mode text-center">Payment Channel</th>
-            <th class="col-c-status text-center">Status</th>
+            <th class="col-c-date cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortContributions('date')" id="th-c-date" title="Click to sort by date (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>Date</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-c-member cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortContributions('name')" id="th-c-name" title="Click to sort by member name (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>Member</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-c-type cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortContributions('type')" id="th-c-type" title="Click to sort by type (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center gap-1.5">
+                <span>Type</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-c-amount text-right cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortContributions('amount')" id="th-c-amount" title="Click to sort by amount (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-end gap-1.5 w-full">
+                <span>Amount</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-c-mode text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortContributions('mode')" id="th-c-mode" title="Click to sort by payment channel (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-center gap-1.5 w-full">
+                <span>Payment Channel</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
+            <th class="col-c-status text-center cursor-pointer select-none hover:text-slate-900 dark:hover:text-white transition-colors" onclick="sortContributions('status')" id="th-c-status" title="Click to sort by status (Asc / Desc / Default)" aria-sort="none">
+              <div class="inline-flex items-center justify-center gap-1.5 w-full">
+                <span>Status</span>
+                <span class="sort-icon text-[10px] text-slate-300 dark:text-slate-600"><i class="fas fa-sort"></i></span>
+              </div>
+            </th>
             <th class="col-c-actions text-center">Action</th>
           </tr>
         </thead>
