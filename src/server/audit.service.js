@@ -1,6 +1,6 @@
 /**
- * Append-only audit trail in sheet "AuditLog".
- * Columns: Timestamp, Actor Email, Action, Entity, Entity ID, Summary, Details
+ * Tamper-Evident Append-Only Audit Trail in sheet "Audit Log" (Task SEC-1).
+ * Columns: Timestamp, Actor Email, Action, Entity, Entity ID, Summary, Details, Previous Hash, Entry Hash
  */
 
 function syncRepaymentsStatusFromContributions_() {
@@ -71,12 +71,129 @@ function syncRepaymentsStatusFromContributions_() {
     repSheet.getRange(r + 1, repCol["Status"] + 1).setValue(matchedStatus);
   }
 }
+// =========================================================================
+// TASK SEC-1: Cryptographic SHA-256 Rolling Hash Chain & Audit Log Engine
+// =========================================================================
+
+/** Genesis block constant for the Brightlife SHA-256 rolling audit chain */
+const GENESIS_HASH = "0000000000000000000000000000000000000000000000000000000000000000";
+
+/**
+ * Computes a standard lowercase 64-hex SHA-256 digest.
+ * Utilizes Apps Script Utilities.computeDigest with fallback for test environments.
+ * @param {string} str Input payload
+ * @return {string} 64-character lowercase hexadecimal hash
+ */
+function sha256Hex_(str) {
+  if (str === null || str === undefined) str = "";
+  if (typeof Utilities !== "undefined" && Utilities.computeDigest && Utilities.DigestAlgorithm) {
+    const rawHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(str), Utilities.Charset.UTF_8);
+    let hex = "";
+    for (let i = 0; i < rawHash.length; i++) {
+      let byteVal = rawHash[i];
+      if (byteVal < 0) byteVal += 256;
+      let byteHex = byteVal.toString(16);
+      if (byteHex.length === 1) byteHex = "0" + byteHex;
+      hex += byteHex;
+    }
+    return hex;
+  }
+  // Standard Node.js crypto fallback for tests and headless runners
+  try {
+    const crypto = require("crypto");
+    return crypto.createHash("sha256").update(String(str), "utf8").digest("hex");
+  } catch (e) {
+    throw new Error("SHA-256 digest engine unavailable in current runtime: " + e.message);
+  }
+}
+
+/**
+ * Computes the canonical SHA-256 rolling hash for an audit log entry.
+ * Canonical string format:
+ * [prevHash]|[ts]|[actorEmail]|[action]|[entity]|[entityId]|[summary]|[detailsJson]
+ *
+ * @param {string} prevHash Preceding row's Entry Hash or GENESIS_HASH
+ * @param {string|Date} ts Timestamp
+ * @param {string} actorEmail Email of the active user/actor
+ * @param {string} action Operation identifier (e.g. member.create)
+ * @param {string} entity Entity domain (e.g. Member, Contribution, Loan)
+ * @param {string} entityId Entity unique identifier or ""
+ * @param {string} summary Single-line human readable summary
+ * @param {string|Object} detailsJson JSON string or object payload
+ * @return {string} 64-character lowercase hexadecimal hash
+ */
+function computeAuditEntryHash_(prevHash, ts, actorEmail, action, entity, entityId, summary, detailsJson) {
+  const pHash = String(prevHash || GENESIS_HASH).trim();
+  let tStr = "";
+  if (ts instanceof Date) {
+    let tz = "Africa/Nairobi";
+    try {
+      if (typeof getSpreadsheet_ === "function") {
+        tz = getSpreadsheet_().getSpreadsheetTimeZone() || tz;
+      }
+    } catch (e) {}
+    if (typeof Utilities !== "undefined" && Utilities.formatDate) {
+      tStr = Utilities.formatDate(ts, tz, "yyyy-MM-dd'T'HH:mm:ss");
+    } else {
+      tStr = ts.toISOString().replace(/\.\d{3}Z$/, "");
+    }
+  } else {
+    tStr = String(ts || "").trim();
+  }
+
+  const emailStr = String(actorEmail || "").trim();
+  const actionStr = String(action || "").trim();
+  const entityStr = String(entity || "").trim();
+  const entityIdStr = String(entityId || "").trim();
+  const summaryStr = String(summary || "").trim();
+
+  let detailsStr = "";
+  if (typeof detailsJson === "object" && detailsJson !== null) {
+    detailsStr = JSON.stringify(detailsJson);
+  } else {
+    detailsStr = String(detailsJson || "").trim();
+  }
+
+  const canonicalStr = [
+    pHash,
+    tStr,
+    emailStr,
+    actionStr,
+    entityStr,
+    entityIdStr,
+    summaryStr,
+    detailsStr,
+  ].join("|");
+
+  return sha256Hex_(canonicalStr);
+}
+
+/**
+ * Retrieves the cryptographic checkpoint hash bridge for archived audit logs.
+ * Defaults to GENESIS_HASH when no logs have been archived.
+ * @return {string}
+ */
+function getAuditCheckpointHash_() {
+  try {
+    if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+      const cp = PropertiesService.getScriptProperties().getProperty("AUDIT_LOG_CHECKPOINT_HASH");
+      if (cp && cp.length === 64) {
+        return cp;
+      }
+    }
+  } catch (e) {}
+  return GENESIS_HASH;
+}
+
+/**
+ * Retrieves or initializes the Audit Log sheet with the canonical 9-column schema:
+ * ["Timestamp", "Actor Email", "Action", "Entity", "Entity ID", "Summary", "Details", "Previous Hash", "Entry Hash"]
+ * @return {GoogleAppsScript.Spreadsheet.Sheet}
+ */
 function getOrCreateAuditSheet_() {
   var ss = getSpreadsheet_();
   var sheet = getSheetByNameInsensitive_(ss, SHEETS.AUDIT_LOG);
-  if (sheet) return sheet;
-  sheet = ss.insertSheet(SHEETS.AUDIT_LOG);
-  sheet.appendRow([
+  var requiredHeaders = [
     "Timestamp",
     "Actor Email",
     "Action",
@@ -84,27 +201,218 @@ function getOrCreateAuditSheet_() {
     "Entity ID",
     "Summary",
     "Details",
-  ]);
-  sheet.setFrozenRows(1);
+    "Previous Hash",
+    "Entry Hash",
+  ];
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.AUDIT_LOG);
+    sheet.appendRow(requiredHeaders);
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+  if (sheet.getLastRow() < 1) {
+    sheet.appendRow(requiredHeaders);
+    sheet.setFrozenRows(1);
+    return sheet;
+  }
+
+  var headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  var colMap = getHeaderMap_(headers);
+  var lastCol = sheet.getLastColumn();
+  if (colMap["Previous Hash"] === undefined) {
+    lastCol++;
+    sheet.getRange(1, lastCol).setValue("Previous Hash");
+  }
+  if (colMap["Entry Hash"] === undefined) {
+    lastCol++;
+    sheet.getRange(1, lastCol).setValue("Entry Hash");
+  }
   return sheet;
 }
 
 /**
+ * Upgrades Audit Log schema to 9 columns and seals any historical unhashed entries
+ * with rolling SHA-256 hashes starting from GENESIS_HASH (or checkpoint hash).
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} [ss]
+ * @return {{ upgraded: boolean, totalRowsSealed: number }}
+ */
+function upgradeAuditLogSchemaAndHashChain_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  let sheet = getSheetByNameInsensitive_(ss, SHEETS.AUDIT_LOG);
+  if (!sheet) {
+    sheet = getOrCreateAuditSheet_();
+    return { upgraded: true, totalRowsSealed: 0 };
+  }
+
+  const requiredHeaders = [
+    "Timestamp",
+    "Actor Email",
+    "Action",
+    "Entity",
+    "Entity ID",
+    "Summary",
+    "Details",
+    "Previous Hash",
+    "Entry Hash",
+  ];
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 1) {
+    sheet.appendRow(requiredHeaders);
+    sheet.setFrozenRows(1);
+    return { upgraded: true, totalRowsSealed: 0 };
+  }
+
+  let headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  let colMap = getHeaderMap_(headers);
+  let lastCol = sheet.getLastColumn();
+
+  if (colMap["Previous Hash"] === undefined) {
+    lastCol++;
+    sheet.getRange(1, lastCol).setValue("Previous Hash");
+  }
+  if (colMap["Entry Hash"] === undefined) {
+    lastCol++;
+    sheet.getRange(1, lastCol).setValue("Entry Hash");
+  }
+
+  if (lastRow <= 1) {
+    return { upgraded: true, totalRowsSealed: 0 };
+  }
+
+  headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  colMap = getHeaderMap_(headers);
+
+  const prevHashColIdx = colMap["Previous Hash"];
+  const entryHashColIdx = colMap["Entry Hash"];
+  const numDataRows = lastRow - 1;
+  const dataRange = sheet.getRange(2, 1, numDataRows, sheet.getLastColumn());
+  const dataValues = dataRange.getValues();
+
+  let needsSealing = false;
+  for (let r = 0; r < dataValues.length; r++) {
+    const pHash = String(dataValues[r][prevHashColIdx] || "").trim();
+    const eHash = String(dataValues[r][entryHashColIdx] || "").trim();
+    if (!pHash || !eHash) {
+      needsSealing = true;
+      break;
+    }
+  }
+
+  let totalRowsSealed = 0;
+  if (needsSealing) {
+    let runningPrevHash = (typeof getAuditCheckpointHash_ === "function" ? getAuditCheckpointHash_() : null) || GENESIS_HASH;
+    const hashBatch = [];
+
+    const tsIdx = colMap["Timestamp"] !== undefined ? colMap["Timestamp"] : 0;
+    const emailIdx = colMap["Actor Email"] !== undefined ? colMap["Actor Email"] : 1;
+    const actionIdx = colMap["Action"] !== undefined ? colMap["Action"] : 2;
+    const entityIdx = colMap["Entity"] !== undefined ? colMap["Entity"] : 3;
+    const entityIdIdx = colMap["Entity ID"] !== undefined ? colMap["Entity ID"] : 4;
+    const summaryIdx = colMap["Summary"] !== undefined ? colMap["Summary"] : 5;
+    const detailsIdx = colMap["Details"] !== undefined ? colMap["Details"] : 6;
+
+    for (let r = 0; r < dataValues.length; r++) {
+      const row = dataValues[r];
+      const ts = row[tsIdx];
+      const email = row[emailIdx];
+      const action = row[actionIdx];
+      const entity = row[entityIdx];
+      const entityId = row[entityIdIdx];
+      const summary = row[summaryIdx];
+      const details = row[detailsIdx];
+
+      const entryHash = computeAuditEntryHash_(
+        runningPrevHash,
+        ts,
+        email,
+        action,
+        entity,
+        entityId,
+        summary,
+        details
+      );
+
+      hashBatch.push([runningPrevHash, entryHash]);
+      runningPrevHash = entryHash;
+      totalRowsSealed++;
+    }
+
+    if (entryHashColIdx === prevHashColIdx + 1) {
+      sheet.getRange(2, prevHashColIdx + 1, numDataRows, 2).setValues(hashBatch);
+    } else {
+      const prevBatch = hashBatch.map(function (pair) { return [pair[0]]; });
+      const entryBatch = hashBatch.map(function (pair) { return [pair[1]]; });
+      sheet.getRange(2, prevHashColIdx + 1, numDataRows, 1).setValues(prevBatch);
+      sheet.getRange(2, entryHashColIdx + 1, numDataRows, 1).setValues(entryBatch);
+    }
+  } else {
+    totalRowsSealed = numDataRows;
+  }
+
+  return { upgraded: true, totalRowsSealed: totalRowsSealed };
+}
+
+/**
+ * Appends a tamper-evident audit log record secured with cryptographic SHA-256 rolling hash chain.
+ *
  * @param {string} action e.g. member.create, member.update, contribution.create
- * @param {string} entity e.g. Member, Contribution
+ * @param {string} entity e.g. Member, Contribution, Loan
  * @param {string} entityId optional id or ""
- * @param {string} summary one line
- * @param {string} detailsJson optional JSON string
+ * @param {string} summary one line summary
+ * @param {string|Object} detailsJson optional JSON string or object payload
  */
 function appendAuditLog_(action, entity, entityId, summary, detailsJson) {
   try {
     var sheet = getOrCreateAuditSheet_();
-    var tz = getSpreadsheet_().getSpreadsheetTimeZone();
+    var tz = "Africa/Nairobi";
+    try {
+      tz = getSpreadsheet_().getSpreadsheetTimeZone() || tz;
+    } catch (e) {}
     var ts = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd'T'HH:mm:ss");
     var email = "";
     try {
-      email = String(Session.getActiveUser().getEmail() || "").trim();
+      if (typeof Session !== "undefined" && Session.getActiveUser) {
+        email = String(Session.getActiveUser().getEmail() || "").trim();
+      }
     } catch (e) {}
+    if (!email && typeof getCurrentUserEmail_ === "function") {
+      try {
+        email = getCurrentUserEmail_();
+      } catch (e) {}
+    }
+
+    var lastRow = sheet.getLastRow();
+    var prevHash = (typeof getAuditCheckpointHash_ === "function" ? getAuditCheckpointHash_() : null) || GENESIS_HASH;
+
+    if (lastRow > 1) {
+      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      var colMap = getHeaderMap_(headers);
+      var entryHashCol = colMap["Entry Hash"] !== undefined ? colMap["Entry Hash"] + 1 : 9;
+      var lastEntryHash = String(sheet.getRange(lastRow, entryHashCol).getValue() || "").trim();
+      if (lastEntryHash && lastEntryHash.length === 64) {
+        prevHash = lastEntryHash;
+      }
+    }
+
+    var detailsStr = "";
+    if (typeof detailsJson === "object" && detailsJson !== null) {
+      detailsStr = JSON.stringify(detailsJson);
+    } else {
+      detailsStr = String(detailsJson || "").trim();
+    }
+
+    var entryHash = computeAuditEntryHash_(
+      prevHash,
+      ts,
+      email,
+      action,
+      entity,
+      entityId || "",
+      summary || "",
+      detailsStr
+    );
+
     sheet.appendRow([
       ts,
       email,
@@ -112,11 +420,395 @@ function appendAuditLog_(action, entity, entityId, summary, detailsJson) {
       entity,
       entityId || "",
       summary || "",
-      detailsJson || "",
+      detailsStr,
+      prevHash,
+      entryHash,
     ]);
+
+    try {
+      if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+        CacheService.getScriptCache().remove("audit_integrity_status_cache");
+      }
+    } catch (e) {}
   } catch (err) {
     console.error("appendAuditLog_: " + err);
   }
+}
+
+/**
+ * Scans the Audit Log sheet and verifies the cryptographic rolling SHA-256 hash chain.
+ * Pinpoints any out-of-band alterations, row deletions, or illegal insertions.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} [ss]
+ * @return {{
+ *   success: boolean,
+ *   isValid: boolean,
+ *   totalEntries: number,
+ *   verifiedEntries: number,
+ *   tamperedCount: number,
+ *   tamperedRows: Array<{ row: number, timestamp: string, action: string, entity: string, entityId: string, recordedHash: string, expectedHash: string, reason: string }>,
+ *   genesisHash: string,
+ *   lastVerifiedHash: string,
+ *   checkedAt: string,
+ *   statusBadge: string
+ * }}
+ */
+function verifyAuditLogIntegrity_(ss) {
+  if (!ss) ss = getSpreadsheet_();
+  const sheet = getSheetByNameInsensitive_(ss, SHEETS.AUDIT_LOG);
+
+  let tz = "Africa/Nairobi";
+  try {
+    tz = ss.getSpreadsheetTimeZone() || tz;
+  } catch (e) {}
+
+  const checkedAt = typeof Utilities !== "undefined" && Utilities.formatDate
+    ? Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HH:mm:ss")
+    : new Date().toISOString().replace("T", " ").substring(0, 19);
+
+  const checkpointHash = typeof getAuditCheckpointHash_ === "function"
+    ? getAuditCheckpointHash_()
+    : GENESIS_HASH;
+
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return {
+      success: true,
+      isValid: true,
+      totalEntries: 0,
+      verifiedEntries: 0,
+      tamperedCount: 0,
+      tamperedRows: [],
+      genesisHash: checkpointHash,
+      lastVerifiedHash: checkpointHash,
+      checkedAt: checkedAt,
+      statusBadge: "IMMUTABLE_AND_VERIFIED"
+    };
+  }
+
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  const allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const headers = allValues[0];
+  const colMap = getHeaderMap_(headers);
+
+  const tsIdx = colMap["Timestamp"] !== undefined ? colMap["Timestamp"] : 0;
+  const emailIdx = colMap["Actor Email"] !== undefined ? colMap["Actor Email"] : 1;
+  const actionIdx = colMap["Action"] !== undefined ? colMap["Action"] : 2;
+  const entityIdx = colMap["Entity"] !== undefined ? colMap["Entity"] : 3;
+  const entityIdIdx = colMap["Entity ID"] !== undefined ? colMap["Entity ID"] : 4;
+  const summaryIdx = colMap["Summary"] !== undefined ? colMap["Summary"] : 5;
+  const detailsIdx = colMap["Details"] !== undefined ? colMap["Details"] : 6;
+  const prevHashIdx = colMap["Previous Hash"] !== undefined ? colMap["Previous Hash"] : 7;
+  const entryHashIdx = colMap["Entry Hash"] !== undefined ? colMap["Entry Hash"] : 8;
+
+  const tamperedRows = [];
+  let verifiedCount = 0;
+  let expectedPrevHash = checkpointHash;
+  let lastHash = checkpointHash;
+  const entriesCount = lastRow - 1;
+
+  for (let i = 1; i < allValues.length; i++) {
+    const rowNum = i + 1;
+    const row = allValues[i];
+
+    const ts = row[tsIdx];
+    const email = row[emailIdx];
+    const action = row[actionIdx];
+    const entity = row[entityIdx];
+    const entityId = row[entityIdIdx];
+    const summary = row[summaryIdx];
+    const details = row[detailsIdx];
+    const recordedPrevHash = String(row[prevHashIdx] || "").trim();
+    const recordedEntryHash = String(row[entryHashIdx] || "").trim();
+
+    let tsStr = "";
+    if (ts instanceof Date) {
+      tsStr = typeof Utilities !== "undefined" && Utilities.formatDate
+        ? Utilities.formatDate(ts, tz, "yyyy-MM-dd'T'HH:mm:ss")
+        : ts.toISOString().replace(/\.\d{3}Z$/, "");
+    } else {
+      tsStr = String(ts || "").trim();
+    }
+
+    const recomputedHash = computeAuditEntryHash_(
+      recordedPrevHash,
+      ts,
+      email,
+      action,
+      entity,
+      entityId,
+      summary,
+      details
+    );
+
+    let isTampered = false;
+    let reason = "";
+
+    // 1. Check Previous Hash linkage against expected preceding hash
+    if (recordedPrevHash !== expectedPrevHash) {
+      isTampered = true;
+      reason = "Broken hash chain linkage: Previous Hash does not match preceding Entry Hash";
+    }
+
+    // 2. Check recomputed entry hash against recorded entry hash
+    if (recomputedHash !== recordedEntryHash) {
+      isTampered = true;
+      const payloadReason = "Payload tampering detected: recomputed SHA-256 hash does not match recorded Entry Hash";
+      reason = reason ? (reason + " | " + payloadReason) : payloadReason;
+    }
+
+    if (isTampered) {
+      tamperedRows.push({
+        row: rowNum,
+        timestamp: tsStr,
+        action: String(action || ""),
+        entity: String(entity || ""),
+        entityId: String(entityId || ""),
+        recordedHash: recordedEntryHash,
+        expectedHash: recomputedHash,
+        reason: reason
+      });
+    } else {
+      verifiedCount++;
+      lastHash = recordedEntryHash;
+    }
+
+    // Advance expectedPrevHash to recordedEntryHash for subsequent link verification
+    expectedPrevHash = recordedEntryHash;
+  }
+
+  return {
+    success: true,
+    isValid: tamperedRows.length === 0,
+    totalEntries: entriesCount,
+    verifiedEntries: verifiedCount,
+    tamperedCount: tamperedRows.length,
+    tamperedRows: tamperedRows,
+    genesisHash: checkpointHash,
+    lastVerifiedHash: lastHash,
+    checkedAt: checkedAt,
+    statusBadge: tamperedRows.length === 0 ? "IMMUTABLE_AND_VERIFIED" : "TAMPER_DETECTED"
+  };
+}
+
+/**
+ * Fast status check for dashboard badges, cached for 60 seconds unless forced.
+ * @param {boolean} [force=false]
+ * @return {Object}
+ */
+function getAuditIntegrityStatus(force) {
+  if (typeof requireAccess_ === "function") {
+    try {
+      requireAccess_();
+    } catch (e) {}
+  }
+  const cacheKey = "audit_integrity_status_cache";
+  if (!force && typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+    try {
+      const cached = CacheService.getScriptCache().get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {}
+  }
+
+  const result = verifyAuditLogIntegrity_();
+  if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+    try {
+      CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), 60);
+    } catch (e) {}
+  }
+  return result;
+}
+
+/**
+ * Admin / Treasurer RPC endpoint to verify ledger integrity on demand.
+ * @return {Object}
+ */
+function verifyLedgerIntegrity() {
+  if (typeof requireAccess_ === "function") {
+    requireAccess_();
+  }
+  return getAuditIntegrityStatus(true);
+}
+
+/**
+ * Retrieves audit log retention policy in days. Default is 365 days (0 = infinite).
+ * @return {{ success: boolean, retentionDays: number, isInfinite: boolean }}
+ */
+function getAuditRetentionSettings() {
+  if (typeof requireAccess_ === "function") {
+    try {
+      requireAccess_();
+    } catch (e) {}
+  }
+  let days = 365;
+  try {
+    if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+      const prop = PropertiesService.getScriptProperties().getProperty("AUDIT_LOG_RETENTION_DAYS");
+      if (prop !== null && prop !== undefined && prop !== "") {
+        days = parseInt(prop, 10);
+        if (isNaN(days) || days < 0) days = 365;
+      }
+    }
+  } catch (e) {}
+  return {
+    success: true,
+    retentionDays: days,
+    isInfinite: days === 0
+  };
+}
+
+/**
+ * Persists audit log retention policy in days.
+ * @param {number|string} days
+ * @return {{ success: boolean, retentionDays: number, isInfinite: boolean }}
+ */
+function saveAuditRetentionSettings(days) {
+  if (typeof requireRole_ === "function") {
+    requireRole_([ROLE_KEY.ADMIN, ROLE_KEY.TREASURER]);
+  }
+  const numDays = parseInt(days, 10);
+  if (isNaN(numDays) || numDays < 0) {
+    throw new Error("Invalid retention days. Must be a non-negative integer (0 for infinite).");
+  }
+  if (typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    PropertiesService.getScriptProperties().setProperty("AUDIT_LOG_RETENTION_DAYS", String(numDays));
+  }
+  if (typeof appendAuditLog_ === "function") {
+    appendAuditLog_(
+      "settings.audit_retention.update",
+      "Settings",
+      "AUDIT_LOG_RETENTION_DAYS",
+      "Updated audit log retention policy to " + (numDays === 0 ? "Infinite" : numDays + " days"),
+      JSON.stringify({ retentionDays: numDays })
+    );
+  }
+  return {
+    success: true,
+    retentionDays: numDays,
+    isInfinite: numDays === 0
+  };
+}
+
+/**
+ * Moves entries older than retentionDays to '[ARCHIVED] Audit Log YYYY' sheet,
+ * updating AUDIT_LOG_CHECKPOINT_HASH in ScriptProperties with the last archived entry hash
+ * to maintain unbroken chain verification.
+ *
+ * @param {number} [retentionDays]
+ * @return {{ success: boolean, archivedCount: number, archiveSheet?: string, checkpointHash?: string, message?: string }}
+ */
+function archiveOldAuditLogs_(retentionDays) {
+  if (retentionDays === undefined || retentionDays === null) {
+    const settings = getAuditRetentionSettings();
+    retentionDays = settings.retentionDays;
+  }
+  retentionDays = parseInt(retentionDays, 10);
+  if (isNaN(retentionDays) || retentionDays <= 0) {
+    return { success: true, archivedCount: 0, message: "Retention set to infinite; no rows archived." };
+  }
+
+  const ss = getSpreadsheet_();
+  const sheet = getSheetByNameInsensitive_(ss, SHEETS.AUDIT_LOG);
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return { success: true, archivedCount: 0, message: "Audit log is empty." };
+  }
+
+  const cutoffTime = new Date().getTime() - (retentionDays * 24 * 60 * 60 * 1000);
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  const allValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  const headers = allValues[0];
+  const colMap = getHeaderMap_(headers);
+  const tsIdx = colMap["Timestamp"] !== undefined ? colMap["Timestamp"] : 0;
+  const entryHashIdx = colMap["Entry Hash"] !== undefined ? colMap["Entry Hash"] : 8;
+
+  let countToArchive = 0;
+  let lastArchivedHash = "";
+  let archiveYear = new Date().getFullYear();
+
+  for (let i = 1; i < allValues.length; i++) {
+    const tsVal = allValues[i][tsIdx];
+    let rowDate = null;
+    if (tsVal instanceof Date) {
+      rowDate = tsVal;
+    } else if (tsVal) {
+      rowDate = new Date(String(tsVal).trim());
+    }
+
+    if (rowDate && !isNaN(rowDate.getTime()) && rowDate.getTime() < cutoffTime) {
+      countToArchive++;
+      lastArchivedHash = String(allValues[i][entryHashIdx] || "").trim();
+      archiveYear = rowDate.getFullYear();
+    } else {
+      break;
+    }
+  }
+
+  if (countToArchive === 0) {
+    return { success: true, archivedCount: 0, message: "No entries older than retention cutoff." };
+  }
+
+  const archiveSheetName = "[ARCHIVED] Audit Log " + archiveYear;
+  let archiveSheet = getSheetByNameInsensitive_(ss, archiveSheetName);
+  if (!archiveSheet) {
+    archiveSheet = ss.insertSheet(archiveSheetName);
+    archiveSheet.appendRow(headers);
+    archiveSheet.setFrozenRows(1);
+    try {
+      archiveSheet.setTabColor("#94a3b8");
+    } catch (e) {}
+  }
+
+  const rowsToMove = sheet.getRange(2, 1, countToArchive, lastCol).getValues();
+  const targetStartRow = archiveSheet.getLastRow() + 1;
+  archiveSheet.getRange(targetStartRow, 1, rowsToMove.length, lastCol).setValues(rowsToMove);
+
+  if (lastArchivedHash && typeof PropertiesService !== "undefined" && PropertiesService.getScriptProperties) {
+    PropertiesService.getScriptProperties().setProperty("AUDIT_LOG_CHECKPOINT_HASH", lastArchivedHash);
+  }
+
+  sheet.deleteRows(2, countToArchive);
+
+  try {
+    if (typeof CacheService !== "undefined" && CacheService.getScriptCache) {
+      CacheService.getScriptCache().remove("audit_integrity_status_cache");
+    }
+  } catch (e) {}
+
+  if (typeof appendAuditLog_ === "function") {
+    appendAuditLog_(
+      "audit.archive",
+      "AuditLog",
+      archiveSheetName,
+      "Archived " + countToArchive + " legacy audit log entries into " + archiveSheetName,
+      JSON.stringify({
+        archivedCount: countToArchive,
+        checkpointHash: lastArchivedHash,
+        retentionDays: retentionDays
+      })
+    );
+  }
+
+  return {
+    success: true,
+    archivedCount: countToArchive,
+    archiveSheet: archiveSheetName,
+    checkpointHash: lastArchivedHash
+  };
+}
+
+/**
+ * Admin / Treasurer RPC to trigger manual archival on demand.
+ * @param {number} [retentionDays]
+ * @return {Object}
+ */
+function archiveOldAuditLogsNow(retentionDays) {
+  if (typeof requireRole_ === "function") {
+    requireRole_([ROLE_KEY.ADMIN, ROLE_KEY.TREASURER]);
+  }
+  return archiveOldAuditLogs_(retentionDays);
 }
 
 /**
@@ -496,6 +1188,11 @@ function runAuditLogAndFormulaIntegrityCheck(ss) {
     setupEquityStatementSchema_(spreadsheet);
   } catch (eEq) {
     console.error("runAuditLogAndFormulaIntegrityCheck: setupEquityStatementSchema_ failed: " + eEq.message);
+  }
+  try {
+    upgradeAuditLogSchemaAndHashChain_(spreadsheet);
+  } catch (eAudit) {
+    console.error("runAuditLogAndFormulaIntegrityCheck: upgradeAuditLogSchemaAndHashChain_ failed: " + eAudit.message);
   }
   return runSchemaMigrationAddMemberIds_(spreadsheet);
 }

@@ -59,7 +59,7 @@ Any deposit, payment, or reconciliation record must strictly match one of the 5 
 * **`Equity Statement`** *(Single Canonical Equity Bank Statement Table — `SHEETS.EQUITY_STATEMENT`)*: `Statement Date | Account Name | Account Number | Opening Balance | Money In (Deposits) | Money Out (Withdrawals) | Net Change | Closing Balance | Statement Ref | Notes / Breakdown` *(Named Range: `EquityStatement_ClosingBalance`)*
 * **`CIC Statement`** *(Single Canonical MMF Statement Table — replaces `CIC Transactions` and legacy `Fund Statements`)*: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
 * **`Roles`**: `Email | Role | Permissions | Status`
-* **`Audit Log`**: `Timestamp | Actor Email | Action | Entity | Entity ID | Summary | Details`
+* **`Audit Log`** *(Cryptographic Tamper-Evident Ledger — Task SEC-1)*: `Timestamp | Actor Email | Action | Entity | Entity ID | Summary | Details | Previous Hash | Entry Hash` *(Secured by SHA-256 rolling hash chain anchored from `GENESIS_HASH` with `AUDIT_LOG_CHECKPOINT_HASH` archival bridge)*
 
 ---
 
