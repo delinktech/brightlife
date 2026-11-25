@@ -100,6 +100,14 @@
         <p class="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-1.5 truncate">
           Active loan capital deployed
         </p>
+        <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
+          <span id="home-cdr-badge" class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded font-mono tabular-nums bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60" title="Capital Deployment Ratio (Target: 70%–85%)">
+            <span>CDR:</span> <strong id="home-cdr-val">0.0%</strong>
+          </span>
+          <span id="home-cdr-warning" class="hidden inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-mono" title="Exceeds SASRA 85% statutory leverage ceiling">
+            <i class="fas fa-triangle-exclamation text-[9px]"></i> (&gt; 85% SASRA Cap)
+          </span>
+        </div>
       </div>
     </div>
 
@@ -130,10 +138,58 @@
       <div>
         <h3 id="home-outstanding" class="text-lg sm:text-2xl font-bold text-amber-700 dark:text-amber-400 tracking-tight font-mono tabular-nums">KES 0</h3>
         <div class="mt-1.5 flex items-center gap-1.5 flex-wrap">
-          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">PAR: <strong id="home-par-rate" class="text-amber-700 dark:text-amber-400 font-semibold font-mono tabular-nums">0%</strong></span>
+          <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium">PAR: <strong id="home-par-rate" class="text-amber-700 dark:text-amber-400 font-semibold font-mono tabular-nums">0%</strong></span>
+          <span id="home-par-provision-badge" class="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono tabular-nums" title="Statutory Provisioning Coverage">
+            Prov: <strong id="home-par-provision-val" class="ml-1">KES 0</strong>
+          </span>
+        </div>
+        <div class="mt-1 flex items-center gap-1.5 flex-wrap text-[10px] text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+          <span title="Watch facility (31–60 DPD)" class="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60">
+            PAR 30: <strong id="home-par30-val">0.0%</strong>
+          </span>
+          <span title="Non-performing portfolio (91+ DPD)" class="px-1.5 py-0.5 rounded bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/70 dark:border-rose-800/60">
+            PAR 90+: <strong id="home-par90-val">0.0%</strong>
+          </span>
         </div>
       </div>
     </div>
+
+  </div>
+
+  <!-- Institutional Profitability & Liquidity Telemetry Micro-Strip -->
+  <div id="home-actuarial-microstrip" class="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:px-4 shadow-2xs">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-chart-line text-sky-600 dark:text-sky-400"></i>
+        <span class="font-bold uppercase tracking-wider text-[11px] text-slate-700 dark:text-slate-200">Actuarial Telemetry</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 w-full sm:w-auto">
+        <!-- Metric 1: ROE -->
+        <div class="flex items-center justify-between sm:justify-start gap-2">
+          <span class="text-slate-500 dark:text-slate-400 text-[11px]">ROE (Return on Equity):</span>
+          <span id="home-roe-badge" class="inline-flex items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <span id="home-roe-val">0.0%</span>
+            <span id="home-roe-status" class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">(&ge; 8.0%)</span>
+          </span>
+        </div>
+        <!-- Metric 2: ROA -->
+        <div class="flex items-center justify-between sm:justify-start gap-2">
+          <span class="text-slate-500 dark:text-slate-400 text-[11px]">ROA (Return on Assets):</span>
+          <span id="home-roa-badge" class="inline-flex items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <span id="home-roa-val">0.0%</span>
+          </span>
+        </div>
+        <!-- Metric 3: Liquidity Ratio -->
+        <div class="flex items-center justify-between sm:justify-start gap-2">
+          <span class="text-slate-500 dark:text-slate-400 text-[11px]">Liquidity Ratio:</span>
+          <span id="home-liquidity-badge" class="inline-flex items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <span id="home-liquidity-val">0.0%</span>
+            <span id="home-liquidity-indicator" class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">(&ge; 15% SASRA Floor)</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   </div>
 
@@ -159,22 +215,22 @@
       </div>
     </div>
 
-    <!-- Right 1/3: Available Balances & Ownership Distribution Donut -->
+    <!-- Right 1/3: Available Balances & Ownership / Asset Allocation Distribution Donut -->
     <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-3">
         <div>
-          <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Ownership & Account Balances</h3>
-          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Liquid cash distribution across accounts</p>
+          <h3 id="home-donut-title" class="text-sm font-semibold text-slate-900 dark:text-white">Chama Asset Allocation</h3>
+          <p id="home-donut-subtitle" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Liquid cash, MMF, loans &amp; projects</p>
         </div>
-        <div class="w-6 h-6 bg-slate-100 dark:bg-slate-800 rounded-md flex items-center justify-center text-slate-500 dark:text-slate-400">
-          <i class="fas fa-chart-pie text-xs"></i>
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[10px]">
+          <button type="button" id="btn-toggle-asset-alloc" onclick="toggleHomeMixChart('assets')" class="px-2 py-0.5 rounded font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs">Assets</button>
+          <button type="button" id="btn-toggle-acct-bal" onclick="toggleHomeMixChart('accounts')" class="px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Accounts</button>
         </div>
       </div>
-      <div class="h-56 sm:h-64 w-full my-auto flex items-center justify-center">
-        <canvas id="accountBalanceChart"></canvas>
-      </div>
-      <div class="hidden">
-        <canvas id="capitalMixChart"></canvas>
+      <div class="h-56 sm:h-64 w-full my-auto flex items-center justify-center relative">
+        <canvas id="assetAllocationChart"></canvas>
+        <canvas id="accountBalanceChart" class="hidden"></canvas>
+        <canvas id="capitalMixChart" class="hidden"></canvas>
       </div>
     </div>
 
@@ -374,8 +430,16 @@
       </div>
 
       <div class="bg-white dark:bg-[#0b1320] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700/80">
-        <h4 class="font-bold text-slate-900 dark:text-white mb-4 text-sm">Loans Portfolio by Status</h4>
-        <div class="h-64 w-full">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h4 class="font-bold text-slate-900 dark:text-white text-sm">SASRA Credit Quality Distribution</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Value-weighted statutory loan aging classification</p>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-emerald-800/60">
+            SASRA Standard
+          </span>
+        </div>
+        <div class="h-64 w-full flex items-center justify-center">
           <canvas id="loanStatusChart"></canvas>
         </div>
       </div>
@@ -3176,7 +3240,64 @@
       }
     }
 
-    // 2. Ownership & Account Balances Donut Chart
+    // 2A. Chama Asset Allocation Donut Chart
+    const ctxAssetAlloc = document.getElementById('assetAllocationChart');
+    if (ctxAssetAlloc) {
+      if (charts.assetAllocationChart) {
+        charts.assetAllocationChart.destroy();
+        charts.assetAllocationChart = null;
+      }
+      const alloc = data.assetAllocation || {};
+      const allocLabels = Array.isArray(alloc.labels) && alloc.labels.length
+        ? alloc.labels
+        : ['Liquid Bank Cash', 'MMF Equivalents', 'Net Loans Receivable', 'Tangible Capital Projects'];
+      const allocAmounts = Array.isArray(alloc.amounts) && alloc.amounts.length
+        ? alloc.amounts
+        : [Number(data.cash) || 0, (data.liquidity && data.liquidity.cashEquivalents) || 0, Number(data.loansOutstanding) || 0, (data.invested || 0)];
+      const allocColors = Array.isArray(alloc.colors) && alloc.colors.length
+        ? alloc.colors
+        : ['#0284c7', '#6366f1', '#10b981', '#f59e0b'];
+      const totalAllocVal = allocAmounts.reduce((acc, v) => acc + (Number(v) || 0), 0);
+      const hasAllocData = totalAllocVal > 0;
+
+      if (!setChartEmptyState('assetAllocationChart', !hasAllocData, 'No asset allocation records available')) {
+        charts.assetAllocationChart = new Chart(ctxAssetAlloc, {
+          type: 'doughnut',
+          data: {
+            labels: allocLabels,
+            datasets: [{
+              data: allocAmounts,
+              backgroundColor: allocColors,
+              borderWidth: 0,
+              hoverOffset: 4
+            }]
+          },
+          options: {
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom',
+                labels: { font: { size: 10 }, boxWidth: 10, color: theme.tickColor }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    const total = (ctx.dataset.data || []).reduce((acc, v) => acc + (Number(v) || 0), 0);
+                    const val = Number(ctx.parsed) || 0;
+                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                    return (ctx.label || 'Asset') + ': ' + formatChartKes(val) + ' (' + pct + '%)';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 2B. Ownership & Account Balances Donut Chart
     const ctxAccount = document.getElementById('accountBalanceChart');
     if (ctxAccount) {
       if (charts.accountBalanceChart) {
@@ -3229,7 +3350,7 @@
       }
     }
 
-    // 3. Loans by Status Bar Chart
+    // 3. SASRA Credit Quality Donut (Upgraded Value-Weighted loanStatusChart)
     const ctxLoanStatus = document.getElementById('loanStatusChart');
     if (ctxLoanStatus) {
       if (charts.loanStatusChart) {
@@ -3237,42 +3358,91 @@
         charts.loanStatusChart = null;
       }
 
-      const activeCnt = Number(data.loanStatusBreakdown && data.loanStatusBreakdown.active) || 0;
-      const pendingCnt = Number(data.loanStatusBreakdown && data.loanStatusBreakdown.pending) || 0;
-      const settledCnt = Number(data.loanStatusBreakdown && data.loanStatusBreakdown.settled) || 0;
-      const hasLoanData = (activeCnt + pendingCnt + settledCnt) > 0;
+      const sq = data.sasraCreditQuality || {};
+      const sqAmounts = (Array.isArray(sq.amounts) && sq.amounts.length === 5)
+        ? sq.amounts
+        : (Array.isArray(data.creditQualityDistribution) && data.creditQualityDistribution.length === 5
+          ? data.creditQualityDistribution
+          : null);
 
-      if (!setChartEmptyState('loanStatusChart', !hasLoanData, 'No loans recorded yet')) {
-        charts.loanStatusChart = new Chart(ctxLoanStatus, {
-          type: 'bar',
-          data: {
-            labels: ['Active', 'Pending', 'Settled'],
-            datasets: [{
-              label: 'Loans Count',
-              data: [activeCnt, pendingCnt, settledCnt],
-              backgroundColor: ['#2563eb', '#38bdf8', '#059669'],
-              borderRadius: 8
-            }]
-          },
-          options: {
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                callbacks: {
-                  label: function(ctx) {
-                    const n = Number(ctx.parsed.y) || 0;
-                    return (ctx.label || 'Loans') + ': ' + n.toLocaleString() + (n === 1 ? ' loan' : ' loans');
+      if (sqAmounts) {
+        const sasraLabels = ['Normal (0 DPD)', 'Watch (1–30 DPD)', 'Substandard (31–60 DPD)', 'Doubtful (61–90 DPD)', 'Loss (91+ DPD)'];
+        const sasraColors = ['#10b981', '#f59e0b', '#fb923c', '#ef4444', '#991b1b'];
+        const totalExp = sqAmounts.reduce((acc, v) => acc + (Number(v) || 0), 0);
+        const hasExp = totalExp > 0;
+
+        if (!setChartEmptyState('loanStatusChart', !hasExp, 'No active loan portfolio for credit quality assessment')) {
+          charts.loanStatusChart = new Chart(ctxLoanStatus, {
+            type: 'doughnut',
+            data: {
+              labels: sasraLabels,
+              datasets: [{
+                data: sqAmounts,
+                backgroundColor: sasraColors,
+                borderWidth: 0,
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              maintainAspectRatio: false,
+              cutout: '70%',
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'bottom',
+                  labels: { font: { size: 10 }, boxWidth: 10, color: theme.tickColor }
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const val = Number(ctx.parsed) || 0;
+                      const pct = totalExp > 0 ? ((val / totalExp) * 100).toFixed(1) : '0.0';
+                      return (ctx.label || 'Risk Tier') + ': ' + formatChartKes(val) + ' (' + pct + '%)';
+                    }
                   }
                 }
               }
-            },
-            scales: {
-              x: { grid: { display: false }, ticks: { color: theme.tickColor } },
-              y: { beginAtZero: true, ticks: { precision: 0, color: theme.tickColor }, grid: { color: theme.gridColor } }
             }
-          }
-        });
+          });
+        }
+      } else {
+        const activeCnt = Number(data.loanStatusBreakdown && data.loanStatusBreakdown.active) || 0;
+        const pendingCnt = Number(data.loanStatusBreakdown && data.loanStatusBreakdown.pending) || 0;
+        const settledCnt = Number(data.loanStatusBreakdown && data.loanStatusBreakdown.settled) || 0;
+        const hasLoanData = (activeCnt + pendingCnt + settledCnt) > 0;
+
+        if (!setChartEmptyState('loanStatusChart', !hasLoanData, 'No loans recorded yet')) {
+          charts.loanStatusChart = new Chart(ctxLoanStatus, {
+            type: 'bar',
+            data: {
+              labels: ['Active', 'Pending', 'Settled'],
+              datasets: [{
+                label: 'Loans Count',
+                data: [activeCnt, pendingCnt, settledCnt],
+                backgroundColor: ['#2563eb', '#38bdf8', '#059669'],
+                borderRadius: 8
+              }]
+            },
+            options: {
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(ctx) {
+                      const n = Number(ctx.parsed.y) || 0;
+                      return (ctx.label || 'Loans') + ': ' + n.toLocaleString() + (n === 1 ? ' loan' : ' loans');
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: { grid: { display: false }, ticks: { color: theme.tickColor } },
+                y: { beginAtZero: true, ticks: { precision: 0, color: theme.tickColor }, grid: { color: theme.gridColor } }
+              }
+            }
+          });
+        }
       }
     }
 
@@ -3318,6 +3488,40 @@
       window.renderCashFlowStatement(data);
     }
   }
+
+  function toggleHomeMixChart(mode) {
+    const assetCanvas = document.getElementById('assetAllocationChart');
+    const acctCanvas = document.getElementById('accountBalanceChart');
+    const btnAsset = document.getElementById('btn-toggle-asset-alloc');
+    const btnAcct = document.getElementById('btn-toggle-acct-bal');
+    const titleEl = document.getElementById('home-donut-title');
+    const subEl = document.getElementById('home-donut-subtitle');
+
+    if (mode === 'accounts') {
+      if (assetCanvas) assetCanvas.classList.add('hidden');
+      if (acctCanvas) acctCanvas.classList.remove('hidden');
+      if (btnAcct) {
+        btnAcct.className = 'px-2 py-0.5 rounded font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs';
+      }
+      if (btnAsset) {
+        btnAsset.className = 'px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200';
+      }
+      if (titleEl) titleEl.textContent = 'Ownership & Account Balances';
+      if (subEl) subEl.textContent = 'Liquid cash distribution across accounts';
+    } else {
+      if (acctCanvas) acctCanvas.classList.add('hidden');
+      if (assetCanvas) assetCanvas.classList.remove('hidden');
+      if (btnAsset) {
+        btnAsset.className = 'px-2 py-0.5 rounded font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs';
+      }
+      if (btnAcct) {
+        btnAcct.className = 'px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200';
+      }
+      if (titleEl) titleEl.textContent = 'Chama Asset Allocation';
+      if (subEl) subEl.textContent = 'Liquid cash, MMF, loans & projects';
+    }
+  }
+  window.toggleHomeMixChart = toggleHomeMixChart;
 
   const homeBsKesFormatter = new Intl.NumberFormat('en-KE', {
     style: 'currency',

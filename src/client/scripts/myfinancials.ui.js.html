@@ -91,29 +91,51 @@
 
     // 1. Borrowing Capacity (3x Personal Savings - Active Loans)
     const savings = Number(summary.savings) || 0;
+    const multiplier = Number(summary.borrowingMultiplier) || 3.0;
+    const maxLimit = savings * multiplier;
     const activeLoans = Number(summary.activeLoanBalance) || 0;
-    const maxLimit = savings * 3;
-    const availableCapacity = Math.max(0, maxLimit - activeLoans);
-    const utilizationPct = maxLimit > 0 ? Math.min(100, (activeLoans / maxLimit) * 100) : 0;
+    const encumbered = Number(summary.encumberedSavings) || 0;
+    const isLocked = Boolean(summary.delinquencyLocked);
+    const lockReason = summary.delinquencyReason || "Account has facility in arrears. Borrowing privilege locked under statutory rules.";
+    const effectiveCapacity = isLocked ? 0 : (summary.effectiveBorrowingCapacity !== undefined ? Number(summary.effectiveBorrowingCapacity) : Math.max(0, maxLimit - activeLoans - encumbered));
+    const effectiveCapacityFormatted = summary.effectiveBorrowingCapacityFormatted || formatMoney(effectiveCapacity);
 
     const capEl = document.getElementById("pf-borrowing-capacity");
     const capLimEl = document.getElementById("pf-borrowing-limit");
     const capUsedEl = document.getElementById("pf-borrowing-used");
     const capBarEl = document.getElementById("pf-borrowing-bar");
     const capBadgeEl = document.getElementById("pf-borrowing-badge");
+    const lockBannerEl = document.getElementById("pf-delinquency-lock-banner");
+    const lockReasonEl = document.getElementById("pf-delinquency-lock-reason");
 
-    if (capEl) capEl.textContent = formatMoney(availableCapacity);
+    if (capEl) capEl.textContent = isLocked ? "KES 0" : effectiveCapacityFormatted;
     if (capLimEl) capLimEl.textContent = formatMoney(maxLimit);
     if (capUsedEl) capUsedEl.textContent = formatMoney(activeLoans);
+
+    if (lockBannerEl) {
+      if (isLocked) {
+        lockBannerEl.classList.remove("hidden");
+        if (lockReasonEl) lockReasonEl.textContent = lockReason;
+      } else {
+        lockBannerEl.classList.add("hidden");
+      }
+    }
+
+    const totalObligations = activeLoans + encumbered;
+    const utilizationPct = maxLimit > 0 ? Math.min(100, (totalObligations / maxLimit) * 100) : 0;
     if (capBarEl) {
-      capBarEl.style.width = utilizationPct.toFixed(1) + "%";
+      capBarEl.style.width = isLocked ? "100%" : utilizationPct.toFixed(1) + "%";
       capBarEl.className = "h-full rounded-full transition-all duration-500 " + (
+        isLocked ? "bg-rose-600" :
         utilizationPct >= 85 ? "bg-rose-500" :
         utilizationPct >= 50 ? "bg-amber-500" : "bg-sky-600"
       );
     }
     if (capBadgeEl) {
-      if (savings <= 0) {
+      if (isLocked) {
+        capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60";
+        capBadgeEl.textContent = "🔒 Delinquency Locked";
+      } else if (savings <= 0) {
         capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700";
         capBadgeEl.textContent = "Build Savings First";
       } else if (utilizationPct >= 100) {
@@ -121,7 +143,7 @@
         capBadgeEl.textContent = "Limit Reached";
       } else {
         capBadgeEl.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30";
-        capBadgeEl.textContent = (100 - utilizationPct).toFixed(0) + "% Headroom";
+        capBadgeEl.textContent = multiplier.toFixed(1) + "x Savings Multiplier";
       }
     }
 
@@ -251,6 +273,8 @@
     if (!data) return;
     window.latestPersonalFinancials = data;
 
+    const summary = data.personalSummary || {};
+
     // User Profile Header
     if (data.user) {
       document.getElementById("pf-user-name").textContent = data.user.name || "Member";
@@ -259,12 +283,69 @@
       document.getElementById("pf-member-status").textContent = data.user.status || "Active";
     }
 
+    // Credit Reputation Tier & Financial Discipline Telemetry Strip
+    const creditStanding = summary.creditStanding || {};
+    const tier = summary.creditTier || creditStanding.tier || "Tier 1: Flawless";
+    const streak = summary.streakMonths !== undefined ? summary.streakMonths : (creditStanding.streakMonths !== undefined ? creditStanding.streakMonths : 0);
+    const consistency = summary.consistencyScore !== undefined ? summary.consistencyScore : (creditStanding.consistencyScore !== undefined ? creditStanding.consistencyScore : 100);
+
+    const tierBadgeEl = document.getElementById("pf-credit-tier-badge");
+    const tierTextEl = document.getElementById("pf-credit-tier-text");
+    if (tierTextEl) tierTextEl.textContent = tier;
+    if (tierBadgeEl) {
+      if (tier.indexOf("Tier 1") !== -1 || tier.toLowerCase().indexOf("flawless") !== -1) {
+        tierBadgeEl.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60";
+      } else if (tier.indexOf("Tier 2") !== -1 || tier.toLowerCase().indexOf("good") !== -1) {
+        tierBadgeEl.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 dark:bg-sky-950/70 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60";
+      } else {
+        tierBadgeEl.className = "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 dark:bg-rose-950/70 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60";
+      }
+    }
+    const streakTextEl = document.getElementById("pf-streak-text");
+    if (streakTextEl) streakTextEl.textContent = streak + " Months Streak";
+    const consistencyTextEl = document.getElementById("pf-consistency-text");
+    if (consistencyTextEl) consistencyTextEl.textContent = consistency + "% Deposit Consistency";
+
     // Personal Summary KPI Cards
     if (data.personalSummary) {
-      document.getElementById("pf-my-savings").textContent = data.personalSummary.savingsFormatted || "KES 0";
-      document.getElementById("pf-my-shares").textContent = data.personalSummary.sharesPercentage || "0.00%";
-      document.getElementById("pf-my-loan-balance").textContent = data.personalSummary.activeLoanBalanceFormatted || "KES 0";
-      document.getElementById("pf-my-profit-share").textContent = data.personalSummary.estimatedProfitShareFormatted || "KES 0";
+      const savingsFormatted = summary.savingsFormatted || formatMoney(summary.savings || 0);
+      const freeFormatted = summary.freeSavingsFormatted || formatMoney(summary.freeSavings !== undefined ? summary.freeSavings : summary.savings || 0);
+      const encumbered = Number(summary.encumberedSavings) || 0;
+      const pledgedFormatted = summary.encumberedSavingsFormatted || formatMoney(encumbered);
+
+      const savingsEl = document.getElementById("pf-my-savings");
+      if (savingsEl) savingsEl.textContent = savingsFormatted;
+
+      const freeEl = document.getElementById("pf-free-savings-val");
+      if (freeEl) freeEl.textContent = freeFormatted;
+
+      const pledgedBadge = document.getElementById("pf-pledged-savings-badge");
+      const pledgedVal = document.getElementById("pf-pledged-savings-val");
+      if (pledgedVal) pledgedVal.textContent = pledgedFormatted;
+      if (pledgedBadge) {
+        if (encumbered > 0) {
+          pledgedBadge.classList.remove("hidden");
+        } else {
+          pledgedBadge.classList.add("hidden");
+        }
+      }
+
+      document.getElementById("pf-my-shares").textContent = summary.sharesPercentage || "0.00%";
+      document.getElementById("pf-my-loan-balance").textContent = summary.activeLoanBalanceFormatted || "KES 0";
+
+      // Card 4: Projected Year-End Dividend & Dual-Stream Routing (Rule 5.2)
+      const grossDivFormatted = summary.projectedDividendFormatted || summary.estimatedProfitShareFormatted || formatMoney(summary.projectedDividend || summary.estimatedProfitShare || 0);
+      const loanOffsetFormatted = summary.dividendLoanOffsetFormatted || formatMoney(summary.dividendLoanOffset || 0);
+      const reinvestFormatted = summary.dividendSavingsReinvestFormatted || formatMoney(summary.dividendSavingsReinvest || (Number(summary.projectedDividend) || 0));
+
+      const profitEl = document.getElementById("pf-my-profit-share");
+      if (profitEl) profitEl.textContent = grossDivFormatted;
+
+      const offsetEl = document.getElementById("pf-dividend-offset-val");
+      if (offsetEl) offsetEl.textContent = loanOffsetFormatted;
+
+      const reinvestEl = document.getElementById("pf-dividend-reinvest-val");
+      if (reinvestEl) reinvestEl.textContent = reinvestFormatted;
     }
 
     // Group Macro Overview
@@ -305,7 +386,7 @@
     document.getElementById("pf-loan-count").textContent = loans.length + " records";
 
     if (loans.length === 0) {
-      lTbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-500 dark:text-slate-400">No active or past loans.</td></tr>';
+      lTbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-500 dark:text-slate-400">No active or past loans.</td></tr>';
     } else {
       lTbody.innerHTML = loans
         .map(function (l) {
@@ -317,13 +398,30 @@
             ? (String(l.status || "").toLowerCase().indexOf("arrears") !== -1 ? "text-rose-700 dark:text-rose-400" : "text-amber-700 dark:text-amber-400")
             : "text-slate-500 dark:text-slate-400";
 
+          let maturityHtml = '—';
+          if (l.isOverdue) {
+            const days = Math.abs(l.daysToMaturity || 0);
+            maturityHtml = '<div class="text-[11px] leading-tight"><span class="font-mono text-slate-700 dark:text-slate-300">' + (escapePfHtml(l.dueDateFormatted) || '—') + '</span><br><span class="text-rose-600 dark:text-rose-400 font-bold inline-flex items-center gap-0.5 text-[10px]">⚠️ ' + days + ' ' + (days === 1 ? 'day' : 'days') + ' overdue</span></div>';
+          } else if (l.dueDateFormatted) {
+            const days = l.daysToMaturity;
+            const countdown = (days !== null && days !== undefined)
+              ? (days === 0 ? '<span class="text-amber-600 dark:text-amber-400 font-semibold text-[10px]">Due today</span>' : '<span class="text-slate-500 dark:text-slate-400 font-medium text-[10px]">In ' + days + ' ' + (days === 1 ? 'day' : 'days') + '</span>')
+              : '';
+            maturityHtml = '<div class="text-[11px] leading-tight"><span class="font-mono text-slate-700 dark:text-slate-300">' + escapePfHtml(l.dueDateFormatted) + '</span>' + (countdown ? '<br>' + countdown : '') + '</div>';
+          }
+
+          const loanId = l.id || l.loanId || '';
+          const printBtnHtml = '<button type="button" onclick="openPrintLoanStatement(\'' + escapePfHtml(loanId) + '\')" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200/80 dark:border-slate-700 transition-colors shadow-2xs" title="Print Loan Statement"><i class="fas fa-print text-[11px] text-slate-500 dark:text-slate-400"></i></button>';
+
           return (
             '<tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">' +
-            '<td class="py-2.5 font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">' + (l.id || "—") + '</td>' +
+            '<td class="py-2.5 font-mono tabular-nums font-bold text-slate-800 dark:text-slate-200">' + escapePfHtml(l.id || "—") + '</td>' +
+            '<td class="py-2.5">' + maturityHtml + '</td>' +
             '<td class="py-2.5 text-right font-mono tabular-nums font-medium text-slate-700 dark:text-slate-300">' + (l.requestedAmountFormatted || "KES 0") + '</td>' +
             '<td class="py-2.5 text-right font-mono tabular-nums text-emerald-700 dark:text-emerald-400 font-medium">' + (l.paidFormatted || "KES 0") + '</td>' +
             '<td class="py-2.5 text-right font-mono tabular-nums font-bold ' + balCls + '">' + (l.balanceFormatted || "KES 0") + '</td>' +
             '<td class="py-2.5 text-center">' + statusPill + '</td>' +
+            '<td class="py-2.5 text-right">' + printBtnHtml + '</td>' +
             '</tr>'
           );
         })

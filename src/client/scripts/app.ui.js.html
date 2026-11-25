@@ -1522,7 +1522,63 @@
     if (parRateEl) parRateEl.innerText = formatPercent(data.portfolio && data.portfolio.parRate);
     const rangeLabelEl = document.getElementById("home-range-label");
     if (rangeLabelEl) rangeLabelEl.innerText = rangeLabel(data.range || currentHomeRange);
-    renderMainCharts(data);
+
+    // ANA-1 Actuarial Telemetry: CDR, PAR 30/90, and Institutional Micro-Strip
+    const exec = data.executiveTelemetry || {};
+    const cdrVal = data.cdr !== undefined ? data.cdr : (exec.cdr !== undefined ? exec.cdr : 0);
+    const isAboveSasra = data.isAboveSasraCap !== undefined ? data.isAboveSasraCap : Boolean(exec.isAboveSasraCap);
+    const cdrValEl = document.getElementById("home-cdr-val");
+    if (cdrValEl) cdrValEl.innerText = Number(cdrVal).toFixed(1) + "%";
+    const cdrWarnEl = document.getElementById("home-cdr-warning");
+    if (cdrWarnEl) {
+      if (isAboveSasra) {
+        cdrWarnEl.classList.remove("hidden");
+      } else {
+        cdrWarnEl.classList.add("hidden");
+      }
+    }
+
+    const par30Val = data.par30Ratio !== undefined ? data.par30Ratio : (exec.par30Ratio !== undefined ? exec.par30Ratio : 0);
+    const par90Val = data.par90Ratio !== undefined ? data.par90Ratio : (exec.par90Ratio !== undefined ? exec.par90Ratio : 0);
+    const provAmt = data.totalRequiredProvision !== undefined ? data.totalRequiredProvision : (exec.totalRequiredProvision !== undefined ? exec.totalRequiredProvision : 0);
+
+    const par30El = document.getElementById("home-par30-val");
+    if (par30El) par30El.innerText = Number(par30Val).toFixed(1) + "%";
+    const par90El = document.getElementById("home-par90-val");
+    if (par90El) par90El.innerText = Number(par90Val).toFixed(1) + "%";
+    const provValEl = document.getElementById("home-par-provision-val");
+    if (provValEl) provValEl.innerText = formatMoney(provAmt);
+
+    const roeVal = data.roe !== undefined ? data.roe : (exec.roe !== undefined ? exec.roe : 0);
+    const roaVal = data.roa !== undefined ? data.roa : (exec.roa !== undefined ? exec.roa : 0);
+    const liqVal = data.liquidityRatio !== undefined ? data.liquidityRatio : (exec.liquidityRatio !== undefined ? exec.liquidityRatio : 0);
+
+    const roeEl = document.getElementById("home-roe-val");
+    if (roeEl) roeEl.innerText = Number(roeVal).toFixed(1) + "%";
+    const roeStatusEl = document.getElementById("home-roe-status");
+    if (roeStatusEl) {
+      roeStatusEl.innerText = roeVal >= 8.0 ? "(≥ 8.0%)" : "(< 8.0%)";
+      roeStatusEl.className = roeVal >= 8.0
+        ? "text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold"
+        : "text-[9px] text-amber-600 dark:text-amber-400 font-semibold";
+    }
+
+    const roaEl = document.getElementById("home-roa-val");
+    if (roaEl) roaEl.innerText = Number(roaVal).toFixed(1) + "%";
+
+    const liqEl = document.getElementById("home-liquidity-val");
+    if (liqEl) liqEl.innerText = Number(liqVal).toFixed(1) + "%";
+    const liqIndicatorEl = document.getElementById("home-liquidity-indicator");
+    if (liqIndicatorEl) {
+      liqIndicatorEl.innerText = liqVal >= 15.0 ? "(≥ 15% SASRA Floor)" : "(⚠️ < 15% SASRA Floor)";
+      liqIndicatorEl.className = liqVal >= 15.0
+        ? "text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold"
+        : "text-[9px] text-rose-600 dark:text-rose-400 font-semibold";
+    }
+
+    if (typeof renderMainCharts === "function") {
+      renderMainCharts(data);
+    }
   }
 
   function refreshDashboard(forceRefresh) {
