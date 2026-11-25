@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v148`** (Google Apps Script Build `@149`, deployed `@155`, deployment `AKfycbx4........wRCA`) |
-| **Total Tracked Tasks** | **39 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-3`–`UI-7`, `COM-3`–`COM-6`, `COM-2`, `RPT-3`, `RPT-5`, `SET-1`, `MIG-3`, `SEC-1`) |
-| **Completed & Shipped (`[DONE]`)** | **39 Tasks (100.0%)** |
+| **Current Live Release** | **`v149`** (Google Apps Script Build `@150`, deployed `@156`, deployment `AKfycbx4........wRCA`) |
+| **Total Tracked Tasks** | **40 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-3`–`UI-7`, `COM-3`–`COM-6`, `COM-2`, `RPT-3`, `RPT-5`, `SET-1`, `MIG-3`, `SEC-1`, `ANA-1`) |
+| **Completed & Shipped (`[DONE]`)** | **40 Tasks (100.0%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** |
 | **Prioritized Backlog (`[BACKLOG]`)** | **0 Tasks (100% Core Backlog Completed)** |
-| **Current Sprint Focus** | **🎉 100% Backlog Completion Achieved!** All 39 planned deliverables are designed, tested, verified, and live in production. Final operational maturity reached. |
+| **Current Sprint Focus** | **🎉 100% Backlog Completion Achieved!** All 40 planned deliverables are designed, tested, verified, and live in production. Final operational maturity reached. |
 
 ---
 
@@ -21,6 +21,7 @@
 
 | Task ID | Domain | Title & Description | Target Agents | Shipped Release | Date Completed |
 | :---: | :---: | :--- | :---: | :---: | :---: |
+| **`ANA-1`** | Financial Intelligence & Actuarial UX | **Executive & Member Dashboard Financial Intelligence, Actuarial Ratios & Visual Taxonomy**: Implemented Member Portal financial intelligence in `MyFinancials.html` & `personal.service.js` (Free vs Encumbered Savings decomposition, dynamic borrowing capacity with delinquency lockout, Rule 5.2 dual-stream dividend routing, credit standing tier badges with deposit streak counter, active loan maturity countdowns with 1-click `openPrintLoanStatement`) and Executive Overview actuarial metrics in `Home.html` & `dashboard.service.js` (Capital Deployment Ratio with SASRA 85% ceiling, PAR 30 vs PAR 90+ split with loan loss provisioning coverage, Return on Equity, Return on Assets, Liquidity Coverage $\ge 15\%$, 5-tier SASRA Credit Quality Donut, and Chama Asset Allocation Donut). | `@fixer`, `@designer`, `@sentinel` | **`v149`** (`@150` / `@156`) | 2026-11-25 |
 | **`SEC-1`** | Security & Cryptographic Compliance | **Tamper-Evident Ledger Hashing & Audit Log Retention**: Implemented cryptographic SHA-256 rolling hash chain (`computeAuditEntryHash_`, `sha256Hex_`) starting from `GENESIS_HASH` ("0000...0000"), dynamic 9-column schema migration (`upgradeAuditLogSchemaAndHashChain_`) with batch backfill sealing, tamper-evident append-only logger (`appendAuditLog_`), comprehensive integrity scanner and anomaly pinpoint engine (`verifyAuditLogIntegrity_`, `getAuditIntegrityStatus`, `verifyLedgerIntegrity`), configurable audit retention policy (`getAuditRetentionSettings`, `saveAuditRetentionSettings`), archival engine (`archiveOldAuditLogs_`), and Card 6 UI integration in `Settings.html` & `settings.ui.js.html` with real-time integrity status badge, sealed rows counter, seal hash display/copy, manual on-demand integrity verification, and tamper anomaly warnings. | `@fixer`, `@sentinel`, `@designer` | **`v148`** (`@149` / `@155`) | 2026-11-24 |
 | **`COM-2`** | Member Communications & Financial Intelligence | **End-of-Month Automated Member Statements & Dividend Projections with Settings**: Implemented automated monthly statement dispatch engine (`runAutomatedMonthlyStatementDispatch_`, `dispatchAutomatedMonthlyStatementsNow`) with time-driven triggers (`setupAutomatedStatementTrigger_`, `removeAutomatedStatementTrigger_`), day-of-month scheduling (Day 1–28 at 08:00 Nairobi time), strict month-level idempotency protection, and Treasurer/Admin settings (`autoMonthlyStatements`, `autoStatementDay`, `lastAutoDispatchMonth/Timestamp/Count`). Integrated SASRA/IFRS dividend projection engine (`getGroupDividendProjectionPool_`) calculating qualifying savings weight, 20% statutory reserve deduction, annualized net distributable surplus, projected dividend (KES), annualized ROI yield (%), capital pool share (%), and smart payout priority routing (Rule 5.2 loan offset vs. savings capitalization) in rich responsive dark-mode HTML email and WhatsApp templates. | `@fixer` | **`v147`** (`@148`) | 2026-11-24 |
 | **`UI-3`** | UI/UX & Frontend Performance | **Advanced Ledger Multi-Sort & Filter Presets**: Interactive column header sorting (Ascending ➔ Descending ➔ Neutral) across dates, numeric amounts, and alphanumeric labels with dynamic SVG/FontAwesome sort indicators; 1-click segmented filter chip presets (`This Month`, `Savings/Deposits`, `Loan Repayments`, `Unallocated/Suspense`, `Large (≥ KES 10,000)` on Contributions; `Active/Disbursed`, `Overdue/In Arrears`, `Fully Repaid`, `Pending Review` on Loans; `Active Members`, `Borrowers`, `Committee/Officers`, `Inactive/Dormant` on Members) with live record counters; and RFC-4180 formula-injection-safe CSV export (`exportContributionsCSV()`, `exportLoansCSV()`, `exportMembersCSV()`) delivering the active filtered and sorted dataset. | `@designer` | **`v146`** (`@147`) | 2026-11-24 |
@@ -66,11 +67,12 @@
 ## 3. Prioritized Unworked Backlog (The Road Ahead)
 
 > [!NOTE]
-> **🎉 100% BACKLOG COMPLETION ACHIEVED (`v148` / `@149` / `@155`):**  
-> With the successful delivery, security clearance, and production deployment of **`SEC-1: Tamper-Evident Ledger Hashing & Audit Log Retention`**, all **39 planned engineering deliverables** across Architecture, Financials, Visual Analytics, UI/UX, Communications, Governance, Reporting, Migrations, and Security are **100% complete and live in production**!
+> **🎉 100% BACKLOG COMPLETION ACHIEVED (`v149` / `@150` / `@156`):**  
+> With the successful delivery, security clearance, and production deployment of **`ANA-1: Executive & Member Dashboard Financial Intelligence, Actuarial Ratios & Visual Taxonomy`**, all **40 planned engineering deliverables** across Architecture, Financials, Visual Analytics, UI/UX, Communications, Governance, Reporting, Migrations, Security, and Intelligence are **100% complete and live in production**!
 >
 > The Bright Life Group Dashboard has attained full operational maturity:
 > - **IFRS & SASRA Regulatory Compliance:** Complete Balance Sheet (`RPT-1`), P&L (`RPT-2`), Statement of Changes in Equity (`RPT-3`), IAS 7 Direct Cash Flow (`RPT-3`), 5-tier statutory impairment aging (`VIS-3`), and AGM Annual Audit Export Pack (`RPT-4`).
+> - **Financial Intelligence & Actuarial UX:** Member-facing Free vs. Encumbered savings decomposition, dynamic borrowing capacity with delinquency protection, Bylaws Rule 5.2 dividend routing, credit standing tier badges, executive CDR telemetry with SASRA 85% ceiling indicator, and asset allocation donuts (`ANA-1`).
 > - **Dual-Officer Governance & Credit Engine:** Multi-signature loan review & disbursement (`GOV-1`), native loan application workflow (`UI-2`), dynamic loan policy & tenor tiers (`SET-1`), and individual loan statements with amortization schedules (`RPT-5`).
 > - **Enterprise Architecture & Performance:** Request-scoped SheetContext with $\le 8$ reads per RPC (`ARC-4`), materialized view Summary KPIs with formula offloading (`ARC-3`), 3-tier investment accounting (`ARC-2`), institutional 'BL' prefix standardization (`ARC-5`), and client SWR caching (`UI-4`).
 > - **Automated Communications Hub:** Automated monthly member statements & dividend projections with scheduling triggers (`COM-2`), automated transaction receipts via WhatsApp & Email (`COM-1`), certified statement print/PDF export (`COM-4`, `COM-5`), and 1/3-page contribution receipt slips (`COM-6`).
@@ -102,7 +104,7 @@
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v148) — 100% Complete"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v149) — 100% Complete"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -132,6 +134,7 @@ graph TD
         R4["RPT-4: Official AGM & Bank Audit Pack"]
         C1["COM-1: Automated WhatsApp/Email Receipts"]
         S1["SEC-1: Tamper-Evident Ledger Hashing & Retention"]
+        N1["ANA-1: Financial Intelligence & Actuarial UX"]
     end
 
     subgraph Ongoing_Operational_Backfill ["Ongoing Operational Backfill (Standing Ingestion)"]
@@ -154,6 +157,8 @@ graph TD
     R2 --> C2
     C1 --> C2
     A1 --> S1
+    R1 & R2 & V2 & V3 --> N1
+    C2 --> N1
 ```
 
 ---
