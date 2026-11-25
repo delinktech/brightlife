@@ -181,3 +181,41 @@ Client-server contracts called via `google.script.run`:
   - **Tamper-Evident Verification Scanner (`verifyAuditLogIntegrity_()`, `verifyLedgerIntegrity`):** High-speed auditing scanner verifying rolling chain integrity, immediately detecting and pinpointing out-of-band cell modification, row insertion, and row deletion with exact row numbers.
   - **Retention Policy & Partition Archive Manager (`archiveOldAuditLogs_`, `saveAuditRetentionSettings`):** Configurable retention window (`AUDIT_LOG_RETENTION_DAYS`, 30–3650 days, default 365 days). Safely archives expired rows to `[ARCHIVE] Audit Log` while maintaining cryptographic continuity via `AUDIT_LOG_CHECKPOINT_HASH`.
   - **Cryptographic Monitoring UI (`Settings.html` Card 6 & `settings.ui.js.html`):** Interactive dashboard card with real-time status badges (`IMMUTABLE & VERIFIED` vs `TAMPER DETECTED`), total sealed entries counter, last verified seal hash with 1-click clipboard copy, tamper anomaly alerts, and instant verification trigger.
+
+---
+
+## 9. Financial Intelligence & Actuarial Reporting Specifications (`@analyst`)
+*Maintained by `@analyst` to define institutional formulas, ratio specifications, and contracts for `@fixer` (RPC backend) and `@designer` (frontend Chart.js & UI).*
+
+### 9.1 Member Financial Standing & Capacity Specifications (`getPersonalFinancialsData`)
+* **Free vs Encumbered Savings Split**:
+  - `freeSavings = Math.max(0, savings - totalGuaranteed)`
+  - `encumberedSavings = Math.min(savings, totalGuaranteed)`
+* **Dynamic Effective Borrowing Capacity**:
+  - Multiplier fetched from `Constants!Statutory Thresholds` (key: `Max Loan Multiplier`, default: `3.0`).
+  - If member has delinquent loans (`isArrears === true` or `daysPastDue > 0`), `availableCapacity = 0` (Delinquency Lockout).
+  - Else: `availableCapacity = Math.max(0, (savings * multiplier) - activeLoanBalance - encumberedSavings)`.
+* **Bylaws Rule 5.2 Dividend Projection & Routing**:
+  - Distributable pool matches standardized formula: `netDistributableSurplus = totalLoanInterest + totalInvestmentGains`.
+  - `grossProjectedDividend = totalGroupSavings > 0 ? (netDistributableSurplus * (savings / totalGroupSavings)) : 0`.
+  - `loanOffsetAmount = Math.min(grossProjectedDividend, activeLoanBalance)`.
+  - `savingsCreditAmount = Math.max(0, grossProjectedDividend - loanOffsetAmount)`.
+
+### 9.2 Executive Risk & Efficiency Ratios (`getHomeAnalytics`)
+* **Capital Deployment Ratio (CDR)**:
+  - Formula: `(totalOutstandingLoans / totalMemberSavings) * 100` (Benchmark target: 70%–85%, SASRA statutory ceiling: 85%).
+* **Portfolio at Risk (PAR 30 & Non-Performing)**:
+  - `par30Amount`: Total balance of loans with `daysPastDue >= 31 && daysPastDue <= 60`.
+  - `nonPerformingAmount`: Total balance of loans with `daysPastDue >= 61` (Substandard, Doubtful, Loss).
+  - `parRate`: `(totalParAmount / totalOutstandingLoans) * 100` (Benchmark: `< 5.0%`).
+* **Return on Equity (ROE)**:
+  - Formula: `(netOperatingSurplus / totalMembersEquity) * 100` (Benchmark: `≥ 8.0%`).
+* **Operational Expense Ratio (OER)**:
+  - Formula: `(operatingExpenses / totalOperatingRevenue) * 100` (Benchmark: `≤ 15.0%`).
+* **Asset Allocation Mix**:
+  - Total Group Assets decomposed into 4 standard categories:
+    1. `operatingCash`: Physical Bank + Till balances.
+    2. `cashEquivalents`: CIC MMF + Liquid Money Market funds.
+    3. `netLoanBook`: Gross Loans Receivable less SASRA Section 51 impairment reserve.
+    4. `tangibleProjects`: Capital Projects and external fixed equity.
+

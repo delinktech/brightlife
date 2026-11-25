@@ -61,6 +61,9 @@ function getDashboardData() {
       });
     }
 
+    const cdrStats = totalPool > 0 ? Math.round(((totalActiveLoans / totalPool) * 100) * 100) / 100 : 0;
+    const isAboveSasraCapStats = cdrStats > 85.0;
+
     return {
       stats: {
         pool: totalPool,
@@ -70,6 +73,8 @@ function getDashboardData() {
         invested: kpiSnap ? kpiSnap.totalInvestmentAssets : 0,
         activeMembers: kpiSnap ? kpiSnap.totalActiveMembers : 0,
         parRate: kpiSnap ? kpiSnap.activeParPct : 0,
+        cdr: cdrStats,
+        isAboveSasraCap: isAboveSasraCapStats,
         fromMaterializedView: Boolean(kpiSnap),
       },
       loans: loanList,
@@ -100,6 +105,14 @@ function clearDashboardCache_() {
 }
 
 function getHomeAnalytics(rangeKey) {
+  return getHomeAnalyticsByRange_(rangeKey || "year");
+}
+
+function getHomeAnalyticsData(rangeKey) {
+  return getHomeAnalyticsByRange_(rangeKey || "year");
+}
+
+function getDashboardOverviewData(rangeKey) {
   return getHomeAnalyticsByRange_(rangeKey || "year");
 }
 
@@ -474,11 +487,53 @@ function getHomeAnalyticsByRange_(rangeKey) {
 
   const liquiditySummary = computeLiquiditySummary_(ss, totalSavings, totalLoans);
   const investments = buildInvestmentHomeCharts_(tz, now, effectiveRange, rangeBounds);
+
+  // ANA-1 Actuarial Telemetry: CDR, Granular PAR Tiering, Provisioning Breakdown
+  const totalMemberSavings = totalSavings;
+  const totalActiveLoans = totalOutstanding;
+  const cdr = totalMemberSavings > 0 ? Math.round(((totalActiveLoans / totalMemberSavings) * 100) * 100) / 100 : 0;
+  const isAboveSasraCap = cdr > 85.0; // SASRA 85% statutory leverage ceiling
+
+  const normalAmount = Math.round((aging.current || 0) * 100) / 100;
+  const watchAmount = Math.round((aging.par30 || 0) * 100) / 100;
+  const substandardAmount = Math.round((aging.par60 || 0) * 100) / 100;
+  const doubtfulAmount = Math.round((aging.par90 || 0) * 100) / 100;
+  const lossAmount = Math.round((aging.loss || 0) * 100) / 100;
+
+  const par30Amount = Math.round((substandardAmount + doubtfulAmount + lossAmount) * 100) / 100;
+  const par30Ratio = totalOutstanding > 0 ? Math.round(((par30Amount / totalOutstanding) * 100) * 100) / 100 : 0;
+  const par90Amount = lossAmount;
+  const par90Ratio = totalOutstanding > 0 ? Math.round(((par90Amount / totalOutstanding) * 100) * 100) / 100 : 0;
+  const totalRequiredProvision = recommendedProvision;
+
+  const creditQualityDistribution = [normalAmount, watchAmount, substandardAmount, doubtfulAmount, lossAmount];
+  const sasraCreditQuality = {
+    amounts: creditQualityDistribution,
+    labels: ["Normal (0 DPD)", "Watch (1–30 DPD)", "Substandard (31–60 DPD)", "Doubtful (61–90 DPD)", "Loss (91+ DPD)"],
+    colors: ["#10b981", "#38bdf8", "#f59e0b", "#f97316", "#ef4444"],
+    percentages: creditQualityDistribution.map(function (amt) {
+      return totalOutstanding > 0 ? Math.round(((amt / totalOutstanding) * 100) * 100) / 100 : 0;
+    }),
+    total: totalOutstanding,
+    normalAmount: normalAmount,
+    watchAmount: watchAmount,
+    substandardAmount: substandardAmount,
+    doubtfulAmount: doubtfulAmount,
+    lossAmount: lossAmount,
+  };
+
   const portfolioPayload = {
     repaymentRate: repaymentRate,
     parRate: parRate,
     totalOutstanding: totalOutstanding,
     parAmount: parAmount,
+    par30Amount: par30Amount,
+    par30Ratio: par30Ratio,
+    par90Amount: par90Amount,
+    par90Ratio: par90Ratio,
+    totalRequiredProvision: totalRequiredProvision,
+    creditQualityDistribution: creditQualityDistribution,
+    sasraCreditQuality: sasraCreditQuality,
     performingAmount: performingAmount,
     performingRate: performingRate,
     aging: aging,
@@ -538,10 +593,84 @@ function getHomeAnalyticsByRange_(rangeKey) {
   const closingLiquidCash = liquiditySummary.cash;
   const openingLiquidCash = Math.max(0, Math.round((closingLiquidCash - netPeriodCashflow) * 100) / 100);
 
+  // ANA-1 Actuarial Executive Telemetry & Chama Asset Allocation
+  const netOperatingSurplus = incomeStatement ? (Number(incomeStatement.netOperatingSurplus) || 0) : 0;
+  const monthsElapsed = Math.max(1, now.getMonth() + 1);
+  const annualizedSurplus = (effectiveRange === "year" || effectiveRange === "this_year") && monthsElapsed < 12 && netOperatingSurplus > 0
+    ? Math.round(((netOperatingSurplus / monthsElapsed) * 12) * 100) / 100
+    : netOperatingSurplus;
+
+  const totalMembersEquity = (balanceSheet && balanceSheet.equity && balanceSheet.equity.totalEquity !== undefined)
+    ? Number(balanceSheet.equity.totalEquity)
+    : (balanceSheet && balanceSheet.totalEquity !== undefined ? Number(balanceSheet.totalEquity) : totalSavings);
+
+  const totalGroupAssets = (balanceSheet && balanceSheet.assets && balanceSheet.assets.totalAssets !== undefined)
+    ? Number(balanceSheet.assets.totalAssets)
+    : (balanceSheet && balanceSheet.totalAssets !== undefined ? Number(balanceSheet.totalAssets) : 0);
+
+  const liquidCashAmount = liquiditySummary ? (Number(liquiditySummary.cash) || 0) : 0;
+
+  const roe = totalMembersEquity > 0 ? Math.round(((annualizedSurplus / totalMembersEquity) * 100) * 100) / 100 : 0;
+  const roa = totalGroupAssets > 0 ? Math.round(((netOperatingSurplus / totalGroupAssets) * 100) * 100) / 100 : 0;
+  const liquidityRatio = totalSavings > 0 ? Math.round(((liquidCashAmount / totalSavings) * 100) * 100) / 100 : 0;
+
+  const liqTiers = (liquiditySummary && liquiditySummary.liquidity && liquiditySummary.liquidity.tiers) || {};
+  const bankCash = roundCurrency2_(
+    liqTiers.operatingCash !== undefined ? liqTiers.operatingCash : (liquiditySummary && liquiditySummary.liquidity ? liquiditySummary.liquidity.operatingCash : liquidCashAmount)
+  );
+  const mmfEquivalents = roundCurrency2_(
+    liqTiers.cashEquivalents !== undefined ? liqTiers.cashEquivalents : (liquiditySummary && liquiditySummary.liquidity ? liquiditySummary.liquidity.cashEquivalents : 0)
+  );
+  const netLoans = netLoanAssetValue;
+  const tangibleProjects = roundCurrency2_(
+    (balanceSheet && balanceSheet.assets && balanceSheet.assets.externalInvestments) ? balanceSheet.assets.externalInvestments.totalInvestments : 0
+  );
+  const totalAssetsComputed = roundCurrency2_(totalGroupAssets > 0 ? totalGroupAssets : (bankCash + mmfEquivalents + netLoans + tangibleProjects));
+
+  const assetAllocation = {
+    bankCash: bankCash,
+    mmfEquivalents: mmfEquivalents,
+    netLoans: netLoans,
+    tangibleProjects: tangibleProjects,
+    totalAssets: totalAssetsComputed,
+    labels: ["Bank Cash", "MMF Equivalents", "Net Loans", "Tangible Projects"],
+    amounts: [bankCash, mmfEquivalents, netLoans, tangibleProjects],
+    colors: ["#0284c7", "#6366f1", "#10b981", "#f59e0b"],
+  };
+
+  const executiveTelemetry = {
+    cdr: cdr,
+    isAboveSasraCap: isAboveSasraCap,
+    par30Amount: par30Amount,
+    par30Ratio: par30Ratio,
+    par90Amount: par90Amount,
+    par90Ratio: par90Ratio,
+    totalRequiredProvision: totalRequiredProvision,
+    roe: roe,
+    roa: roa,
+    liquidityRatio: liquidityRatio,
+    isLiquidityCompliant: liquidityRatio >= 15.0,
+    isRoeCompliant: roe >= 8.0,
+  };
+
   const result = {
     range: effectiveRange,
     savings: totalSavings,
     loans: totalLoans,
+    cdr: cdr,
+    isAboveSasraCap: isAboveSasraCap,
+    par30Amount: par30Amount,
+    par30Ratio: par30Ratio,
+    par90Amount: par90Amount,
+    par90Ratio: par90Ratio,
+    totalRequiredProvision: totalRequiredProvision,
+    roe: roe,
+    roa: roa,
+    liquidityRatio: liquidityRatio,
+    sasraCreditQuality: sasraCreditQuality,
+    creditQualityDistribution: creditQualityDistribution,
+    assetAllocation: assetAllocation,
+    executiveTelemetry: executiveTelemetry,
     invested: balanceSheet.assets.externalInvestments.totalInvestments,
     investmentCount: investmentCount,
     memberCount: memberCount,
