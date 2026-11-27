@@ -8,6 +8,8 @@ This document maintains the chronological status of completed features, active w
 
 | Release | Feature / Improvement | Module / Scope | Status | Date Completed |
 |---|---|---|---|---|
+| **v1.0.1** | **Annual Cohort Member Numbering (`BLM-YYNNN`)** | `members.service.js` | **Completed** | Nov 27, 2026 |
+| | *Introduced cohort-aware automatic member ID generation format (e.g. BLM-26001, BLM-26002) keyed to registration year.* | | | |
 | **v1.0.0** | **Production Baseline: SemVer Standard & Single Source of Truth** | System Core | **Completed** | Nov 27, 2026 |
 | | *Established strict SemVer standard (v1.0.0) across backend constant, dynamic client hydration, and deployment pipelines.* | | | |
 | **v0.15.3** | **Light Mode Theme Parity & Portal Gateway** | `Index.html`, `app.ui.js.html`, `dashboard/` | **Completed** | Nov 27, 2026 |
