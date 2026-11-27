@@ -151,26 +151,35 @@ function getMembersData(page, limit) {
   }
 }
 
-function generateNextMemberId_(sheet, colIndex) {
-  const prefix = "BLM-";
+function generateNextMemberId_(sheet, colIndex, joinedDate) {
+  let yr = new Date().getFullYear();
+  if (joinedDate) {
+    const parsed = new Date(joinedDate);
+    if (!isNaN(parsed.getTime())) {
+      yr = parsed.getFullYear();
+    }
+  }
+  const currentYear2Digit = String(yr).slice(-2);
+  const prefix = "BLM-" + currentYear2Digit;
   const lastRow = sheet.getLastRow();
-  if (lastRow < 2) return prefix + "01";
+  if (lastRow < 2) return prefix + "001";
 
   const ids = sheet.getRange(2, colIndex, lastRow - 1, 1).getValues().flat();
   let maxNumber = 0;
+  const yearPattern = new RegExp("^BLM-" + currentYear2Digit + "(\\d+)$", "i");
+
   ids.forEach(function (id) {
     if (typeof id !== "string") return;
     const trimmed = id.trim();
     if (!trimmed) return;
-    // Support new "BLM-" (e.g. BLM-01, BLM-10) and legacy "BL..." (e.g. BL25-0001, BL24-0012, BL-0001)
-    const match = trimmed.match(/^BL[A-Za-z0-9]*-(\d+)$/i);
+    const match = trimmed.match(yearPattern);
     if (match) {
       const num = parseInt(match[1], 10);
       if (!isNaN(num) && num > maxNumber) maxNumber = num;
     }
   });
 
-  return prefix + String(maxNumber + 1).padStart(2, "0");
+  return prefix + String(maxNumber + 1).padStart(3, "0");
 }
 
 function saveMember(data) {
@@ -219,7 +228,7 @@ function saveMember(data) {
 
     const assignedId = isUpdate
       ? memberId
-      : generateNextMemberId_(sheet, col["Member ID"] + 1);
+      : generateNextMemberId_(sheet, col["Member ID"] + 1, data.joinedDate);
 
     const rowData = isUpdate
       ? values[targetRowIndex - 1].slice()
