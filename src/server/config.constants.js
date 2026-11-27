@@ -1,5 +1,5 @@
 /** App release label (shown in sidebar). Bump when you ship meaningful changes. */
-const APP_VERSION = "0.0.3";
+const APP_VERSION = "154";
 
 /** Diagnostic & maintenance endpoint security key */
 const ADMIN_SECRET_KEY = "bl_admin_sec_984210";

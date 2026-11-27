@@ -1229,7 +1229,10 @@
 
             if (sNameEl) sNameEl.textContent = name;
             if (sEmailEl) sEmailEl.textContent = email || "—";
-            if (verEl) verEl.textContent = "v" + String(info.version || "0.0.0");
+            if (verEl) {
+              const rawVer = String(info.version || "154");
+              verEl.textContent = rawVer.startsWith("v") ? rawVer : ("v" + rawVer);
+            }
             if (sInitials) sInitials.textContent = getInitialsFromName(name, email);
 
             // Sync Header User Trigger
@@ -1741,7 +1744,7 @@
     const email = u.email || currentSessionEmail || "—";
     const memberId = u.memberId || "Unlinked";
     const roleLabel = u.roleLabel || "Member";
-    const version = u.version ? ("v" + String(u.version)) : (document.getElementById("sidebar-version") ? document.getElementById("sidebar-version").textContent : "v—");
+    const version = u.version ? (String(u.version).startsWith("v") ? String(u.version) : ("v" + String(u.version))) : (document.getElementById("sidebar-version") ? document.getElementById("sidebar-version").textContent : "v154");
 
     const nameEl = document.getElementById("session-modal-name");
     const emailEl = document.getElementById("session-modal-email");
