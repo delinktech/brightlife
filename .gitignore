@@ -1,28 +1,44 @@
-# Google Apps Script / clasp local credentials & project IDs
+# Google Apps Script / Clasp Local Credentials & State
 .clasp.json
 .clasprc.json
+.claspignore
+.clasp-dev.json
 
-# Environment & local secrets
+# Environment & Local Secrets
 .env
 .env.*
 *.pem
 *credentials*.json
 *secret*.json
 
-# Node / local syntax-check tooling
+# Node & Package Managers
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 package-lock.json
 
-# OS & IDE files
+# OS & Editor Artifacts
 .DS_Store
 Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 
-# Local test outputs & temporary migration dumps
+# Local Test Outputs, Logs & Temporary Files
 tests/output/
+*.log
+*.tmp
+*.bak
+.system_generated/
+.user_uploaded/
+
+# Financial Data & Export Dumps
 *.csv
 *.xlsx
 !docs/**/*.xlsx
+!docs/**/*.pdf
