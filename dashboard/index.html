@@ -152,6 +152,20 @@
       font-weight: 500;
     }
 
+    /* Warning box for direct file:// protocol execution */
+    #file-protocol-warning {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 10px;
+      font-size: 11px;
+      color: #fca5a5;
+      max-width: 340px;
+      line-height: 1.4;
+    }
+
     /* Fade-out utility */
     .fade-out {
       opacity: 0 !important;
@@ -172,8 +186,11 @@
       </div>
       <h1 class="brand-title">Bright Life SHG</h1>
       <p class="brand-subtitle">Executive & Member Financial Portal</p>
-      <div class="spinner-ring"></div>
-      <span class="loading-status-text">Securing encrypted connection...</span>
+      <div class="spinner-ring" id="loading-spinner"></div>
+      <span class="loading-status-text" id="status-label">Securing encrypted connection...</span>
+      <div id="file-protocol-warning">
+        <strong>Notice:</strong> Google OAuth blocks embedded requests from <code>file:///</code> paths with 401 errors. Deploy via GitHub Pages or an HTTP/HTTPS server for live authentication.
+      </div>
     </div>
   </div>
 
@@ -181,8 +198,8 @@
   <div class="portal-container">
     <iframe
       id="app-frame"
-      title="Brightlife SHG Portal"
-      allow="clipboard-read; clipboard-write"
+      title="Bright Life SHG Portal"
+      allow="clipboard-read; clipboard-write; fullscreen"
       loading="eager"
     ></iframe>
   </div>
@@ -192,12 +209,21 @@
       // Production Google Apps Script Web App Endpoint
       const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbx4NBY3rdhsCAJljxlTw3dQRGpxXTHOXUWLnaJzoscRLJWWo-uPoX4J-S75HtLFB0wRCA/exec";
 
+      const iframe = document.getElementById("app-frame");
+      const splash = document.getElementById("splash-screen");
+      const statusLabel = document.getElementById("status-label");
+      const fileWarn = document.getElementById("file-protocol-warning");
+      const spinner = document.getElementById("loading-spinner");
+
+      if (window.location.protocol === 'file:') {
+        if (fileWarn) fileWarn.style.display = 'block';
+        if (statusLabel) statusLabel.textContent = 'Host via HTTP/HTTPS or GitHub Pages';
+        if (spinner) spinner.style.borderTopColor = '#ef4444';
+      }
+
       // Forward any query parameters from GitHub Pages URL (e.g. ?tab=loans, ?report=agm)
       const currentQuery = window.location.search || "";
       const targetUrl = GAS_BASE_URL + currentQuery;
-
-      const iframe = document.getElementById("app-frame");
-      const splash = document.getElementById("splash-screen");
 
       // Set iframe source with forwarded parameters
       iframe.src = targetUrl;
