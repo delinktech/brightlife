@@ -1229,8 +1229,8 @@
 
             if (sNameEl) sNameEl.textContent = name;
             if (sEmailEl) sEmailEl.textContent = email || "—";
-            if (verEl) {
-              const rawVer = String(info.version || "154");
+            if (verEl && info.version) {
+              const rawVer = String(info.version).trim();
               verEl.textContent = rawVer.startsWith("v") ? rawVer : ("v" + rawVer);
             }
             if (sInitials) sInitials.textContent = getInitialsFromName(name, email);
