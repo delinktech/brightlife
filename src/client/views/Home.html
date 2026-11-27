@@ -225,10 +225,16 @@
           <button type="button" id="btn-toggle-acct-bal" onclick="toggleHomeMixChart('accounts')" class="px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Accounts</button>
         </div>
       </div>
-      <div class="max-w-full overflow-hidden w-full h-56 sm:h-64 my-auto flex items-center justify-center relative">
-        <canvas id="assetAllocationChart"></canvas>
-        <canvas id="accountBalanceChart" class="hidden"></canvas>
-        <canvas id="capitalMixChart" class="hidden"></canvas>
+      <div class="max-w-full overflow-hidden w-full h-56 sm:h-64 my-auto relative">
+        <div id="wrapper-assetAllocationChart" class="w-full h-full flex items-center justify-center">
+          <canvas id="assetAllocationChart"></canvas>
+        </div>
+        <div id="wrapper-accountBalanceChart" class="w-full h-full flex items-center justify-center hidden" style="display: none;">
+          <canvas id="accountBalanceChart" class="hidden" style="display: none;"></canvas>
+        </div>
+        <div id="wrapper-capitalMixChart" class="w-full h-full flex items-center justify-center hidden" style="display: none;">
+          <canvas id="capitalMixChart" class="hidden" style="display: none;"></canvas>
+        </div>
       </div>
     </div>
 
@@ -2017,13 +2023,20 @@
     const container = canvas.parentElement;
     if (!container) return isEmpty;
 
-    const existingEmpty = container.querySelector('[data-chart-empty-for="' + canvasId + '"]');
+    const existingEmpty = document.querySelector ? document.querySelector('[data-chart-empty-for="' + canvasId + '"]') : container.querySelector('[data-chart-empty-for="' + canvasId + '"]');
     if (isEmpty) {
       if (charts[canvasId]) {
         charts[canvasId].destroy();
         charts[canvasId] = null;
       }
       canvas.classList.add("hidden");
+      canvas.style.display = "none";
+      if (canvas.style.setProperty) canvas.style.setProperty("display", "none", "important");
+      const wrapper = document.getElementById('wrapper-' + canvasId);
+      if (wrapper) {
+        wrapper.classList.add("hidden");
+        wrapper.style.display = "none";
+      }
       if (!existingEmpty) {
         const emptyDiv = document.createElement("div");
         emptyDiv.setAttribute("data-chart-empty-for", canvasId);
@@ -2041,12 +2054,26 @@
 
     if (existingEmpty) existingEmpty.remove();
     const activeMixMode = window.currentHomeMixMode || 'assets';
-    if (canvasId === 'accountBalanceChart' && activeMixMode !== 'accounts') {
+    const isTargetHidden = (canvasId === 'accountBalanceChart' && activeMixMode !== 'accounts') ||
+                           (canvasId === 'assetAllocationChart' && activeMixMode === 'accounts');
+    const wrapper = document.getElementById('wrapper-' + canvasId);
+
+    if (isTargetHidden) {
       canvas.classList.add("hidden");
-    } else if (canvasId === 'assetAllocationChart' && activeMixMode === 'accounts') {
-      canvas.classList.add("hidden");
+      canvas.style.display = "none";
+      if (canvas.style.setProperty) canvas.style.setProperty("display", "none", "important");
+      if (wrapper) {
+        wrapper.classList.add("hidden");
+        wrapper.style.display = "none";
+      }
     } else {
       canvas.classList.remove("hidden");
+      canvas.style.display = "";
+      if (canvas.style.removeProperty) canvas.style.removeProperty("display");
+      if (wrapper) {
+        wrapper.classList.remove("hidden");
+        wrapper.style.display = "";
+      }
     }
     return false;
   }
@@ -3378,6 +3405,16 @@
           }
         });
       }
+      if (window.currentHomeMixMode !== 'accounts') {
+        ctxAccount.classList.add('hidden');
+        ctxAccount.style.display = 'none';
+        if (ctxAccount.style.setProperty) ctxAccount.style.setProperty('display', 'none', 'important');
+        const acctWrap = document.getElementById('wrapper-accountBalanceChart');
+        if (acctWrap) {
+          acctWrap.classList.add('hidden');
+          acctWrap.style.display = 'none';
+        }
+      }
       if (typeof toggleHomeMixChart === 'function') {
         toggleHomeMixChart(window.currentHomeMixMode || 'assets');
       }
@@ -3534,16 +3571,46 @@
     const assetCanvas = document.getElementById('assetAllocationChart');
     const acctCanvas = document.getElementById('accountBalanceChart');
     const capCanvas = document.getElementById('capitalMixChart');
+    const assetWrapper = document.getElementById('wrapper-assetAllocationChart');
+    const acctWrapper = document.getElementById('wrapper-accountBalanceChart');
+    const capWrapper = document.getElementById('wrapper-capitalMixChart');
     const btnAsset = document.getElementById('btn-toggle-asset-alloc');
     const btnAcct = document.getElementById('btn-toggle-acct-bal');
     const titleEl = document.getElementById('home-donut-title');
     const subEl = document.getElementById('home-donut-subtitle');
 
-    if (capCanvas) capCanvas.classList.add('hidden');
+    if (capCanvas) {
+      capCanvas.classList.add('hidden');
+      capCanvas.style.display = 'none';
+      if (capCanvas.style.setProperty) capCanvas.style.setProperty('display', 'none', 'important');
+    }
+    if (capWrapper) {
+      capWrapper.classList.add('hidden');
+      capWrapper.style.display = 'none';
+    }
 
     if (window.currentHomeMixMode === 'accounts') {
-      if (assetCanvas) assetCanvas.classList.add('hidden');
-      if (acctCanvas) acctCanvas.classList.remove('hidden');
+      if (assetCanvas) {
+        assetCanvas.classList.add('hidden');
+        assetCanvas.style.display = 'none';
+        if (assetCanvas.style.setProperty) assetCanvas.style.setProperty('display', 'none', 'important');
+      }
+      if (assetWrapper) {
+        assetWrapper.classList.add('hidden');
+        assetWrapper.style.display = 'none';
+      }
+      if (acctCanvas) {
+        acctCanvas.classList.remove('hidden');
+        acctCanvas.style.display = '';
+        if (acctCanvas.style.removeProperty) acctCanvas.style.removeProperty('display');
+      }
+      if (acctWrapper) {
+        acctWrapper.classList.remove('hidden');
+        acctWrapper.style.display = '';
+      }
+      if (typeof charts !== 'undefined' && charts.accountBalanceChart && typeof charts.accountBalanceChart.resize === 'function') {
+        charts.accountBalanceChart.resize();
+      }
       if (btnAcct) {
         btnAcct.className = 'px-2 py-0.5 rounded font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs';
       }
@@ -3553,8 +3620,27 @@
       if (titleEl) titleEl.textContent = 'Ownership & Account Balances';
       if (subEl) subEl.textContent = 'Liquid cash distribution across accounts';
     } else {
-      if (acctCanvas) acctCanvas.classList.add('hidden');
-      if (assetCanvas) assetCanvas.classList.remove('hidden');
+      if (acctCanvas) {
+        acctCanvas.classList.add('hidden');
+        acctCanvas.style.display = 'none';
+        if (acctCanvas.style.setProperty) acctCanvas.style.setProperty('display', 'none', 'important');
+      }
+      if (acctWrapper) {
+        acctWrapper.classList.add('hidden');
+        acctWrapper.style.display = 'none';
+      }
+      if (assetCanvas) {
+        assetCanvas.classList.remove('hidden');
+        assetCanvas.style.display = '';
+        if (assetCanvas.style.removeProperty) assetCanvas.style.removeProperty('display');
+      }
+      if (assetWrapper) {
+        assetWrapper.classList.remove('hidden');
+        assetWrapper.style.display = '';
+      }
+      if (typeof charts !== 'undefined' && charts.assetAllocationChart && typeof charts.assetAllocationChart.resize === 'function') {
+        charts.assetAllocationChart.resize();
+      }
       if (btnAsset) {
         btnAsset.className = 'px-2 py-0.5 rounded font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-2xs';
       }
@@ -3565,18 +3651,15 @@
       if (subEl) subEl.textContent = 'Liquid cash, MMF, loans & projects';
     }
 
-    const container = (assetCanvas && assetCanvas.parentElement) || (acctCanvas && acctCanvas.parentElement);
-    if (container) {
-      const assetEmpty = container.querySelector('[data-chart-empty-for="assetAllocationChart"]');
-      const acctEmpty = container.querySelector('[data-chart-empty-for="accountBalanceChart"]');
-      if (assetEmpty) {
-        if (window.currentHomeMixMode === 'accounts') assetEmpty.classList.add('hidden');
-        else assetEmpty.classList.remove('hidden');
-      }
-      if (acctEmpty) {
-        if (window.currentHomeMixMode === 'accounts') acctEmpty.classList.remove('hidden');
-        else acctEmpty.classList.add('hidden');
-      }
+    const assetEmpty = document.querySelector ? document.querySelector('[data-chart-empty-for="assetAllocationChart"]') : null;
+    const acctEmpty = document.querySelector ? document.querySelector('[data-chart-empty-for="accountBalanceChart"]') : null;
+    if (assetEmpty) {
+      if (window.currentHomeMixMode === 'accounts') assetEmpty.classList.add('hidden');
+      else assetEmpty.classList.remove('hidden');
+    }
+    if (acctEmpty) {
+      if (window.currentHomeMixMode === 'accounts') acctEmpty.classList.remove('hidden');
+      else acctEmpty.classList.add('hidden');
     }
   }
   window.toggleHomeMixChart = toggleHomeMixChart;

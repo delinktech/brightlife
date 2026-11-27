@@ -627,6 +627,8 @@ check("Overview subview correctly encapsulates middle row charts & cash position
 
 check("Chama Asset Allocation and Cash Position cards use responsive typography & truncate protection", () => {
   assert(homeViewHtml.includes('max-w-full overflow-hidden w-full h-56 sm:h-64'), "Donut chart container must be constrained to prevent blowout");
+  assert(homeViewHtml.includes('id="wrapper-assetAllocationChart"'), "Missing wrapper-assetAllocationChart for strict canvas encapsulation");
+  assert(homeViewHtml.includes('id="wrapper-accountBalanceChart"'), "Missing wrapper-accountBalanceChart for strict canvas encapsulation");
   assert(homeViewHtml.includes('id="home-cash" class="text-lg sm:text-xl xl:text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums truncate"'), "home-cash must have responsive font sizes and truncate");
   assert(homeViewHtml.includes('id="home-investment-inflows" class="text-lg sm:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate"'), "home-investment-inflows must have responsive font sizes and truncate");
   assert(homeViewHtml.includes('id="home-operating-outflows" class="text-lg sm:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate"'), "home-operating-outflows must have responsive font sizes and truncate");
