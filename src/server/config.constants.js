@@ -493,6 +493,19 @@ function provisionConstantsReferenceTables_(ss) {
         ["Tenor Tier Max Months", 3, 6, 12],
       ],
     },
+    {
+      keys: ["notification setting parameter", "notification settings parameter", "statement setting parameter"],
+      columns: [
+        [
+          "Notification Setting Parameter",
+          "Auto Statement Day",
+          "Auto Monthly Statements",
+          "Auto Email Receipts",
+          "Notification Bcc Email",
+        ],
+        ["Setting Value", 1, "FALSE", "TRUE", ""],
+      ],
+    },
   ];
 
   // Place immediately adjacent to the last occupied column (or Col 6 if empty sheet so Col E is reserved for Status).

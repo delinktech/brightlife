@@ -89,17 +89,29 @@ function escapeHtml_(str) {
 }
 
 /**
- * Retrieves Notification Settings from Script Properties
+ * Retrieves Notification Settings from Script Properties, with Constants sheet fallback
  */
 function getNotificationSettings() {
   const props = PropertiesService.getScriptProperties();
-  const autoEmail = props.getProperty("AUTO_EMAIL_RECEIPTS");
-  const bcc = props.getProperty("NOTIFICATION_BCC_EMAIL");
-  const autoMonthly = props.getProperty("AUTO_MONTHLY_STATEMENTS");
-  const autoDay = props.getProperty("AUTO_STATEMENT_DAY");
+  let autoEmail = props.getProperty("AUTO_EMAIL_RECEIPTS");
+  let bcc = props.getProperty("NOTIFICATION_BCC_EMAIL");
+  let autoMonthly = props.getProperty("AUTO_MONTHLY_STATEMENTS");
+  let autoDay = props.getProperty("AUTO_STATEMENT_DAY");
   const lastMonth = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_MONTH");
   const lastTs = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_TIMESTAMP");
   const lastCount = props.getProperty("LAST_AUTO_STATEMENT_DISPATCH_COUNT");
+
+  try {
+    const fromSheet = readNotificationSettingsFromConstantsSheet_();
+    if (fromSheet) {
+      if (autoDay === null && fromSheet.autoStatementDay !== undefined) autoDay = String(fromSheet.autoStatementDay);
+      if (autoMonthly === null && fromSheet.autoMonthlyStatements !== undefined) autoMonthly = String(fromSheet.autoMonthlyStatements);
+      if (autoEmail === null && fromSheet.autoEmailReceipts !== undefined) autoEmail = String(fromSheet.autoEmailReceipts);
+      if (bcc === null && fromSheet.notificationBcc !== undefined) bcc = fromSheet.notificationBcc;
+    }
+  } catch (e) {
+    // ignore
+  }
 
   return {
     autoEmailReceipts: autoEmail === null ? true : autoEmail === "true",
@@ -113,7 +125,7 @@ function getNotificationSettings() {
 }
 
 /**
- * Saves Notification Settings (Treasurer/Admin only)
+ * Saves Notification Settings (Treasurer/Admin only) to both Script Properties and Constants sheet
  */
 function saveNotificationSettings(data) {
   const ctx = requirePermission_("accountsWrite");
@@ -149,6 +161,12 @@ function saveNotificationSettings(data) {
     }
   }
 
+  try {
+    syncNotificationSettingsToConstantsSheet_(data);
+  } catch (e) {
+    console.warn("Could not sync notification settings to Constants sheet: " + e.message);
+  }
+
   appendAuditLog_(
     "settings.notifications_update",
     "Settings",
@@ -158,6 +176,84 @@ function saveNotificationSettings(data) {
   );
 
   return { success: true, settings: getNotificationSettings() };
+}
+
+/**
+ * Reads Notification Settings from Constants sheet if available
+ */
+function readNotificationSettingsFromConstantsSheet_() {
+  try {
+    const ss = typeof getSpreadsheet_ === "function" ? getSpreadsheet_() : (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet ? SpreadsheetApp.getActiveSpreadsheet() : null);
+    if (!ss) return null;
+    const sheet = typeof getSheetByNameInsensitive_ === "function" ? getSheetByNameInsensitive_(ss, SHEETS.CONSTANTS) : ss.getSheetByName(SHEETS.CONSTANTS);
+    if (!sheet || sheet.getLastRow() < 2) return null;
+
+    const values = sheet.getDataRange().getValues();
+    const col = typeof getHeaderMap_ === "function" ? getHeaderMap_(values[0]) : {};
+    const paramCol = col["notification setting parameter"] !== undefined ? col["notification setting parameter"] : col["statement setting parameter"];
+    const valCol = col["setting value"];
+    if (paramCol === undefined || valCol === undefined) return null;
+
+    const out = {};
+    for (let r = 1; r < values.length; r++) {
+      const key = String(values[r][paramCol] || "").trim().toLowerCase();
+      const val = values[r][valCol];
+      if (!key) continue;
+      if (key === "auto statement day") {
+        const d = parseInt(val, 10);
+        if (!isNaN(d) && d >= 1 && d <= 28) out.autoStatementDay = d;
+      } else if (key === "auto monthly statements") {
+        out.autoMonthlyStatements = String(val).toLowerCase() === "true";
+      } else if (key === "auto email receipts") {
+        out.autoEmailReceipts = String(val).toLowerCase() === "true";
+      } else if (key === "notification bcc email") {
+        out.notificationBcc = String(val || "").trim();
+      }
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Persists Notification Settings to Constants sheet table
+ */
+function syncNotificationSettingsToConstantsSheet_(data) {
+  try {
+    const ss = typeof getSpreadsheet_ === "function" ? getSpreadsheet_() : (typeof SpreadsheetApp !== "undefined" && SpreadsheetApp.getActiveSpreadsheet ? SpreadsheetApp.getActiveSpreadsheet() : null);
+    if (!ss) return;
+    if (typeof provisionConstantsReferenceTables_ === "function") {
+      provisionConstantsReferenceTables_(ss);
+    }
+    const sheet = typeof getSheetByNameInsensitive_ === "function" ? getSheetByNameInsensitive_(ss, SHEETS.CONSTANTS) : ss.getSheetByName(SHEETS.CONSTANTS);
+    if (!sheet || sheet.getLastRow() < 1) return;
+
+    const values = sheet.getDataRange().getValues();
+    const col = typeof getHeaderMap_ === "function" ? getHeaderMap_(values[0]) : {};
+    const paramCol = col["notification setting parameter"] !== undefined ? col["notification setting parameter"] : col["statement setting parameter"];
+    const valCol = col["setting value"];
+    if (paramCol === undefined || valCol === undefined) return;
+
+    for (let r = 1; r < values.length; r++) {
+      const key = String(values[r][paramCol] || "").trim().toLowerCase();
+      if (!key) continue;
+      if (key === "auto statement day" && data.autoStatementDay !== undefined) {
+        sheet.getRange(r + 1, valCol + 1).setValue(data.autoStatementDay);
+      } else if (key === "auto monthly statements" && data.autoMonthlyStatements !== undefined) {
+        sheet.getRange(r + 1, valCol + 1).setValue(data.autoMonthlyStatements ? "TRUE" : "FALSE");
+      } else if (key === "auto email receipts" && data.autoEmailReceipts !== undefined) {
+        sheet.getRange(r + 1, valCol + 1).setValue(data.autoEmailReceipts ? "TRUE" : "FALSE");
+      } else if (key === "notification bcc email" && data.notificationBcc !== undefined) {
+        sheet.getRange(r + 1, valCol + 1).setValue(String(data.notificationBcc || "").trim());
+      }
+    }
+    if (typeof SpreadsheetApp !== "undefined" && typeof SpreadsheetApp.flush === "function") {
+      SpreadsheetApp.flush();
+    }
+  } catch (e) {
+    console.warn("syncNotificationSettingsToConstantsSheet_ failed: " + e.message);
+  }
 }
 
 /**
