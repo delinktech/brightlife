@@ -5,6 +5,8 @@ on:
     branches:
       - master
     paths:
+      - 'index.html'
+      - '.nojekyll'
       - 'dashboard/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
@@ -37,7 +39,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dashboard'
+          path: '.'
 
       - name: Deploy to GitHub Pages
         id: deployment

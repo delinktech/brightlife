@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Bright Life SHG — Executive & Member Portal</title>
+  <title>Bright Life SHG — Executive Treasury & Member Portal</title>
   
   <!-- SEO & Brand Metadata -->
   <meta name="description" content="Bright Life Self Help Group Executive Treasury, Savings, Credit & Member Financial Portal">
@@ -12,11 +12,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Bright Life SHG">
-  
-  <!-- Open Graph / Social Sharing -->
-  <meta property="og:title" content="Bright Life SHG — Executive & Member Portal">
-  <meta property="og:description" content="Institutional Treasury Performance, Member Savings, Credit Books, and Actuarial Financial Reports.">
-  <meta property="og:type" content="website">
 
   <!-- Favicon (Inline SVG Brand Shield) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230F2A44'%3E%3Cpath d='M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-3zm0 4a3 3 0 110 6 3 3 0 010-6zm-5 11c0-2.33 3.33-3.5 5-3.5s5 1.17 5 3.5v.5H7V17z' fill='%23ffffff'/%3E%3C/svg%3E">
@@ -24,14 +19,17 @@
   <!-- Inter Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --primary-navy: #0F2A44;
-      --accent-blue: #2563eb;
-      --bg-slate: #0b1320;
-      --banner-crop-height: 38px;
+      --bg-dark: #070e17;
+      --card-bg: rgba(15, 30, 48, 0.75);
+      --card-border: rgba(56, 189, 248, 0.2);
+      --accent-blue: #0284c7;
+      --accent-glow: rgba(2, 132, 199, 0.35);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
     }
 
     * {
@@ -40,207 +38,290 @@
       padding: 0;
     }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: var(--primary-navy);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    /* Full-Screen Cropping Wrapper */
-    .portal-container {
-      position: absolute;
-      top: calc(-1 * var(--banner-crop-height));
-      left: 0;
-      width: 100%;
-      height: calc(100% + var(--banner-crop-height));
-      overflow: hidden;
-      background-color: #f8fafc;
-      transition: opacity 0.3s ease-in-out;
-    }
-
-    iframe#app-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-      background-color: transparent;
-    }
-
-    /* Branded Loading Splash Screen */
-    #splash-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle at 50% 30%, #17375a 0%, #0a1b2d 100%);
+    body {
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      z-index: 9999;
-      color: #ffffff;
-      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+      background: radial-gradient(circle at 50% 20%, #112842 0%, #070e17 80%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text-main);
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
     }
 
-    .splash-card {
+    .container {
+      width: 100%;
+      max-width: 480px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      padding: 32px;
-      max-width: 380px;
     }
 
     .brand-logo-shield {
-      width: 68px;
-      height: 68px;
-      background: linear-gradient(135deg, #1e40af, #0284c7);
-      border-radius: 18px;
+      width: 76px;
+      height: 76px;
+      background: linear-gradient(135deg, #1d4ed8, #0284c7);
+      border-radius: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.4), 0 8px 10px -6px rgba(2, 132, 199, 0.2);
-      margin-bottom: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 12px 30px -4px var(--accent-glow), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+      margin-bottom: 24px;
+      animation: float 4s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
     }
 
     .brand-logo-shield svg {
-      width: 36px;
-      height: 36px;
+      width: 42px;
+      height: 42px;
       fill: #ffffff;
     }
 
-    .brand-title {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin-bottom: 6px;
-      color: #f8fafc;
-    }
-
-    .brand-subtitle {
-      font-size: 13px;
-      font-weight: 500;
-      color: #94a3b8;
-      margin-bottom: 28px;
-      letter-spacing: 0.01em;
-    }
-
-    /* Loading Spinner */
-    .spinner-ring {
-      width: 32px;
-      height: 32px;
-      border: 3px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #38bdf8;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 16px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .loading-status-text {
-      font-size: 12px;
-      color: #64748b;
-      font-weight: 500;
-    }
-
-    /* Warning box for direct file:// protocol execution */
-    #file-protocol-warning {
-      display: none;
-      margin-top: 16px;
-      padding: 12px 16px;
-      background: rgba(239, 68, 68, 0.15);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      border-radius: 10px;
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background: rgba(2, 132, 199, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 9999px;
       font-size: 11px;
-      color: #fca5a5;
-      max-width: 340px;
-      line-height: 1.4;
+      font-weight: 600;
+      color: #38bdf8;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
     }
 
-    /* Fade-out utility */
-    .fade-out {
-      opacity: 0 !important;
-      visibility: hidden !important;
-      pointer-events: none;
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+      background: linear-gradient(180deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 30px;
+      max-width: 380px;
+    }
+
+    .portal-card {
+      width: 100%;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+      margin-bottom: 24px;
+    }
+
+    .launch-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 15px 24px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 20px -2px rgba(2, 132, 199, 0.5);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .launch-btn:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 25px -2px rgba(2, 132, 199, 0.65);
+    }
+
+    .launch-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 12px -2px rgba(2, 132, 199, 0.4);
+    }
+
+    .launch-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform 0.2s ease;
+    }
+
+    .launch-btn:hover svg {
+      transform: translateX(3px);
+    }
+
+    .auth-notice {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+
+    .auth-notice svg {
+      width: 14px;
+      height: 14px;
+      fill: #38bdf8;
+      shrink: 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 24px;
+    }
+
+    .feature-pill {
+      background: rgba(15, 30, 48, 0.5);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: 12px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .feature-pill .icon {
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .feature-pill .label {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+
+    .footer {
+      font-size: 11px;
+      color: #64748b;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .footer a {
+      color: #38bdf8;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
 
-  <!-- Loading Splash Overlay -->
-  <div id="splash-screen">
-    <div class="splash-card">
-      <div class="brand-logo-shield">
+  <div class="container">
+    <!-- Brand Logo Shield -->
+    <div class="brand-logo-shield">
+      <svg viewBox="0 0 24 24">
+        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+      </svg>
+    </div>
+
+    <!-- Live Status Pill -->
+    <div class="badge-status">
+      <div class="badge-dot"></div>
+      Release v153 • Operational
+    </div>
+
+    <h1>Bright Life SHG</h1>
+    <p class="subtitle">Executive Treasury, Financial Operations & Member Self-Service Portal</p>
+
+    <!-- Main Portal Launch Card -->
+    <div class="portal-card">
+      <a
+        href="https://script.google.com/macros/s/AKfycbx4NBY3rdhsCAJljxlTw3dQRGpxXTHOXUWLnaJzoscRLJWWo-uPoX4J-S75HtLFB0wRCA/exec"
+        class="launch-btn"
+        id="launch-portal-btn"
+      >
+        <span>Open Financial Portal</span>
         <svg viewBox="0 0 24 24">
-          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+          <polyline points="15 3 21 3 21 9"></polyline>
+          <line x1="10" y1="14" x2="21" y2="3"></line>
         </svg>
+      </a>
+
+      <div class="auth-notice">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-2h-2v2zm0-4h2V7h-2v6z"/>
+        </svg>
+        <span>Sign in with your registered Google Account</span>
       </div>
-      <h1 class="brand-title">Bright Life SHG</h1>
-      <p class="brand-subtitle">Executive & Member Financial Portal</p>
-      <div class="spinner-ring" id="loading-spinner"></div>
-      <span class="loading-status-text" id="status-label">Securing encrypted connection...</span>
-      <div id="file-protocol-warning">
-        <strong>Notice:</strong> Google OAuth blocks embedded requests from <code>file:///</code> paths with 401 errors. Deploy via GitHub Pages or an HTTP/HTTPS server for live authentication.
+    </div>
+
+    <!-- Features Micro-Grid -->
+    <div class="features-grid">
+      <div class="feature-pill">
+        <div class="icon">🏛️</div>
+        <div class="label">Executive Treasury</div>
       </div>
+      <div class="feature-pill">
+        <div class="icon">📈</div>
+        <div class="label">SASRA Compliance</div>
+      </div>
+      <div class="feature-pill">
+        <div class="icon">📑</div>
+        <div class="label">Member Statements</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <span>Bright Life Self Help Group &bull; Financial OS</span>
+      <span>Secured via Google Workspace & Apps Script</span>
     </div>
   </div>
 
-  <!-- Main Application Wrapper (Cropping out Google's 38px warning bar) -->
-  <div class="portal-container">
-    <iframe
-      id="app-frame"
-      title="Bright Life SHG Portal"
-      allow="clipboard-read; clipboard-write; fullscreen"
-      loading="eager"
-    ></iframe>
-  </div>
-
   <script>
+    // Forward any incoming query parameters (e.g. ?tab=loans, ?view=reports)
     (function() {
-      // Production Google Apps Script Web App Endpoint
-      const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbx4NBY3rdhsCAJljxlTw3dQRGpxXTHOXUWLnaJzoscRLJWWo-uPoX4J-S75HtLFB0wRCA/exec";
-
-      const iframe = document.getElementById("app-frame");
-      const splash = document.getElementById("splash-screen");
-      const statusLabel = document.getElementById("status-label");
-      const fileWarn = document.getElementById("file-protocol-warning");
-      const spinner = document.getElementById("loading-spinner");
-
-      if (window.location.protocol === 'file:') {
-        if (fileWarn) fileWarn.style.display = 'block';
-        if (statusLabel) statusLabel.textContent = 'Host via HTTP/HTTPS or GitHub Pages';
-        if (spinner) spinner.style.borderTopColor = '#ef4444';
-      }
-
-      // Forward any query parameters from GitHub Pages URL (e.g. ?tab=loans, ?report=agm)
-      const currentQuery = window.location.search || "";
-      const targetUrl = GAS_BASE_URL + currentQuery;
-
-      // Set iframe source with forwarded parameters
-      iframe.src = targetUrl;
-
-      // When the iframe finishes loading, dismiss splash overlay smoothly
-      iframe.onload = function() {
-        setTimeout(function() {
-          if (splash) splash.classList.add("fade-out");
-        }, 350);
-      };
-
-      // Fallback: If network is slow, hide splash after 6 seconds max
-      setTimeout(function() {
-        if (splash && !splash.classList.contains("fade-out")) {
-          splash.classList.add("fade-out");
+      const search = window.location.search;
+      if (search) {
+        const btn = document.getElementById("launch-portal-btn");
+        if (btn) {
+          btn.href = btn.href + search;
         }
-      }, 6000);
+      }
     })();
   </script>
 </body>
