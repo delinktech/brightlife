@@ -1,6 +1,6 @@
 # Bright Life SHG — Executive Treasury, Financial OS & Member Portal
 
-[![Release v153](https://img.shields.io/badge/Release-v153-0284c7.svg)](https://github.com/delinktech/brightlife)
+[![Release v1.0.0](https://img.shields.io/badge/Release-v1.0.0-0284c7.svg)](https://github.com/delinktech/brightlife)
 [![Google Apps Script](https://img.shields.io/badge/Engine-Google%20Apps%20Script-34A853.svg)](https://developers.google.com/apps-script)
 [![Architecture](https://img.shields.io/badge/Architecture-Modular%20Cloud%20Monolith-0F2A44.svg)](#system-architecture)
 [![License: Private](https://img.shields.io/badge/License-Proprietary-slate.svg)](#license)

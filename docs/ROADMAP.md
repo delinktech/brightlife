@@ -8,7 +8,9 @@ This document maintains the chronological status of completed features, active w
 
 | Release | Feature / Improvement | Module / Scope | Status | Date Completed |
 |---|---|---|---|---|
-| **v153** | **Light Mode Theme Parity & Portal Gateway** | `Index.html`, `app.ui.js.html`, `dashboard/` | **Completed** | Nov 27, 2026 |
+| **v1.0.0** | **Production Baseline: SemVer Standard & Single Source of Truth** | System Core | **Completed** | Nov 27, 2026 |
+| | *Established strict SemVer standard (v1.0.0) across backend constant, dynamic client hydration, and deployment pipelines.* | | | |
+| **v0.15.3** | **Light Mode Theme Parity & Portal Gateway** | `Index.html`, `app.ui.js.html`, `dashboard/` | **Completed** | Nov 27, 2026 |
 | | *Refactored navbar avatar and sidebar role badges for high-contrast light/dark mode parity; deployed automated GitHub Pages gateway pipeline.* | | | |
 | **v152** | **Workbook Constants Sync for Statements** | `Constants`, `notifications.service.js` | **Completed** | Nov 27, 2026 |
 | | *Bi-directional persistence for automated statement dispatch day, monthly schedules & BCC settings.* | | | |
