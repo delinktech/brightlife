@@ -1466,29 +1466,50 @@
     if (!data) return;
     updateRangeButtons(data.range || currentHomeRange);
     const savingsEl = document.getElementById("home-savings");
-    if (savingsEl) savingsEl.innerText = formatMoney(data.savings);
+    if (savingsEl) {
+      const formattedSavings = formatMoney(data.savings);
+      savingsEl.innerText = formattedSavings;
+      savingsEl.title = formattedSavings;
+      if (typeof savingsEl.setAttribute === "function") savingsEl.setAttribute("title", formattedSavings);
+    }
     const loansEl = document.getElementById("home-loans");
-    if (loansEl) loansEl.innerText = formatMoney(data.loans);
+    if (loansEl) {
+      const formattedLoans = formatMoney(data.loans);
+      loansEl.innerText = formattedLoans;
+      loansEl.title = formattedLoans;
+      if (typeof loansEl.setAttribute === "function") loansEl.setAttribute("title", formattedLoans);
+    }
     const outstandingEl = document.getElementById("home-outstanding");
     if (outstandingEl) {
       const outstandingVal =
         data.portfolio && data.portfolio.totalOutstanding !== undefined
           ? data.portfolio.totalOutstanding
           : (data.loansOutstanding || 0);
-      outstandingEl.innerText = formatMoney(outstandingVal);
+      const formattedOutstanding = formatMoney(outstandingVal);
+      outstandingEl.innerText = formattedOutstanding;
+      outstandingEl.title = formattedOutstanding;
+      if (typeof outstandingEl.setAttribute === "function") outstandingEl.setAttribute("title", formattedOutstanding);
     }
     const ytdEl = document.getElementById("home-ytd-contrib");
     if (ytdEl) {
-      ytdEl.innerText = formatMoney(
+      const formattedYtd = formatMoney(
         data.yearToDateContributions !== undefined && data.yearToDateContributions !== null
           ? data.yearToDateContributions
           : data.yearlyContributions
       );
+      ytdEl.innerText = formattedYtd;
+      ytdEl.title = formattedYtd;
+      if (typeof ytdEl.setAttribute === "function") ytdEl.setAttribute("title", formattedYtd);
     }
     const memberCountEl = document.getElementById("home-membercount");
     if (memberCountEl) memberCountEl.innerText = (data.memberCount || 0).toLocaleString();
     const cashEl = document.getElementById("home-cash");
-    if (cashEl) cashEl.innerText = formatMoney(data.cash);
+    if (cashEl) {
+      const formattedCash = formatMoney(data.cash);
+      cashEl.innerText = formattedCash;
+      cashEl.title = formattedCash;
+      if (typeof cashEl.setAttribute === "function") cashEl.setAttribute("title", formattedCash);
+    }
     const monthlyContribEl = document.getElementById("home-monthly-contrib");
     if (monthlyContribEl) {
       monthlyContribEl.innerText = formatMoneyCompactK(data.currentMonthContributions);

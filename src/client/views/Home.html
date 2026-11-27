@@ -158,39 +158,37 @@
 
   <!-- Institutional Profitability & Liquidity Telemetry Micro-Strip -->
   <div id="home-actuarial-microstrip" class="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:px-4 shadow-2xs">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
       <div class="flex items-center gap-2">
         <i class="fas fa-chart-line text-sky-600 dark:text-sky-400"></i>
         <span class="font-bold uppercase tracking-wider text-[11px] text-slate-700 dark:text-slate-200">Actuarial Telemetry</span>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 w-full sm:w-auto">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full lg:w-auto">
         <!-- Metric 1: ROE -->
-        <div class="flex items-center justify-between sm:justify-start gap-2">
+        <div class="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
           <span class="text-slate-500 dark:text-slate-400 text-[11px]">ROE (Return on Equity):</span>
-          <span id="home-roe-badge" class="inline-flex items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <span id="home-roe-badge" class="inline-flex flex-wrap items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <span id="home-roe-val">0.0%</span>
             <span id="home-roe-status" class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">(&ge; 8.0%)</span>
           </span>
         </div>
         <!-- Metric 2: ROA -->
-        <div class="flex items-center justify-between sm:justify-start gap-2">
+        <div class="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
           <span class="text-slate-500 dark:text-slate-400 text-[11px]">ROA (Return on Assets):</span>
-          <span id="home-roa-badge" class="inline-flex items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <span id="home-roa-badge" class="inline-flex flex-wrap items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <span id="home-roa-val">0.0%</span>
           </span>
         </div>
         <!-- Metric 3: Liquidity Ratio -->
-        <div class="flex items-center justify-between sm:justify-start gap-2">
+        <div class="flex items-center justify-between sm:justify-start gap-2 flex-wrap">
           <span class="text-slate-500 dark:text-slate-400 text-[11px]">Liquidity Ratio:</span>
-          <span id="home-liquidity-badge" class="inline-flex items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <span id="home-liquidity-badge" class="inline-flex flex-wrap items-center gap-1 font-mono font-bold tabular-nums text-slate-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             <span id="home-liquidity-val">0.0%</span>
             <span id="home-liquidity-indicator" class="text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">(&ge; 15% SASRA Floor)</span>
           </span>
         </div>
       </div>
     </div>
-  </div>
-
   </div>
 
   <!-- Middle Row: Historical Contributions Chart & Ownership / Balances Donut -->
@@ -227,7 +225,7 @@
           <button type="button" id="btn-toggle-acct-bal" onclick="toggleHomeMixChart('accounts')" class="px-2 py-0.5 rounded font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200">Accounts</button>
         </div>
       </div>
-      <div class="h-56 sm:h-64 w-full my-auto flex items-center justify-center relative">
+      <div class="max-w-full overflow-hidden w-full h-56 sm:h-64 my-auto flex items-center justify-center relative">
         <canvas id="assetAllocationChart"></canvas>
         <canvas id="accountBalanceChart" class="hidden"></canvas>
         <canvas id="capitalMixChart" class="hidden"></canvas>
@@ -240,30 +238,30 @@
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
 
     <!-- Liquid Bank Position Card -->
-    <div class="bg-white dark:bg-[#0b1320] p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between relative overflow-hidden">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between relative overflow-hidden">
       <div class="flex items-center justify-between mb-3">
         <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Bank Balance per Records</span>
-        <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs border border-emerald-200 dark:border-slate-700">
+        <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs border border-emerald-200 dark:border-slate-700 shrink-0">
           <i class="fas fa-wallet"></i>
         </div>
       </div>
       <div>
-        <h2 id="home-cash" class="text-2xl sm:text-3xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0</h2>
+        <h2 id="home-cash" class="text-lg sm:text-xl xl:text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums truncate" title="KES 0">KES 0</h2>
         <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-          Net liquid position across bank accounts & mobile wallets.
+          Net liquid position across bank accounts &amp; mobile wallets.
         </p>
       </div>
     </div>
 
     <!-- Investment Inflows Card -->
-    <div class="bg-white dark:bg-[#0b1320] p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-2">
         <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Investment Inflows</span>
-        <i class="fas fa-arrow-up-right-from-square text-sky-600 dark:text-sky-400 text-xs"></i>
+        <i class="fas fa-arrow-up-right-from-square text-sky-600 dark:text-sky-400 text-xs shrink-0"></i>
       </div>
       <div>
-        <h3 id="home-investment-inflows" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h3>
-        <p id="home-investment-inflows-sub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+        <h3 id="home-investment-inflows" class="text-lg sm:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate" title="KES 0">KES 0</h3>
+        <p id="home-investment-inflows-sub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed truncate" title="No cashflow records">
           No cashflow records
         </p>
       </div>
@@ -273,14 +271,14 @@
     </div>
 
     <!-- Operating Outflows Card -->
-    <div class="bg-white dark:bg-[#0b1320] p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
+    <div class="bg-white dark:bg-[#0b1320] p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700/80 flex flex-col justify-between">
       <div class="flex items-center justify-between mb-2">
         <span class="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Operating Outflows</span>
-        <i class="fas fa-arrow-down-right-from-square text-rose-600 dark:text-rose-400 text-xs"></i>
+        <i class="fas fa-arrow-down-right-from-square text-rose-600 dark:text-rose-400 text-xs shrink-0"></i>
       </div>
       <div>
-        <h3 id="home-operating-outflows" class="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0</h3>
-        <p id="home-operating-outflows-sub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+        <h3 id="home-operating-outflows" class="text-lg sm:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate" title="KES 0">KES 0</h3>
+        <p id="home-operating-outflows-sub" class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed truncate" title="No cashflow records">
           No cashflow records
         </p>
       </div>
@@ -705,8 +703,17 @@
             </span>
           </div>
           <div>
-            <h5 id="trajectory-kpi-snapshot" class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate">KES 0 / KES 0</h5>
-            <p id="trajectory-kpi-snapshot-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Total savings vs. outstanding loan balances</p>
+            <div id="trajectory-kpi-snapshot" class="space-y-0.5 text-xs font-semibold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums" title="Savings: KES 0 | Loans: KES 0">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-normal text-slate-500 dark:text-slate-400">Savings:</span>
+                <span id="trajectory-snapshot-savings" class="font-bold truncate" title="KES 0">KES 0</span>
+              </div>
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-normal text-slate-500 dark:text-slate-400">Loans:</span>
+                <span id="trajectory-snapshot-loans" class="font-bold text-indigo-600 dark:text-indigo-400 truncate" title="KES 0">KES 0</span>
+              </div>
+            </div>
+            <p id="trajectory-kpi-snapshot-sub" class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">Total savings vs. outstanding loan balances</p>
           </div>
         </div>
       </div>
@@ -899,7 +906,7 @@
               <i class="fas fa-landmark"></i>
             </span>
           </div>
-          <h4 id="agm-kpi-assets" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">KES 0.00</h4>
+          <h4 id="agm-kpi-assets" class="text-base sm:text-lg xl:text-xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate" title="KES 0.00">KES 0.00</h4>
         </div>
 
         <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
@@ -909,7 +916,7 @@
               <i class="fas fa-users-line"></i>
             </span>
           </div>
-          <h4 id="agm-kpi-equity" class="text-base sm:text-lg font-bold text-indigo-700 dark:text-indigo-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+          <h4 id="agm-kpi-equity" class="text-base sm:text-lg xl:text-xl font-bold text-indigo-700 dark:text-indigo-400 tracking-tight font-mono tabular-nums truncate" title="KES 0.00">KES 0.00</h4>
         </div>
 
         <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
@@ -919,7 +926,7 @@
               <i class="fas fa-chart-line"></i>
             </span>
           </div>
-          <h4 id="agm-kpi-surplus" class="text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums">KES 0.00</h4>
+          <h4 id="agm-kpi-surplus" class="text-base sm:text-lg xl:text-xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums truncate" title="KES 0.00">KES 0.00</h4>
         </div>
 
         <div class="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between gap-1.5">
@@ -929,7 +936,7 @@
               <i class="fas fa-shield-halved"></i>
             </span>
           </div>
-          <h4 id="agm-kpi-solvency" class="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums">0.0%</h4>
+          <h4 id="agm-kpi-solvency" class="text-base sm:text-lg xl:text-xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate" title="0.0%">0.0%</h4>
         </div>
       </div>
     </div>
@@ -2033,7 +2040,14 @@
     }
 
     if (existingEmpty) existingEmpty.remove();
-    canvas.classList.remove("hidden");
+    const activeMixMode = window.currentHomeMixMode || 'assets';
+    if (canvasId === 'accountBalanceChart' && activeMixMode !== 'accounts') {
+      canvas.classList.add("hidden");
+    } else if (canvasId === 'assetAllocationChart' && activeMixMode === 'accounts') {
+      canvas.classList.add("hidden");
+    } else {
+      canvas.classList.remove("hidden");
+    }
     return false;
   }
 
@@ -2737,9 +2751,25 @@
 
     // 3. Update Portfolio Snapshot
     const elSnapshot = document.getElementById('trajectory-kpi-snapshot');
+    const elSnapshotSavings = document.getElementById('trajectory-snapshot-savings');
+    const elSnapshotLoans = document.getElementById('trajectory-snapshot-loans');
     const elSnapshotSub = document.getElementById('trajectory-kpi-snapshot-sub');
+    const formattedSavings = formatChartKes(m.totalSavings);
+    const formattedLoans = formatChartKes(m.totalExposure);
+    if (elSnapshotSavings && elSnapshotLoans) {
+      elSnapshotSavings.textContent = formattedSavings;
+      elSnapshotSavings.title = formattedSavings;
+      if (typeof elSnapshotSavings.setAttribute === 'function') elSnapshotSavings.setAttribute('title', formattedSavings);
+      elSnapshotLoans.textContent = formattedLoans;
+      elSnapshotLoans.title = formattedLoans;
+      if (typeof elSnapshotLoans.setAttribute === 'function') elSnapshotLoans.setAttribute('title', formattedLoans);
+    } else if (elSnapshot) {
+      elSnapshot.textContent = formattedSavings + ' / ' + formattedLoans;
+    }
     if (elSnapshot) {
-      elSnapshot.textContent = formatChartKes(m.totalSavings) + ' / ' + formatChartKes(m.totalExposure);
+      const snapTitle = 'Savings: ' + formattedSavings + ' | Loans: ' + formattedLoans;
+      elSnapshot.title = snapTitle;
+      if (typeof elSnapshot.setAttribute === 'function') elSnapshot.setAttribute('title', snapTitle);
     }
     if (elSnapshotSub) {
       elSnapshotSub.textContent = 'Total savings vs. outstanding loan balances';
@@ -3348,6 +3378,9 @@
           }
         });
       }
+      if (typeof toggleHomeMixChart === 'function') {
+        toggleHomeMixChart(window.currentHomeMixMode || 'assets');
+      }
     }
 
     // 3. SASRA Credit Quality Donut (Upgraded Value-Weighted loanStatusChart)
@@ -3455,7 +3488,10 @@
     const inflowEl = document.getElementById('home-investment-inflows');
     const inflowSubEl = document.getElementById('home-investment-inflows-sub');
     if (inflowEl) {
-      inflowEl.textContent = hasInflows ? formatMoney(inv.totalInflows) : 'KES 0';
+      const inflowTxt = hasInflows ? formatMoney(inv.totalInflows) : 'KES 0';
+      inflowEl.textContent = inflowTxt;
+      inflowEl.title = inflowTxt;
+      if (typeof inflowEl.setAttribute === 'function') inflowEl.setAttribute('title', inflowTxt);
     }
     if (inflowSubEl) {
       inflowSubEl.textContent = hasInflows
@@ -3467,7 +3503,10 @@
     const outflowEl = document.getElementById('home-operating-outflows');
     const outflowSubEl = document.getElementById('home-operating-outflows-sub');
     if (outflowEl) {
-      outflowEl.textContent = hasOutflows ? formatMoney(inv.totalOutflows) : 'KES 0';
+      const outflowTxt = hasOutflows ? formatMoney(inv.totalOutflows) : 'KES 0';
+      outflowEl.textContent = outflowTxt;
+      outflowEl.title = outflowTxt;
+      if (typeof outflowEl.setAttribute === 'function') outflowEl.setAttribute('title', outflowTxt);
     }
     if (outflowSubEl) {
       outflowSubEl.textContent = hasOutflows
@@ -3489,15 +3528,20 @@
     }
   }
 
+  window.currentHomeMixMode = 'assets';
   function toggleHomeMixChart(mode) {
+    window.currentHomeMixMode = mode || 'assets';
     const assetCanvas = document.getElementById('assetAllocationChart');
     const acctCanvas = document.getElementById('accountBalanceChart');
+    const capCanvas = document.getElementById('capitalMixChart');
     const btnAsset = document.getElementById('btn-toggle-asset-alloc');
     const btnAcct = document.getElementById('btn-toggle-acct-bal');
     const titleEl = document.getElementById('home-donut-title');
     const subEl = document.getElementById('home-donut-subtitle');
 
-    if (mode === 'accounts') {
+    if (capCanvas) capCanvas.classList.add('hidden');
+
+    if (window.currentHomeMixMode === 'accounts') {
       if (assetCanvas) assetCanvas.classList.add('hidden');
       if (acctCanvas) acctCanvas.classList.remove('hidden');
       if (btnAcct) {
@@ -3519,6 +3563,20 @@
       }
       if (titleEl) titleEl.textContent = 'Chama Asset Allocation';
       if (subEl) subEl.textContent = 'Liquid cash, MMF, loans & projects';
+    }
+
+    const container = (assetCanvas && assetCanvas.parentElement) || (acctCanvas && acctCanvas.parentElement);
+    if (container) {
+      const assetEmpty = container.querySelector('[data-chart-empty-for="assetAllocationChart"]');
+      const acctEmpty = container.querySelector('[data-chart-empty-for="accountBalanceChart"]');
+      if (assetEmpty) {
+        if (window.currentHomeMixMode === 'accounts') assetEmpty.classList.add('hidden');
+        else assetEmpty.classList.remove('hidden');
+      }
+      if (acctEmpty) {
+        if (window.currentHomeMixMode === 'accounts') acctEmpty.classList.remove('hidden');
+        else acctEmpty.classList.add('hidden');
+      }
     }
   }
   window.toggleHomeMixChart = toggleHomeMixChart;
@@ -3868,7 +3926,11 @@
     const is = window.latestIncomeStatementModel;
     const setTxt = function (id, txt) {
       const el = document.getElementById(id);
-      if (el) el.textContent = txt;
+      if (el) {
+        el.textContent = txt;
+        el.title = txt;
+        if (typeof el.setAttribute === 'function') el.setAttribute('title', txt);
+      }
     };
     if (bs) {
       setTxt('agm-kpi-assets', formatBsKes_(bs.assets.totalAssets));
@@ -3878,10 +3940,13 @@
     if (is) {
       const elSurplus = document.getElementById('agm-kpi-surplus');
       if (elSurplus) {
-        elSurplus.textContent = is.netOperatingSurplus < 0
+        const surplusTxt = is.netOperatingSurplus < 0
           ? ('(' + formatBsKes_(Math.abs(is.netOperatingSurplus)) + ')')
           : formatBsKes_(is.netOperatingSurplus);
-        elSurplus.className = 'text-base sm:text-lg font-bold tracking-tight font-mono tabular-nums ' + (
+        elSurplus.textContent = surplusTxt;
+        elSurplus.title = surplusTxt;
+        if (typeof elSurplus.setAttribute === 'function') elSurplus.setAttribute('title', surplusTxt);
+        elSurplus.className = 'text-base sm:text-lg xl:text-xl font-bold font-mono tabular-nums truncate ' + (
           is.netOperatingSurplus >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
         );
       }

@@ -570,6 +570,86 @@ check("toggleHomeMixChart correctly alternates between Assets and Accounts canva
 });
 
 // -----------------------------------------------------------------------------
+// SECTION 6: UI/UX Responsive Layout & DOM Integrity Regression Suite
+// -----------------------------------------------------------------------------
+console.log("\n--> Section 6: UI/UX Responsive Layout & DOM Integrity Regressions");
+
+check("Home.html DOM tree has 0 tag nesting / premature closure errors", () => {
+  const stripped = homeViewHtml
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '');
+
+  const tagRegex = /<\/?([a-zA-Z0-9\-]+)(?:\s+[^>]*?)?(\/?)>/g;
+  let match;
+  let stack = [];
+  const selfClosing = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+  let mismatches = 0;
+
+  while ((match = tagRegex.exec(stripped)) !== null) {
+    const matchedText = match[0];
+    const tagName = match[1].toLowerCase();
+    const isSelfClose = match[2] === '/' || selfClosing.has(tagName);
+    const isClose = matchedText.startsWith('</');
+
+    if (isSelfClose) continue;
+    if (isClose) {
+      if (stack.length === 0) {
+        mismatches++;
+      } else {
+        const top = stack.pop();
+        if (top !== tagName) mismatches++;
+      }
+    } else {
+      stack.push(tagName);
+    }
+  }
+  assert.strictEqual(mismatches, 0, "Found mismatched tags in Home.html");
+  assert.strictEqual(stack.length, 0, "Found unclosed tags in Home.html");
+});
+
+check("Overview subview correctly encapsulates middle row charts & cash position cards", () => {
+  const overviewOpenIdx = homeViewHtml.indexOf('id="home-subview-overview"');
+  const analyticsOpenIdx = homeViewHtml.indexOf('id="home-subview-analytics"');
+  const reportsOpenIdx = homeViewHtml.indexOf('id="home-subview-reports"');
+  const sectionCloseIdx = homeViewHtml.lastIndexOf('</section>');
+
+  assert(overviewOpenIdx !== -1, "Missing home-subview-overview");
+  assert(analyticsOpenIdx > overviewOpenIdx, "home-subview-analytics must follow overview");
+  assert(reportsOpenIdx > analyticsOpenIdx, "home-subview-reports must follow analytics");
+  assert(sectionCloseIdx > reportsOpenIdx, "section#home must enclose reports subview");
+
+  const overviewSlice = homeViewHtml.substring(overviewOpenIdx, analyticsOpenIdx);
+  assert(overviewSlice.includes('id="assetAllocationChart"'), "assetAllocationChart must be inside overview subview");
+  assert(overviewSlice.includes('id="home-cash"'), "home-cash card must be inside overview subview");
+  assert(overviewSlice.includes('id="home-actuarial-microstrip"'), "home-actuarial-microstrip must be inside overview subview");
+});
+
+check("Chama Asset Allocation and Cash Position cards use responsive typography & truncate protection", () => {
+  assert(homeViewHtml.includes('max-w-full overflow-hidden w-full h-56 sm:h-64'), "Donut chart container must be constrained to prevent blowout");
+  assert(homeViewHtml.includes('id="home-cash" class="text-lg sm:text-xl xl:text-2xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums truncate"'), "home-cash must have responsive font sizes and truncate");
+  assert(homeViewHtml.includes('id="home-investment-inflows" class="text-lg sm:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate"'), "home-investment-inflows must have responsive font sizes and truncate");
+  assert(homeViewHtml.includes('id="home-operating-outflows" class="text-lg sm:text-xl xl:text-2xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate"'), "home-operating-outflows must have responsive font sizes and truncate");
+});
+
+check("Actuarial Telemetry micro-strip wraps cleanly across mobile and tablet screens", () => {
+  assert(homeViewHtml.includes('grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 w-full lg:w-auto'), "Microstrip grid must be responsive for mobile/tablet");
+  assert(homeViewHtml.includes('id="home-liquidity-badge" class="inline-flex flex-wrap items-center gap-1'), "Liquidity ratio badge must allow flex-wrap for SASRA floor");
+});
+
+check("Portfolio Snapshot displays stacked savings and loan metrics to eliminate truncation", () => {
+  assert(homeViewHtml.includes('id="trajectory-snapshot-savings"'), "Missing stacked trajectory-snapshot-savings");
+  assert(homeViewHtml.includes('id="trajectory-snapshot-loans"'), "Missing stacked trajectory-snapshot-loans");
+});
+
+check("Reports Subview top 4 KPI cards feature full responsive sizing and truncate safeguards", () => {
+  assert(homeViewHtml.includes('id="agm-kpi-assets" class="text-base sm:text-lg xl:text-xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate"'), "agm-kpi-assets must be responsive and truncated");
+  assert(homeViewHtml.includes('id="agm-kpi-equity" class="text-base sm:text-lg xl:text-xl font-bold text-indigo-700 dark:text-indigo-400 tracking-tight font-mono tabular-nums truncate"'), "agm-kpi-equity must be responsive and truncated");
+  assert(homeViewHtml.includes('id="agm-kpi-surplus" class="text-base sm:text-lg xl:text-xl font-bold text-emerald-700 dark:text-emerald-400 tracking-tight font-mono tabular-nums truncate"'), "agm-kpi-surplus must be responsive and truncated");
+  assert(homeViewHtml.includes('id="agm-kpi-solvency" class="text-base sm:text-lg xl:text-xl font-bold text-slate-900 dark:text-white tracking-tight font-mono tabular-nums truncate"'), "agm-kpi-solvency must be responsive and truncated");
+});
+
+// -----------------------------------------------------------------------------
 // SUMMARY
 // -----------------------------------------------------------------------------
 console.log("\n======================================================================");
