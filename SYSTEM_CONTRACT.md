@@ -6,7 +6,7 @@
 ## 1. Environment & Deployment (`@shipper`)
 - **GAS Script ID:** `13PqieSL........GSQj` *(Masked)*
 - **Active Production Deployment:** `AKfycbx4........wRCA` *(Masked)*
-- **Current Live Version:** `v151` (Google Apps Script Build `@152`, Deployed `@158`)
+- **Current Live Version:** `v152` (Google Apps Script Build `@153`, Deployed `@159`)
 - **Timezone:** `Africa/Nairobi`
 - **Release Ledger:** See `RELEASES.md` for historical release versions and changelog.
 
@@ -55,7 +55,7 @@ Any deposit, payment, or reconciliation record must strictly match one of the 5 
 * **`Investment Cashflows`** *(Tier 3 Unified Transactional Ledger — replaces `InvestmentLedger`)*: `Transaction ID | Date | Entity Type | Entity ID | Flow Type | Category | Description | Amount | Transaction Fee | Payment Channel | Reference | Recorded By | Recorded At`
 * **`Accounts`**: `Org. Name | Acc. Number | Payment Mode | Paybill | Inflows [CALC] | Outflows [CALC] | System Balance [CALC] | Statement Balance | Balance Date | Variance [CALC] | Reconciliation Status [CALC] | Notes` *(Equity Bank Acc. Number: `0020164001424`)*
 * **`Summary KPIs`** *(Materialized O(1) Cache)*: `Metric Key | Value | Formula Basis & Description`
-* **`Constants`** *(Single Unified Native Table — Title Case with Single Spaces)*: `Gender | Membership Status | Deposit Channel | Transaction Type | Contribution Status | Loans Statuses | Investment Statuses | Ledger Types | Ledger Categories | Roles | Member Selector | Asset Classes | Project Categories | Statutory Thresholds | Threshold Value`
+* **`Constants`** *(Single Unified Native Table — Title Case with Single Spaces)*: `Gender | Membership Status | Deposit Channel | Transaction Type | Contribution Status | Loans Statuses | Investment Statuses | Ledger Types | Ledger Categories | Roles | Member Selector | Asset Classes | Project Categories | Statutory Thresholds | Threshold Value | Notification Setting Parameter | Setting Value`
 * **`Equity Statement`** *(Single Canonical Equity Bank Statement Table — `SHEETS.EQUITY_STATEMENT`)*: `Statement Date | Account Name | Account Number | Opening Balance | Money In (Deposits) | Money Out (Withdrawals) | Net Change | Closing Balance | Statement Ref | Notes / Breakdown` *(Named Range: `EquityStatement_ClosingBalance`)*
 * **`CIC Statement`** *(Single Canonical MMF Statement Table — replaces `CIC Transactions` and legacy `Fund Statements`)*: `Statement Date | Fund Channel | Opening Balance | Purchases / Deposits | Gross Interest | Withholding Tax | Net Yield | Withdrawals | Closing Balance | Statement Ref`
 * **`Roles`**: `Email | Role | Permissions | Status`
@@ -171,6 +171,7 @@ Client-server contracts called via `google.script.run`:
   - **Branded Notification Templates:** Standardized HTML email and WhatsApp statement templates featuring high-contrast layout, group credentials (`brightlyfe@gmail.com`), monthly savings and loan KPI matrix, and projected year-end dividend cards.
   - **Settings & Administration UI (`Settings.html` Card 5 & `Statements.html`):** Integrated admin controls for automated monthly statements toggle, dispatch day-of-month selector (days 1–28), and manual `[Run Dispatch Now]` instant trigger.
   - **Trigger Lifecycle Management (`setupAutomatedStatementTrigger_`, `removeAutomatedStatementTrigger_`):** Background Apps Script time-driven triggers dynamically configured or retired based on setting toggles without manual Apps Script intervention.
+  - **Workbook Constants Synchronization (`config.constants.js`, `notifications.service.js`):** Provisioned `Notification Setting Parameter` | `Setting Value` table (`Auto Statement Day`, `Auto Monthly Statements`, `Auto Email Receipts`, `Notification Bcc Email`) in `Constants` sheet with bi-directional synchronization to `PropertiesService`.
 
 ---
 
