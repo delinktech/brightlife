@@ -23,11 +23,10 @@
 
   <style>
     :root {
-      --bg-dark: #070e17;
-      --card-bg: rgba(15, 30, 48, 0.75);
-      --card-border: rgba(56, 189, 248, 0.2);
+      --primary-navy: #0F2A44;
       --accent-blue: #0284c7;
-      --accent-glow: rgba(2, 132, 199, 0.35);
+      --accent-glow: rgba(2, 132, 199, 0.4);
+      --bg-dark: #070e17;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
     }
@@ -44,16 +43,16 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 20%, #112842 0%, #070e17 80%);
+      background: radial-gradient(circle at 50% 25%, #132e4d 0%, #070e17 80%);
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       color: var(--text-main);
       padding: 24px 16px;
       -webkit-font-smoothing: antialiased;
     }
 
-    .container {
+    .gateway-container {
       width: 100%;
-      max-width: 480px;
+      max-width: 440px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -61,26 +60,26 @@
     }
 
     .brand-logo-shield {
-      width: 76px;
-      height: 76px;
+      width: 80px;
+      height: 80px;
       background: linear-gradient(135deg, #1d4ed8, #0284c7);
-      border-radius: 22px;
+      border-radius: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 12px 30px -4px var(--accent-glow), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+      box-shadow: 0 16px 36px -6px var(--accent-glow), 0 0 0 1px rgba(255, 255, 255, 0.18) inset;
       margin-bottom: 24px;
-      animation: float 4s ease-in-out infinite;
+      animation: float 3.5s ease-in-out infinite;
     }
 
     @keyframes float {
       0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
+      50% { transform: translateY(-5px); }
     }
 
     .brand-logo-shield svg {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       fill: #ffffff;
     }
 
@@ -97,7 +96,7 @@
       color: #38bdf8;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .badge-dot {
@@ -106,131 +105,106 @@
       border-radius: 50%;
       background-color: #38bdf8;
       box-shadow: 0 0 8px #38bdf8;
-      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      animation: pulse 1.6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+      50% { opacity: 0.35; }
     }
 
     h1 {
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
-      letter-spacing: -0.03em;
-      margin-bottom: 8px;
+      letter-spacing: -0.025em;
+      margin-bottom: 6px;
       background: linear-gradient(180deg, #ffffff 40%, #cbd5e1 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     p.subtitle {
-      font-size: 13.5px;
+      font-size: 13px;
       color: var(--text-muted);
-      line-height: 1.5;
-      margin-bottom: 30px;
-      max-width: 380px;
+      line-height: 1.45;
+      margin-bottom: 28px;
     }
 
-    .portal-card {
+    .loader-card {
       width: 100%;
-      background: var(--card-bg);
+      background: rgba(15, 30, 48, 0.7);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(56, 189, 248, 0.18);
       border-radius: 20px;
-      padding: 24px;
+      padding: 28px 24px;
       box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
       margin-bottom: 24px;
-    }
-
-    .launch-btn {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
+    }
+
+    /* Progress bar indicator */
+    .progress-track {
       width: 100%;
-      padding: 15px 24px;
-      background: linear-gradient(135deg, #0284c7, #2563eb);
-      color: #ffffff;
-      font-size: 15px;
-      font-weight: 700;
-      text-decoration: none;
-      border-radius: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 8px 20px -2px rgba(2, 132, 199, 0.5);
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      cursor: pointer;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 18px;
+      position: relative;
     }
 
-    .launch-btn:hover {
-      background: linear-gradient(135deg, #0369a1, #1d4ed8);
-      transform: translateY(-2px);
-      box-shadow: 0 12px 25px -2px rgba(2, 132, 199, 0.65);
+    .progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #0284c7, #38bdf8);
+      border-radius: 9999px;
+      box-shadow: 0 0 12px #38bdf8;
+      animation: fillProgress 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    .launch-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 4px 12px -2px rgba(2, 132, 199, 0.4);
+    @keyframes fillProgress {
+      0% { width: 0%; }
+      60% { width: 85%; }
+      100% { width: 100%; }
     }
 
-    .launch-btn svg {
-      width: 18px;
-      height: 18px;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2.2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      transition: transform 0.2s ease;
-    }
-
-    .launch-btn:hover svg {
-      transform: translateX(3px);
-    }
-
-    .auth-notice {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-top: 16px;
-      font-size: 11.5px;
-      color: #94a3b8;
-    }
-
-    .auth-notice svg {
-      width: 14px;
-      height: 14px;
-      fill: #38bdf8;
-      shrink: 0;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      width: 100%;
-      margin-bottom: 24px;
-    }
-
-    .feature-pill {
-      background: rgba(15, 30, 48, 0.5);
-      border: 1px solid rgba(56, 189, 248, 0.15);
-      border-radius: 12px;
-      padding: 12px 8px;
-      text-align: center;
-    }
-
-    .feature-pill .icon {
-      font-size: 16px;
-      margin-bottom: 4px;
-    }
-
-    .feature-pill .label {
-      font-size: 10.5px;
+    .status-text {
+      font-size: 13.5px;
       font-weight: 600;
-      color: #cbd5e1;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    .substatus-text {
+      font-size: 11.5px;
+      color: #64748b;
+      margin-bottom: 18px;
+    }
+
+    .fallback-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    .fallback-link:hover {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.4);
     }
 
     .footer {
@@ -240,16 +214,11 @@
       flex-direction: column;
       gap: 4px;
     }
-
-    .footer a {
-      color: #38bdf8;
-      text-decoration: none;
-    }
   </style>
 </head>
 <body>
 
-  <div class="container">
+  <div class="gateway-container">
     <!-- Brand Logo Shield -->
     <div class="brand-logo-shield">
       <svg viewBox="0 0 24 24">
@@ -264,45 +233,23 @@
     </div>
 
     <h1>Bright Life SHG</h1>
-    <p class="subtitle">Executive Treasury, Financial Operations & Member Self-Service Portal</p>
+    <p class="subtitle">Executive Treasury & Member Financial Portal</p>
 
-    <!-- Main Portal Launch Card -->
-    <div class="portal-card">
+    <!-- Automatic Handoff Card -->
+    <div class="loader-card">
+      <div class="progress-track">
+        <div class="progress-fill"></div>
+      </div>
+      <div class="status-text" id="status-title">Authenticating Secure Session...</div>
+      <div class="substatus-text" id="status-subtitle">Verifying Google account & role authorization</div>
+
       <a
         href="https://script.google.com/macros/s/AKfycbx4NBY3rdhsCAJljxlTw3dQRGpxXTHOXUWLnaJzoscRLJWWo-uPoX4J-S75HtLFB0wRCA/exec"
-        class="launch-btn"
-        id="launch-portal-btn"
+        class="fallback-link"
+        id="manual-launch-link"
       >
-        <span>Open Financial Portal</span>
-        <svg viewBox="0 0 24 24">
-          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-          <polyline points="15 3 21 3 21 9"></polyline>
-          <line x1="10" y1="14" x2="21" y2="3"></line>
-        </svg>
+        <span>Open Portal Manually &rarr;</span>
       </a>
-
-      <div class="auth-notice">
-        <svg viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v-2h-2v2zm0-4h2V7h-2v6z"/>
-        </svg>
-        <span>Sign in with your registered Google Account</span>
-      </div>
-    </div>
-
-    <!-- Features Micro-Grid -->
-    <div class="features-grid">
-      <div class="feature-pill">
-        <div class="icon">🏛️</div>
-        <div class="label">Executive Treasury</div>
-      </div>
-      <div class="feature-pill">
-        <div class="icon">📈</div>
-        <div class="label">SASRA Compliance</div>
-      </div>
-      <div class="feature-pill">
-        <div class="icon">📑</div>
-        <div class="label">Member Statements</div>
-      </div>
     </div>
 
     <!-- Footer -->
@@ -313,15 +260,24 @@
   </div>
 
   <script>
-    // Forward any incoming query parameters (e.g. ?tab=loans, ?view=reports)
     (function() {
-      const search = window.location.search;
-      if (search) {
-        const btn = document.getElementById("launch-portal-btn");
-        if (btn) {
-          btn.href = btn.href + search;
-        }
+      // Production Google Apps Script Web App Endpoint
+      const GAS_BASE_URL = "https://script.google.com/macros/s/AKfycbx4NBY3rdhsCAJljxlTw3dQRGpxXTHOXUWLnaJzoscRLJWWo-uPoX4J-S75HtLFB0wRCA/exec";
+
+      // Forward any parameters from URL (e.g. ?tab=loans, ?view=reports)
+      const currentQuery = window.location.search || "";
+      const targetUrl = GAS_BASE_URL + currentQuery;
+
+      // Update manual link in case popups are blocked
+      const manualLink = document.getElementById("manual-launch-link");
+      if (manualLink) {
+        manualLink.href = targetUrl;
       }
+
+      // Smooth automated handoff after 350ms
+      setTimeout(function() {
+        window.location.replace(targetUrl);
+      }, 350);
     })();
   </script>
 </body>
