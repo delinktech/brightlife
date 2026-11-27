@@ -29,21 +29,26 @@ This document maintains the chronological status of completed features, active w
 
 ---
 
-## 2. Active Pending Tasks Queue
+## 2. Active Pending Tasks Queue (ClickUp Synchronized)
 
-| # | Task Title | Description & Proposed Scope | Priority | Status |
-|---|---|---|---|---|
-| **MIG-2** | **Full Financial Reconciliation Audit** | Comprehensive reconciliation audit against physical bank statements and CIC MMF certificates. | High | **Next Candidate** |
-| **SEC-2** | **Guarantor Shortfall & Exposure Alert** | Automated detection and visual warning badge for members with under-guaranteed active loans. | Medium | Queued |
-| **LOC-1** | **Kiswahili / English Dual Language Toggle** | Bilingual UI toggle for English & Kiswahili translations across sidebar labels, headers, cards, and modal dialogs. | Low | Queued |
+The following deliverables have been prioritized and synchronized with the ClickUp project board under the **Backlog & Features** list (`1200460000065096`):
+
+| Task ID | Task Title & Scope | Priority | Assigned Agents | ClickUp Link | Status |
+|---|---|---|---|---|---|
+| **INT-1** | **Automated M-Pesa C2B SMS Parser & Transaction Matcher**<br>*Modal paste interface with regex parsing, fuzzy member matching, batch review grid, and duplicate fraud prevention.* | **High (P1)** | `@fixer`, `@designer`, `@sentinel`, `@shipper` | [123tzfy1ux1](https://app.clickup.com/t/123tzfy1ux1) | **Ready for Sprint** |
+| **SEC-2** | **Guarantor Exposure & Under-Secured Loan Risk Matrix**<br>*Active pledge exposure aggregation, net unencumbered savings guard, visual risk tags, and automatic pledge liberation upon loan payoff.* | **High (P1)** | `@fixer`, `@designer`, `@sentinel`, `@shipper` | [123tzfy1ux2](https://app.clickup.com/t/123tzfy1ux2) | **Ready for Sprint** |
+| **DIV-1** | **Annual Surplus Distribution & AGM Dividend Yield Simulator**<br>*Actuarial net profit distribution modeling after 20% statutory reserve, Rule 5.2 loan offset waterfall, and interactive "what-if" planning slider.* | **Medium (P2)** | `@analyst`, `@fixer`, `@designer`, `@sentinel` | [123tzfy1ux3](https://app.clickup.com/t/123tzfy1ux3) | **Ready for Sprint** |
+| **OPS-2** | **Automated Google Drive Workbook Snapshot & Backup Trigger**<br>*Time-driven automated weekly/monthly backup cloning to Drive, state hashing, 12-month rolling retention rotation, and Settings health widget.* | **Medium (P2)** | `@fixer`, `@sentinel`, `@shipper` | [123tzfy1ux4](https://app.clickup.com/t/123tzfy1ux4) | **Ready for Sprint** |
+| **LOC-1** | **Bilingual Interface Localization (English & Kiswahili)**<br>*Client-side i18n translation matrix (Akiba, Mikopo, Wanachama), zero-reload instantaneous DOM switcher, and persistent user preference.* | **Polish (P3)** | `@designer`, `@sentinel`, `@shipper` | [123tzfy1ux5](https://app.clickup.com/t/123tzfy1ux5) | **Ready for Sprint** |
+| **MIG-2** | **Full Financial Reconciliation Audit & Statement Digitization**<br>*Continuous reconciliation audit against historical physical bank statements (standing ingestion awaiting physical PDFs from leadership).* | **High (P1)** | `@migrator`, `@ledger`, `@fixer` | N/A | **Standing Ingestion** |
 
 ---
 
 ## 3. Backlog & Future Proposals
 
-- [ ] **Automated M-Pesa Payment Matching**: Direct integration reconciling M-Pesa C2B / Daraja notification callbacks with member savings rows.
-- [ ] **Investment Dividend Yield Simulator**: Dynamic projection tool computing expected AGM dividend payouts across savings tiers.
-- [ ] **SMS Gateway Fallback**: Africa's Talking SMS integration for members without registered smartphones.
+- [ ] **SMS Gateway Fallback (Africa's Talking)**: Automated SMS notification fallback for members without registered smartphones or WhatsApp access.
+- [ ] **Native Mobile Progressive Web App (PWA) Manifest**: Offline caching shell, service workers, and home-screen installability across iOS and Android.
+- [ ] **Direct M-Pesa Daraja API Integration**: Webhook receiver for automated real-time C2B payment capture directly into Google Apps Script.
 
 ---
 

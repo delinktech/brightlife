@@ -8,12 +8,12 @@
 
 | Metric | Status |
 | :--- | :--- |
-| **Current Live Release** | **`v152`** (Google Apps Script Build `@153`, deployed `@159`, deployment `AKfycbx4........wRCA`) |
-| **Total Tracked Tasks** | **42 Tasks** (Expanded with `ARC-1`–`ARC-6`, `UI-3`–`UI-8`, `COM-3`–`COM-6`, `COM-2`, `RPT-3`, `RPT-5`, `SET-1`, `SET-2`, `MIG-3`, `SEC-1`, `ANA-1`) |
-| **Completed & Shipped (`[DONE]`)** | **42 Tasks (100.0%)** |
+| **Current Live Release** | **`v1.0.1`** (Google Apps Script Build `@163`, deployment `AKfycbx4........wRCA`) |
+| **Total Tracked Tasks** | **47 Tasks** (42 Shipped Production Deliverables + 5 Prioritized Sprint Backlog Tasks) |
+| **Completed & Shipped (`[DONE]`)** | **42 Tasks (89.4%)** |
 | **Active In-Flight (`[IN PROGRESS]`)** | **0 Tasks** |
-| **Prioritized Backlog (`[BACKLOG]`)** | **0 Tasks (100% Core Backlog & Workbook Synchronization Completed)** |
-| **Current Sprint Focus** | **🎉 100% Backlog & Workbook Constants Synchronization Achieved!** All 42 planned deliverables and layout/configuration sync tasks are designed, tested, verified, and live in production. |
+| **Prioritized Backlog (`[BACKLOG]`)** | **5 Tasks (`INT-1`, `SEC-2`, `DIV-1`, `OPS-2`, `LOC-1`)** |
+| **Current Sprint Focus** | **Sprint Backlog Prioritization & Technical Decomposition (`INT-1`, `SEC-2`, `DIV-1`, `OPS-2`, `LOC-1`) synchronized with ClickUp (`1200460000065096`).** |
 
 ---
 
@@ -96,9 +96,103 @@
 
 ---
 
-### Tier 3: Advanced Intelligence, Financial Reporting & Platform Hardening (`P2`)
+### Prioritized Active Sprint Queue (Next Wave Deliverables)
 
-*All core Tier 3 deliverables (`RPT-1`, `RPT-2`, `RPT-3`, `RPT-4`, `RPT-5`, `SEC-1`) are 100% completed and verified in production.*
+*The following 5 tasks have been technically decomposed, estimated, and synchronized with ClickUp under the **Backlog & Features** list (`1200460000065096`).*
+
+| Task ID | Domain | Title & Description | Priority | Assigned Agents | ClickUp Link |
+| :---: | :---: | :--- | :---: | :---: | :---: |
+| **`INT-1`** | Integration & Ops | **Automated M-Pesa C2B SMS Parser & Transaction Matcher**: Client-side SMS paste/ingestion modal with regex parser, fuzzy member matching engine against phone/name directory, interactive batch staging grid, duplicate reference guard, and atomic posting to Contributions ledger. | **P1 (High)** | `@fixer`, `@designer`, `@sentinel`, `@shipper` | [ClickUp INT-1](https://app.clickup.com/t/123tzfy1ux1) |
+| **`SEC-2`** | Credit Security & Risk | **Guarantor Exposure & Under-Secured Loan Risk Matrix**: Active guarantee liability aggregator across live loans, net unencumbered free savings capacity guard, visual risk badging (Over-Committed Guarantors & Under-Secured Loans), and automatic pledge release on loan settlement. | **P1 (High)** | `@fixer`, `@designer`, `@sentinel`, `@shipper` | [ClickUp SEC-2](https://app.clickup.com/t/123tzfy1ux2) |
+| **`DIV-1`** | Financial Intelligence | **Annual Surplus Distribution & AGM Dividend Yield Simulator**: Actuarial surplus allocation engine after 20% statutory reserve deduction, Rule 5.2 dynamic loan offset vs. savings capitalization waterfall, interactive "what-if" yield slider in Executive Analytics, and printable AGM distribution schedule export. | **P2 (Medium)** | `@analyst`, `@fixer`, `@designer`, `@sentinel` | [ClickUp DIV-1](https://app.clickup.com/t/123tzfy1ux3) |
+| **`OPS-2`** | Reliability & DevOps | **Automated Google Drive Workbook Snapshot & Backup Trigger**: Time-driven background trigger executing scheduled weekly/monthly workbook clones to `Brightlife_Backups` folder, immutable timestamp naming with state hash, retention rotation policy (12 monthly, 4 weekly), and Settings health status widget. | **P2 (Medium)** | `@fixer`, `@sentinel`, `@shipper` | [ClickUp OPS-2](https://app.clickup.com/t/123tzfy1ux4) |
+| **`LOC-1`** | Accessibility & UI/UX | **Bilingual Interface Localization (English & Kiswahili)**: Client-side i18n translation dictionary for all dashboard views, responsive EN/SW language switcher toggle in top header and mobile drawer, persistent localStorage preference, and zero-reload DOM hydration. | **P3 (Polish)** | `@designer`, `@sentinel`, `@shipper` | [ClickUp LOC-1](https://app.clickup.com/t/123tzfy1ux5) |
+
+---
+
+### Detailed Task Decomposition & Acceptance Specifications
+
+#### 1. `INT-1: Automated M-Pesa C2B SMS Parser & Transaction Matcher`
+* **ClickUp Task:** [`123tzfy1ux1`](https://app.clickup.com/t/123tzfy1ux1)
+* **Status:** `[BACKLOG / READY FOR SPRINT]`
+* **Priority:** `P1 (High)`
+* **Domain:** Integration & Treasury Automation
+* **Assigned Pipeline:** `@fixer` (Backend Regex & Matching) $\to$ `@designer` (Staging Modal & UX) $\to$ `@sentinel` (Security Audit) $\to$ `@shipper` (Deployment)
+* **Actionable Subtask Breakdown:**
+  1. **SMS Ingestion Parser Modal (`Contributions.html`):** Add a dedicated "Import M-Pesa SMS" action button and modal allowing the Treasurer to paste raw SMS text strings (or bulk multi-message text).
+  2. **Regex Parsing Engine (`contributions.service.js`):** Extract transaction reference (`[A-Z0-9]{10}`), KES amount, sender name, sender phone number, and timestamp.
+  3. **Fuzzy Member Identification Engine:** Match extracted phone number and name against canonical `Members` records (`BLM-YYNNN`). Auto-assign member ID or route to `[Suspense / Unallocated]` for manual selection.
+  4. **Interactive Batch Reconciliation & Verification Grid:** Present parsed rows in a responsive staging preview table with editable overrides prior to committing to the `Contributions` Google Sheet.
+  5. **Duplicate Reference & Fraud Guard:** Verify reference uniqueness against existing `Contributions` and `SHEETS.AUDIT_LOG` to prevent double-counting.
+* **Definition of Done (DoD):**
+  - Parses single and multi-message paste with 100% regex match accuracy.
+  - Correctly auto-resolves existing members by phone number.
+  - Flags duplicate reference attempts with non-blocking warning.
+  - Commits valid records with full audit logging and passes 15/15 automated tests.
+
+#### 2. `SEC-2: Guarantor Exposure & Under-Secured Loan Risk Matrix`
+* **ClickUp Task:** [`123tzfy1ux2`](https://app.clickup.com/t/123tzfy1ux2)
+* **Status:** `[BACKLOG / READY FOR SPRINT]`
+* **Priority:** `P1 (High)`
+* **Domain:** Credit Risk & Capital Protection
+* **Assigned Pipeline:** `@fixer` (Ledger Math & Locking) $\to$ `@designer` (Badge UI & Indicators) $\to$ `@sentinel` (Integrity Audit) $\to$ `@shipper` (Deployment)
+* **Actionable Subtask Breakdown:**
+  1. **Guarantor Exposure Aggregator (`loans.service.js`):** Calculate cumulative active pledge liability across all active/disbursed loans per member.
+  2. **Net Unencumbered Free Savings Guard:** Enforce dynamic limit: $\text{Free Savings} = \text{Total Savings} - \text{Active Personal Loan} - \text{Total Pledged Guarantees}$. Block guarantor additions when unencumbered savings $\le 0$.
+  3. **Visual Risk Indicators & Badges (`Loans.html`, `Members.html`):** Add color-coded warning chips for `Under-Secured Loans` (shortfall in guarantor pledges) and `Over-Committed Guarantors`.
+  4. **Automatic Pledge Release Lifecycle:** Automatically release pledged allocations back to guarantor free savings when a loan status transitions to `Fully Repaid` or `Closed`.
+* **Definition of Done (DoD):**
+  - Accurately tracks member guarantee exposure across multi-borrower portfolios.
+  - Loan application modal strictly validates that guarantor pledges $\le$ net unencumbered savings.
+  - Fully repaid loans immediately liberate pledged amounts without data leakage.
+
+#### 3. `DIV-1: Annual Surplus Distribution & AGM Dividend Yield Simulator`
+* **ClickUp Task:** [`123tzfy1ux3`](https://app.clickup.com/t/123tzfy1ux3)
+* **Status:** `[BACKLOG / READY FOR SPRINT]`
+* **Priority:** `P2 (Medium)`
+* **Domain:** Financial Intelligence & Actuarial UX
+* **Assigned Pipeline:** `@analyst` (Actuarial Allocation Math) $\to$ `@fixer` (RPCs & Calculations) $\to$ `@designer` (Interactive Simulation UI) $\to$ `@sentinel` (Audit Verification)
+* **Actionable Subtask Breakdown:**
+  1. **Actuarial Allocation Engine (`reports.service.js` / `personal.service.js`):** Ingest audited Net Profit from Income Statement (`RPT-2`), deduct 20% statutory reserve, and compute member qualifying savings weights.
+  2. **Rule 5.2 Dynamic Offset Waterfall:** Automatically compute per-member dividend payouts, prioritizing loan arrears/interest offsets before routing to liquid payout or savings capitalization.
+  3. **Interactive "What-If" AGM Planning Simulation Tool (`Home.html` Analytics):** Provide executive sliders for group officials to model dividend yields (e.g. 5%, 8%, 10%) and assess cash flow impact.
+  4. **AGM Schedule Export Pack:** Generate printable official AGM dividend approval schedule with BLG letterhead and dual-officer sign-off lines.
+* **Definition of Done (DoD):**
+  - Allocation math reconciles to 100.00% of distributable surplus pool.
+  - Bylaw Rule 5.2 offset logic accurately splits funds between debt offset and savings.
+  - Exportable audit schedule matches executive dashboard calculations.
+
+#### 4. `OPS-2: Automated Google Drive Workbook Snapshot & Backup Trigger`
+* **ClickUp Task:** [`123tzfy1ux4`](https://app.clickup.com/t/123tzfy1ux4)
+* **Status:** `[BACKLOG / READY FOR SPRINT]`
+* **Priority:** `P2 (Medium)`
+* **Domain:** Reliability, Disaster Recovery & DevOps
+* **Assigned Pipeline:** `@fixer` (DriveApp & Triggers) $\to$ `@sentinel` (Permissions & Security) $\to$ `@shipper` (Deployment)
+* **Actionable Subtask Breakdown:**
+  1. **Scheduled Snapshot Engine (`backup.service.js`):** Time-driven Google Apps Script background trigger running weekly/monthly to clone master Google Sheet into dedicated `Brightlife_Backups` Drive folder.
+  2. **Immutable Timestamp & State Hash:** Name backups `BrightLife_Master_Ledger_YYYYMMDD_HHMM` and log SHA-256 state seal in `SHEETS.AUDIT_LOG`.
+  3. **Backup Retention & Rotation Policy:** Retain last 12 monthly backups and 4 weekly backups; automatically prune older archives to preserve Drive storage.
+  4. **Settings Health Monitor (`Settings.html`):** Display backup health badge, last snapshot timestamp, and manual "Backup Now" button for authorized administrators.
+* **Definition of Done (DoD):**
+  - Automated trigger clones entire workbook without corrupting formulas or data.
+  - Retention manager bounds storage footprint.
+  - Settings panel reflects real-time backup health.
+
+#### 5. `LOC-1: Bilingual Interface Localization (English & Kiswahili)`
+* **ClickUp Task:** [`123tzfy1ux5`](https://app.clickup.com/t/123tzfy1ux5)
+* **Status:** `[BACKLOG / READY FOR SPRINT]`
+* **Priority:** `P3 (Polish)`
+* **Domain:** Accessibility, Member Inclusion & UI Polish
+* **Assigned Pipeline:** `@designer` (Translation Matrix & UI Toggle) $\to$ `@sentinel` (XSS Sanitization) $\to$ `@shipper` (Deployment)
+* **Actionable Subtask Breakdown:**
+  1. **Client-side i18n Translation Matrix (`i18n.translations.js`):** Establish comprehensive translation dictionary for dashboard labels, menus, modal headers, and status chips (e.g. Akiba, Mikopo, Michango, Wanachama).
+  2. **Language Switcher Control (`Index.html`):** Add segmented toggle (`EN` | `SW`) in the top navigation bar and mobile drawer.
+  3. **Zero-Reload Dynamic DOM Hydration:** Use `data-i18n` attributes for instantaneous client-side UI translation without full-page reloads.
+  4. **Persistent Locale Preference:** Store user language preference in `localStorage` across sessions.
+* **Definition of Done (DoD):**
+  - Seamless 1-click toggling between English and Kiswahili across all core views.
+  - User language preference persists across page reloads.
+  - Zero layout displacement or broken styling.
 
 ---
 
@@ -106,7 +200,7 @@
 
 ```mermaid
 graph TD
-    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v149) — 100% Complete"]
+    subgraph Shipped_Deliverables ["Shipped in Production (v102 - v1.0.1) — 42 Tasks Completed"]
         F1["FIN-1: Decoupled PAR"]
         F2["FIN-2: Net Liquid Cash"]
         F3["FIN-3: Cashflow Period Feeds"]
@@ -139,6 +233,14 @@ graph TD
         N1["ANA-1: Financial Intelligence & Actuarial UX"]
     end
 
+    subgraph Prioritized_Sprint_Queue ["Prioritized Sprint Queue (ClickUp Synchronized)"]
+        I1["INT-1: Automated M-Pesa C2B SMS Parser (P1)"]
+        S2["SEC-2: Guarantor Exposure Risk Matrix (P1)"]
+        D1["DIV-1: Annual Surplus & AGM Dividend Simulator (P2)"]
+        O2["OPS-2: Drive Workbook Backup Trigger (P2)"]
+        L1["LOC-1: Bilingual Interface EN/SW (P3)"]
+    end
+
     subgraph Ongoing_Operational_Backfill ["Ongoing Operational Backfill (Standing Ingestion)"]
         M2["MIG-2: Equity Historical Statements Full Ingestion<br>(Awaiting Remaining Statements from Leadership)"]
     end
@@ -161,6 +263,12 @@ graph TD
     A1 --> S1
     R1 & R2 & V2 & V3 --> N1
     C2 --> N1
+
+    C1 & A3 --> I1
+    U2 & G1 & N1 --> S2
+    N1 & R2 & C2 --> D1
+    S1 & A1 --> O2
+    H & U3 --> L1
 ```
 
 ---
