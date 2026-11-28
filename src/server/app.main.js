@@ -343,9 +343,11 @@ function dispatchHeadlessAction_(action, payload) {
     case "getRolesData":
       return typeof getRolesData === "function" ? getRolesData() : { success: false, error: "getRolesData unavailable" };
     case "saveRole":
-      return typeof saveRole === "function" ? saveRole(p) : { success: false, error: "saveRole unavailable" };
+    case "saveUserRole":
+      return typeof saveUserRole === "function" ? saveUserRole(p) : (typeof saveRole === "function" ? saveRole(p) : { success: false, error: "saveRole unavailable" });
     case "deleteRole":
-      return typeof deleteRole === "function" ? deleteRole(p.email) : { success: false, error: "deleteRole unavailable" };
+    case "deleteUserRole":
+      return typeof deleteUserRole === "function" ? deleteUserRole(p.email || p) : (typeof deleteRole === "function" ? deleteRole(p.email || p) : { success: false, error: "deleteRole unavailable" });
 
     // Settings & System Governance
     case "getLoanPolicySettings":

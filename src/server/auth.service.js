@@ -463,6 +463,7 @@ function getSessionRoleContext_(email) {
   }
 
   return {
+    email: email,
     roleKey: roleKey,
     roleLabel: labels[roleKey] || roleKey,
     permissions: perms,
