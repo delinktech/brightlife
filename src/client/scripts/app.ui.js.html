@@ -1838,6 +1838,8 @@
   }
   window.closeSessionPopover = closeSessionPopover;
 
+  let gsiInitialized = false;
+
   function initGoogleIdentityServices() {
     const clientId = window.GOOGLE_CLIENT_ID || (window.ApiClient && window.ApiClient.CLIENT_ID) || "961631543108-en4e2seqgq8tkk0fs0ehl9hmsqr0itpr.apps.googleusercontent.com";
 
@@ -1848,12 +1850,15 @@
       }
 
       try {
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleCredentialResponse,
-          auto_select: true,
-          cancel_on_tap_outside: false
-        });
+        if (!gsiInitialized) {
+          google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: false
+          });
+          gsiInitialized = true;
+        }
 
         const btnContainer = document.getElementById("google-signin-btn");
         if (btnContainer) {
