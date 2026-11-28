@@ -1,0 +1,296 @@
+<script>
+/**
+ * Headless API Client & google.script.run Transparent Proxy Shim (AUTH-2).
+ * Enables the dashboard to run decoupled on GitHub Pages or custom domain,
+ * sending authenticated HTTP POST requests with Google OAuth ID Tokens.
+ */
+(function (window) {
+  "use strict";
+
+  const DEFAULT_API_URL = "https://script.google.com/macros/s/AKfycbx4NBY3rdhsCAJljxlTw3dQRGpxXTHOXUWLnaJzoscRLJWWo-uPoX4J-S75HtLFB0wRCA/exec";
+  const TOKEN_STORAGE_KEY = "bl_gauth_id_token";
+  const USER_STORAGE_KEY = "bl_gauth_profile";
+  const API_URL_KEY = "bl_api_endpoint_override";
+
+  const ApiClient = {
+    /**
+     * Retrieves the target API execution endpoint URL.
+     */
+    getApiUrl: function () {
+      if (window.BRIGHTLIFE_API_ENDPOINT && String(window.BRIGHTLIFE_API_ENDPOINT).trim()) {
+        return String(window.BRIGHTLIFE_API_ENDPOINT).trim();
+      }
+      try {
+        const stored = sessionStorage.getItem(API_URL_KEY) || localStorage.getItem(API_URL_KEY);
+        if (stored && String(stored).trim()) return String(stored).trim();
+      } catch (e) {}
+
+      // Fallback to meta tag if present
+      const meta = document.querySelector('meta[name="brightlife-api-url"]');
+      if (meta && meta.content && meta.content.trim()) {
+        return meta.content.trim();
+      }
+
+      return DEFAULT_API_URL;
+    },
+
+    /**
+     * Sets an API endpoint override.
+     */
+    setApiUrl: function (url) {
+      if (!url) return;
+      try {
+        sessionStorage.setItem(API_URL_KEY, String(url).trim());
+      } catch (e) {}
+    },
+
+    /**
+     * Retrieves the stored Google OAuth ID Token (JWT).
+     */
+    getIdToken: function () {
+      try {
+        const token = sessionStorage.getItem(TOKEN_STORAGE_KEY) || localStorage.getItem(TOKEN_STORAGE_KEY);
+        return token ? String(token).trim() : "";
+      } catch (e) {
+        return "";
+      }
+    },
+
+    /**
+     * Stores the Google OAuth ID Token (JWT) in sessionStorage.
+     */
+    setIdToken: function (token, rememberMe) {
+      if (!token) return;
+      const cleanToken = String(token).trim();
+      try {
+        sessionStorage.setItem(TOKEN_STORAGE_KEY, cleanToken);
+        if (rememberMe) {
+          localStorage.setItem(TOKEN_STORAGE_KEY, cleanToken);
+        }
+      } catch (e) {}
+    },
+
+    /**
+     * Clears all authentication tokens and cached user profiles.
+     */
+    clearSession: function () {
+      try {
+        sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+        sessionStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
+      } catch (e) {}
+    },
+
+    /**
+     * Decodes claims from a JWT without external libraries.
+     */
+    getDecodedToken: function (rawToken) {
+      const token = rawToken || this.getIdToken();
+      if (!token || typeof token !== "string") return null;
+      try {
+        const parts = token.split(".");
+        if (parts.length < 2) return null;
+        const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const jsonStr = decodeURIComponent(
+          atob(payloadBase64)
+            .split("")
+            .map(function (c) {
+              return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+            })
+            .join("")
+        );
+        return JSON.parse(jsonStr);
+      } catch (err) {
+        return null;
+      }
+    },
+
+    /**
+     * Checks if a valid, unexpired token exists in storage.
+     */
+    hasActiveSession: function () {
+      const claims = this.getDecodedToken();
+      if (!claims || !claims.exp) return false;
+      const nowSec = Math.floor(Date.now() / 1000);
+      return claims.exp > (nowSec + 30); // 30s buffer
+    },
+
+    /**
+     * Sends an authenticated HTTP POST request to the Google Apps Script Web App.
+     * Uses 'text/plain;charset=utf-8' to prevent preflight OPTIONS failures with CORS.
+     */
+    request: async function (action, payload) {
+      if (!action || typeof action !== "string") {
+        throw new Error("ApiClient: action must be a valid string");
+      }
+
+      const url = this.getApiUrl();
+      const token = this.getIdToken();
+
+      const requestBody = {
+        action: action,
+        idToken: token || "",
+        payload: payload || {}
+      };
+
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify(requestBody),
+          redirect: "follow"
+        });
+
+        if (!response.ok && response.status !== 302) {
+          throw new Error("HTTP " + response.status + ": " + response.statusText);
+        }
+
+        const data = await response.json();
+        if (!data || data.success === false) {
+          const errMsg = data && data.error ? data.error : ("Action failed: " + action);
+          throw new Error(errMsg);
+        }
+
+        return data;
+      } catch (err) {
+        console.error("ApiClient request failure for [" + action + "]:", err);
+        throw err;
+      }
+    },
+
+    /**
+     * Maps positional RPC arguments into structured server payload objects.
+     */
+    callRpc: function (action, args) {
+      const a = args || [];
+      let payload = {};
+
+      switch (action) {
+        case "getDashboardOverviewData":
+        case "getHomeAnalyticsData":
+        case "getHomeAnalytics":
+        case "getAgmAuditPackData":
+        case "getAgmAuditExportPackData":
+          payload = { range: a[0] || "this-month" };
+          break;
+
+        case "getMembersData":
+        case "getContributionsData":
+        case "getLoansData":
+        case "getInvestmentsData":
+          payload = { page: a[0] || 1, limit: a[1] || 10 };
+          break;
+
+        case "getLoanRepaymentsData":
+          payload = { loanId: a[0], page: a[1] || 1, limit: a[2] || 10 };
+          break;
+
+        case "getLoanStatementData":
+          payload = { loanId: a[0] };
+          break;
+
+        case "getBorrowerLoanEligibility":
+        case "getEligibleGuarantors":
+          payload = { borrowerId: a[0] };
+          break;
+
+        case "endorseLoan":
+          payload = { loanId: a[0], remarks: a[1] || "" };
+          break;
+
+        case "authorizeLoan":
+          payload = { loanId: a[0], remarks: a[1] || "" };
+          break;
+
+        case "rejectLoan":
+          payload = { loanId: a[0], reason: a[1] || "" };
+          break;
+
+        case "updateContributionStatus":
+          payload = { id: a[0], status: a[1] };
+          break;
+
+        default:
+          if (a.length === 1 && typeof a[0] === "object" && a[0] !== null) {
+            payload = a[0];
+          } else if (a.length > 0) {
+            payload = { args: a };
+          }
+          break;
+      }
+
+      return this.request(action, payload);
+    }
+  };
+
+  /**
+   * Transparent Proxy/Shim for google.script.run.
+   * If running outside the Google Apps Script iframe (e.g. GitHub Pages),
+   * this Proxy intercepts all google.script.run.withSuccessHandler(...).method() calls
+   * and dispatches them via ApiClient without requiring any UI code rewrites!
+   */
+  function installScriptRunProxy() {
+    const isInsideGasIframe = (
+      typeof google !== "undefined" &&
+      google.script &&
+      typeof google.script.run === "object" &&
+      window.location.hostname.indexOf("script.google.com") !== -1 &&
+      !window.FORCE_HEADLESS_CLIENT
+    );
+
+    if (isInsideGasIframe) {
+      // Running natively inside Google Apps Script iframe: keep native implementation
+      return;
+    }
+
+    function createProxy(successFn, failureFn) {
+      return new Proxy({}, {
+        get: function (target, prop) {
+          if (prop === "withSuccessHandler") {
+            return function (fn) {
+              return createProxy(fn, failureFn);
+            };
+          }
+          if (prop === "withFailureHandler") {
+            return function (fn) {
+              return createProxy(successFn, fn);
+            };
+          }
+
+          // Any other property is an RPC method call (e.g. getSessionInfo, getLoansData)
+          return function (...args) {
+            ApiClient.callRpc(prop, args)
+              .then(function (result) {
+                if (typeof successFn === "function") {
+                  successFn(result);
+                }
+              })
+              .catch(function (error) {
+                if (typeof failureFn === "function") {
+                  failureFn(error);
+                } else {
+                  console.error("Unhandled RPC failure on [" + prop + "]:", error);
+                  if (typeof showNotification === "function") {
+                    showNotification((error && error.message) || String(error), "error");
+                  }
+                }
+              });
+          };
+        }
+      });
+    }
+
+    window.google = window.google || {};
+    window.google.script = window.google.script || {};
+    window.google.script.run = createProxy(null, null);
+  }
+
+  // Expose ApiClient and install proxy shim immediately
+  window.ApiClient = ApiClient;
+  installScriptRunProxy();
+
+})(typeof window !== "undefined" ? window : global);
+</script>
