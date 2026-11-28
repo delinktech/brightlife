@@ -1134,6 +1134,14 @@
       stopAppLoader();
     };
 
+    // In headless mode: If no active Google ID token exists in storage, show Sign In view immediately
+    if (window.ApiClient && !window.ApiClient.hasActiveSession() && window.location.hostname !== "script.google.com") {
+      finishLoader();
+      showPage("sign-in");
+      initGoogleIdentityServices();
+      return;
+    }
+
     const failClosedSessionFallback = (fallbackLabel, reasonMessage) => {
       currentSessionEmail = "";
       currentSessionRole = "";
@@ -1380,6 +1388,7 @@
 
   const PAGE_TITLE_LABELS = {
     "session-loading": "Verifying session...",
+    "sign-in": "Sign In to Brightlife",
     home: "Home (Group Overview)",
     "my-financials": "My Financials (Personal)",
     members: "Members Registry",
@@ -1398,10 +1407,14 @@
     let targetPageId = pageId;
     const isAuthenticated = Boolean(window.currentUser && window.currentUser.hasAccess !== false && !sessionAccessDenied);
 
-    if (sessionAccessDenied && targetPageId !== "access-denied") {
+    if (sessionAccessDenied && targetPageId !== "access-denied" && targetPageId !== "sign-in") {
       targetPageId = "access-denied";
-    } else if (!isAuthenticated && targetPageId !== "session-loading" && targetPageId !== "access-denied") {
-      targetPageId = "my-financials";
+    } else if (!isAuthenticated && targetPageId !== "session-loading" && targetPageId !== "access-denied" && targetPageId !== "sign-in") {
+      if (window.ApiClient && !window.ApiClient.hasActiveSession() && window.location.hostname !== "script.google.com") {
+        targetPageId = "sign-in";
+      } else {
+        targetPageId = "my-financials";
+      }
     } else if (
       (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) &&
       STAFF_ONLY_PAGES.indexOf(targetPageId) !== -1
@@ -1410,6 +1423,10 @@
     }
 
     currentActivePageId = targetPageId;
+
+    if (targetPageId === "sign-in") {
+      initGoogleIdentityServices();
+    }
 
     document.querySelectorAll(".page-wrapper").forEach((container) => {
       container.classList.remove("active");
@@ -1820,6 +1837,116 @@
     if (hdrBtn) hdrBtn.setAttribute("aria-expanded", "false");
   }
   window.closeSessionPopover = closeSessionPopover;
+
+  function initGoogleIdentityServices() {
+    const clientId = window.GOOGLE_CLIENT_ID || (window.ApiClient && window.ApiClient.CLIENT_ID) || "961631543108-en4e2seqgq8tkk0fs0ehl9hmsqr0itpr.apps.googleusercontent.com";
+
+    function renderGsi() {
+      if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
+        setTimeout(renderGsi, 250);
+        return;
+      }
+
+      try {
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: true,
+          cancel_on_tap_outside: false
+        });
+
+        const btnContainer = document.getElementById("google-signin-btn");
+        if (btnContainer) {
+          btnContainer.innerHTML = "";
+          const isDark = document.documentElement.classList.contains("dark");
+          google.accounts.id.renderButton(btnContainer, {
+            theme: isDark ? "filled_black" : "outline",
+            size: "large",
+            type: "standard",
+            text: "continue_with",
+            shape: "pill",
+            logo_alignment: "left",
+            width: 280
+          });
+        }
+
+        google.accounts.id.prompt(function (notification) {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // One-Tap fallback to standard button
+          }
+        });
+      } catch (err) {
+        console.warn("initGoogleIdentityServices error:", err);
+      }
+    }
+
+    renderGsi();
+  }
+  window.initGoogleIdentityServices = initGoogleIdentityServices;
+
+  function handleGoogleCredentialResponse(response) {
+    if (!response || !response.credential) {
+      if (typeof showNotification === "function") {
+        showNotification("Sign in cancelled or failed.", "warning");
+      }
+      return;
+    }
+
+    const spinner = document.getElementById("signin-loading-spinner");
+    const btnWrapper = document.getElementById("google-signin-btn-wrapper");
+    if (spinner) spinner.classList.remove("hidden");
+    if (btnWrapper) btnWrapper.classList.add("opacity-50", "pointer-events-none");
+
+    if (window.ApiClient) {
+      window.ApiClient.setIdToken(response.credential);
+    }
+
+    refreshSessionInfo(function (info) {
+      if (spinner) spinner.classList.add("hidden");
+      if (btnWrapper) btnWrapper.classList.remove("opacity-50", "pointer-events-none");
+      if (info && info.success) {
+        sessionAccessDenied = false;
+        resolveSessionLandingPage(info);
+        if (typeof showNotification === "function") {
+          showNotification("Welcome back, " + (info.displayName || "Member") + "!", "success");
+        }
+      } else {
+        const errMsg = (info && info.error) ? String(info.error) : "";
+        if (errMsg.indexOf("Access denied") !== -1 || errMsg.indexOf("not have an active role") !== -1) {
+          showAccessDenied(info && info.email);
+        } else {
+          showSessionErrorNotification("Verification failed: " + (errMsg || "Unable to authenticate."));
+        }
+      }
+    });
+  }
+  window.handleGoogleCredentialResponse = handleGoogleCredentialResponse;
+
+  function handleSignOut() {
+    if (window.ApiClient) {
+      window.ApiClient.clearSession();
+    }
+    if (typeof google !== "undefined" && google.accounts && google.accounts.id) {
+      try {
+        google.accounts.id.disableAutoSelect();
+      } catch (eGsi) {}
+    }
+    window.currentUser = null;
+    window.session = null;
+    currentSessionEmail = "";
+    currentSessionRole = "";
+    sessionAccessDenied = false;
+    cacheClear();
+
+    closeSessionPopover();
+    showPage("sign-in");
+    initGoogleIdentityServices();
+
+    if (typeof showNotification === "function") {
+      showNotification("You have been signed out.", "info");
+    }
+  }
+  window.handleSignOut = handleSignOut;
 
   function forceRefreshCurrentView() {
     cacheClear();
