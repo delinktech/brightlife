@@ -1862,6 +1862,21 @@
 
   function initGoogleIdentityServices() {
     const clientId = window.GOOGLE_CLIENT_ID || (window.ApiClient && window.ApiClient.CLIENT_ID) || "961631543108-en4e2seqgq8tkk0fs0ehl9hmsqr0itpr.apps.googleusercontent.com";
+    const currentOrigin = window.location.origin || (window.location.protocol + "//" + window.location.host);
+
+    const originTextEl = document.getElementById("active-origin-text");
+    if (originTextEl) {
+      originTextEl.textContent = currentOrigin;
+    }
+
+    // Diagnostics: If Google fails to render the button after 3 seconds (e.g. 403 origin rejection), show diagnostic box
+    setTimeout(function () {
+      const btnContainer = document.getElementById("google-signin-btn");
+      const diagBox = document.getElementById("origin-diagnostic-box");
+      if (btnContainer && (!btnContainer.hasChildNodes() || btnContainer.innerHTML.trim() === "") && diagBox) {
+        diagBox.classList.remove("hidden");
+      }
+    }, 3000);
 
     function renderGsi() {
       if (typeof google === "undefined" || !google.accounts || !google.accounts.id) {
