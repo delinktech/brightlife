@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - master
+      - feature/headless-google-auth
     paths:
       - 'index.html'
       - '.nojekyll'
       - 'dashboard/**'
+      - 'staging/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 

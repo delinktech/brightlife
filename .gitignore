@@ -31,6 +31,8 @@ ehthumbs.db
 
 # Local Test Outputs, Logs & Temporary Files
 tests/output/
+preview.html
+preview/
 *.log
 *.tmp
 *.bak
