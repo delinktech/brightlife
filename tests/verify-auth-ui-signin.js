@@ -131,6 +131,17 @@ it("app.ui.js.html routes unauthenticated headless users directly to sign-in pag
   );
 });
 
+it("app.ui.js.html strictly gates unauthenticated users from accessing dashboard views", () => {
+  assert.ok(
+    appJs.includes('document.body.classList.toggle("auth-gate-active", isAuthGate)'),
+    "showPage does not activate auth-gate-active UI state"
+  );
+  assert.ok(
+    appJs.includes('sidebarNav.classList.toggle("hidden", isAuthGate)'),
+    "showPage does not hide sidebar navigation during auth gate"
+  );
+});
+
 console.log("\n======================================================================");
 console.log(`=== AUTH-3 VERIFICATION COMPLETE: ${passedTests}/${totalTests} CHECKS PASSED ===`);
 console.log("======================================================================\n");

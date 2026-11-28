@@ -1152,6 +1152,9 @@
         currentMembers = [];
       }
       cacheClear();
+      if (window.ApiClient) {
+        window.ApiClient.clearSession();
+      }
       applyRolePermissions({ isMemberOnly: true });
       applySessionFallback(sNameEl, sEmailEl, fallbackLabel);
       if (!callbackSettled) {
@@ -1179,7 +1182,7 @@
           ADMIN_RESTRICTED_PAGES.indexOf(activeId) !== -1 ||
           (!arg && activeId === "home");
         if (!arg && isRestrictedOrBoot) {
-          showPage(sessionAccessDenied ? "access-denied" : "my-financials");
+          showPage(sessionAccessDenied ? "access-denied" : "sign-in");
         } else if (arg && (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) && ADMIN_RESTRICTED_PAGES.indexOf(activeId) !== -1) {
           showPage("my-financials");
         }
@@ -1361,11 +1364,11 @@
   }
 
   function resolveSessionLandingPage(info) {
-    if (!info) {
+    if (!info || !info.success) {
       if (sessionAccessDenied) {
         showAccessDenied(currentSessionEmail);
       } else {
-        showPage("my-financials");
+        showPage("sign-in");
       }
       return;
     }
@@ -1410,11 +1413,7 @@
     if (sessionAccessDenied && targetPageId !== "access-denied" && targetPageId !== "sign-in") {
       targetPageId = "access-denied";
     } else if (!isAuthenticated && targetPageId !== "session-loading" && targetPageId !== "access-denied" && targetPageId !== "sign-in") {
-      if (window.ApiClient && !window.ApiClient.hasActiveSession() && window.location.hostname !== "script.google.com") {
-        targetPageId = "sign-in";
-      } else {
-        targetPageId = "my-financials";
-      }
+      targetPageId = "sign-in";
     } else if (
       (!window.APP_PERMS || window.APP_PERMS.isMemberOnly !== false) &&
       STAFF_ONLY_PAGES.indexOf(targetPageId) !== -1
@@ -1423,6 +1422,27 @@
     }
 
     currentActivePageId = targetPageId;
+
+    const isAuthGate = targetPageId === "sign-in" || targetPageId === "access-denied" || !isAuthenticated;
+    document.body.classList.toggle("auth-gate-active", isAuthGate);
+
+    // Hide or show navigation elements based on authentication status
+    const sidebarNav = document.getElementById("sidebar-nav-container");
+    if (sidebarNav) {
+      sidebarNav.classList.toggle("hidden", isAuthGate);
+    }
+    const sidebarUserBlock = document.getElementById("sidebar-user-block");
+    if (sidebarUserBlock) {
+      sidebarUserBlock.classList.toggle("hidden", isAuthGate);
+    }
+    const headerUserBtn = document.getElementById("header-user-btn");
+    if (headerUserBtn) {
+      headerUserBtn.classList.toggle("hidden", isAuthGate);
+    }
+    const mobileBottomBar = document.getElementById("mobile-bottom-bar");
+    if (mobileBottomBar) {
+      mobileBottomBar.classList.toggle("hidden", isAuthGate);
+    }
 
     if (targetPageId === "sign-in") {
       initGoogleIdentityServices();
@@ -1920,7 +1940,9 @@
         if (errMsg.indexOf("Access denied") !== -1 || errMsg.indexOf("not have an active role") !== -1) {
           showAccessDenied(info && info.email);
         } else {
+          if (window.ApiClient) window.ApiClient.clearSession();
           showSessionErrorNotification("Verification failed: " + (errMsg || "Unable to authenticate."));
+          showPage("sign-in");
         }
       }
     });
