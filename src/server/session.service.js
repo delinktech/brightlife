@@ -45,6 +45,11 @@ function getSessionInfo() {
  */
 function getGoogleProfile_(email) {
   var out = { displayName: "", photoUrl: "" };
+  if (typeof ACTIVE_REQUEST_USER_PROFILE_ !== "undefined" && ACTIVE_REQUEST_USER_PROFILE_) {
+    if (ACTIVE_REQUEST_USER_PROFILE_.name) out.displayName = String(ACTIVE_REQUEST_USER_PROFILE_.name).trim();
+    if (ACTIVE_REQUEST_USER_PROFILE_.picture) out.photoUrl = String(ACTIVE_REQUEST_USER_PROFILE_.picture).trim();
+    if (out.displayName && out.photoUrl) return out;
+  }
   var cacheKey = email ? "bl_profile_" + String(email).trim().toLowerCase() : "";
   try {
     if (cacheKey && typeof CacheService !== "undefined") {

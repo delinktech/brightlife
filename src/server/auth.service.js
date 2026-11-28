@@ -2,7 +2,15 @@
  * Role-based access from spreadsheet tab "Roles" (Email, Member, Role, Active, Notes).
  */
 
+/** Request-scoped authenticated user email for Headless API execution (doPost) */
+var ACTIVE_REQUEST_USER_EMAIL_ = null;
+/** Request-scoped Google profile metadata from verified ID token */
+var ACTIVE_REQUEST_USER_PROFILE_ = null;
+
 function getCurrentUserEmail_() {
+  if (typeof ACTIVE_REQUEST_USER_EMAIL_ !== "undefined" && ACTIVE_REQUEST_USER_EMAIL_) {
+    return String(ACTIVE_REQUEST_USER_EMAIL_).trim().toLowerCase();
+  }
   try {
     var activeEmail = String(Session.getActiveUser().getEmail() || "").trim();
     if (activeEmail) return activeEmail;
@@ -10,6 +18,125 @@ function getCurrentUserEmail_() {
     return effectiveEmail;
   } catch (e) {
     return "";
+  }
+}
+
+/**
+ * Verifies a Google OAuth 2.0 ID Token (JWT) issued by Google Identity Services (GIS).
+ * Validates issuer, audience against GOOGLE_CLIENT_ID, expiration, and email_verified status.
+ * Caches verified payload in CacheService for fast repeat lookups.
+ *
+ * @param {string} idToken - The JWT credential string received from the client.
+ * @returns {Object} { valid: boolean, email: string, name: string, picture: string, error?: string }
+ */
+function verifyGoogleIdToken_(idToken) {
+  if (!idToken || typeof idToken !== "string") {
+    return { valid: false, error: "Missing or malformed ID token" };
+  }
+  var rawToken = String(idToken).trim();
+  if (!rawToken) {
+    return { valid: false, error: "Empty ID token" };
+  }
+
+  // Derive hash key for caching
+  var tokenHash = "";
+  try {
+    if (typeof sha256Hex_ === "function") {
+      tokenHash = sha256Hex_(rawToken);
+    } else if (typeof Utilities !== "undefined" && Utilities.computeDigest) {
+      var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, rawToken);
+      tokenHash = digest.map(function(b) { return ("0" + (b & 0xFF).toString(16)).slice(-2); }).join("");
+    }
+  } catch (eHash) {}
+
+  var cacheKey = tokenHash ? "bl_gauth_" + tokenHash.substring(0, 32) : "";
+  try {
+    if (cacheKey && typeof CacheService !== "undefined") {
+      var cached = CacheService.getScriptCache().get(cacheKey);
+      if (cached) {
+        var parsedCached = JSON.parse(cached);
+        if (parsedCached && parsedCached.valid && parsedCached.exp && parsedCached.exp > (Date.now() / 1000)) {
+          return parsedCached;
+        }
+      }
+    }
+  } catch (eCache) {}
+
+  try {
+    var url = "https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(rawToken);
+    var response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      headers: { "Accept": "application/json" }
+    });
+
+    var code = response.getResponseCode();
+    var text = response.getContentText();
+    if (code !== 200) {
+      console.warn("verifyGoogleIdToken_ HTTP " + code + ": " + text);
+      return { valid: false, error: "Google token verification failed: HTTP " + code };
+    }
+
+    var payload = JSON.parse(text);
+    if (!payload || typeof payload !== "object") {
+      return { valid: false, error: "Invalid token payload response from Google" };
+    }
+
+    // 1. Verify Issuer
+    var validIssuers = ["accounts.google.com", "https://accounts.google.com"];
+    if (!payload.iss || validIssuers.indexOf(payload.iss) === -1) {
+      return { valid: false, error: "Invalid token issuer: " + payload.iss };
+    }
+
+    // 2. Verify Audience matches registered GOOGLE_CLIENT_ID
+    var expectedClientId = typeof GOOGLE_CLIENT_ID !== "undefined" ? String(GOOGLE_CLIENT_ID).trim() : "";
+    if (expectedClientId) {
+      var tokenAud = String(payload.aud || "").trim();
+      var tokenAzp = String(payload.azp || "").trim();
+      if (tokenAud !== expectedClientId && tokenAzp !== expectedClientId) {
+        return { valid: false, error: "Token audience mismatch: " + (tokenAud || tokenAzp) };
+      }
+    }
+
+    // 3. Verify Expiration
+    var nowSec = Math.floor(Date.now() / 1000);
+    var expSec = Number(payload.exp) || 0;
+    if (expSec <= nowSec) {
+      return { valid: false, error: "Token has expired" };
+    }
+
+    // 4. Verify Email & Email Verified Flag
+    var email = String(payload.email || "").trim().toLowerCase();
+    if (!email) {
+      return { valid: false, error: "Token does not contain an email address" };
+    }
+    var emailVerified = payload.email_verified === true || payload.email_verified === "true";
+    if (!emailVerified) {
+      return { valid: false, error: "Email address is not verified by Google" };
+    }
+
+    var result = {
+      valid: true,
+      email: email,
+      name: String(payload.name || "").trim(),
+      picture: String(payload.picture || "").trim(),
+      sub: String(payload.sub || "").trim(),
+      exp: expSec
+    };
+
+    // Cache verified token until expiration (max 300s)
+    try {
+      if (cacheKey && typeof CacheService !== "undefined") {
+        var ttl = Math.min(expSec - nowSec, 300);
+        if (ttl > 10) {
+          CacheService.getScriptCache().put(cacheKey, JSON.stringify(result), ttl);
+        }
+      }
+    } catch (ePut) {}
+
+    return result;
+  } catch (err) {
+    console.error("verifyGoogleIdToken_ exception: " + (err.message || err));
+    return { valid: false, error: "Token validation network or parsing error: " + err.message };
   }
 }
 

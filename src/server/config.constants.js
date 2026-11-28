@@ -1,6 +1,9 @@
 /** App release label (shown in sidebar). Bump when you ship meaningful changes. */
 const APP_VERSION = "1.0.1";
 
+/** Google OAuth 2.0 Web Client ID for Headless Token Verification (Google Identity Services) */
+var GOOGLE_CLIENT_ID = "961631543108-en4e2seqgq8tkk0fs0ehl9hmsqr0itpr.apps.googleusercontent.com";
+
 /** Diagnostic & maintenance endpoint security key */
 const ADMIN_SECRET_KEY = "bl_admin_sec_984210";
 
