@@ -372,3 +372,20 @@ function dispatchHeadlessAction_(action, payload) {
       return { success: false, error: "Unsupported or unknown action: " + action };
   }
 }
+
+/**
+ * One-time authorization trigger for script owner to grant UrlFetchApp external_request scope.
+ * Run this function once from the Apps Script editor toolbar.
+ */
+function authorizeScriptPermissions() {
+  var testUrl = "https://oauth2.googleapis.com/tokeninfo";
+  try {
+    var resp = UrlFetchApp.fetch(testUrl, { muteHttpExceptions: true });
+    Logger.log("UrlFetchApp authorization verified! HTTP Code: " + resp.getResponseCode());
+    return "UrlFetchApp authorization verified successfully! Status: " + resp.getResponseCode();
+  } catch (e) {
+    Logger.log("Authorization error: " + e.message);
+    throw e;
+  }
+}
+
